@@ -54,6 +54,7 @@ import {
   pasteClipboardContent,
   dismissNotificationQuery,
 } from './data/thunk';
+import { base_url } from '../compugrade-constants';
 
 const useCourseOutline = ({ courseId }) => {
   const dispatch = useDispatch();
@@ -108,7 +109,7 @@ const useCourseOutline = ({ courseId }) => {
   };
 
   const handleNewSubsectionSubmit = (sectionId) => {
-    dispatch(addNewSubsectionQuery(sectionId));
+    dispatch(addNewSubsectionQuery(sectionId, courseId));
   };
 
   const getUnitUrl = (locator) => {
@@ -117,9 +118,36 @@ const useCourseOutline = ({ courseId }) => {
     }
     return `${getConfig().STUDIO_BASE_URL}/container/${locator}`;
   };
+  // async function createRubric(subsectionId) {
+  //   try {
+  //     const response = await fetch(`${base_url}/api/openedx/create_rubric`, {
+  //       method: "POST",
+  //       headers: {
+  //         Accept: "application/json, text/plain, */*",
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         openedx_based_id: locator,
+  //         course_id: courseId,
+  //         user_id: 1,
+  //         subsection_id: subsectionId,
+  //       }),
+  //     });
 
-  const openUnitPage = (locator) => {
+  //     if (!response.ok) {
+  //       throw new Error(`API call failed with status ${response.status}`);
+  //     }
+
+  //     const data = await response.json();
+  //     console.log("API call successful:", data);
+  //   } catch (error) {
+  //     console.error("Error in createRubric:", error);
+  //   }
+  // }
+
+  const openUnitPage = async (locator) => {
     const url = getUnitUrl(locator);
+ 
     if (getConfig().ENABLE_UNIT_PAGE === 'true') {
       navigate(url);
     } else {
@@ -128,7 +156,7 @@ const useCourseOutline = ({ courseId }) => {
   };
 
   const handleNewUnitSubmit = (subsectionId) => {
-    dispatch(addNewUnitQuery(subsectionId, openUnitPage));
+    dispatch(addNewUnitQuery(subsectionId, courseId, openUnitPage));
   };
 
   const headerNavigationsActions = {

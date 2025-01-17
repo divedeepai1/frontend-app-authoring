@@ -1,41 +1,49 @@
-import { useEffect, useMemo, useState } from 'react';
-import PropTypes from 'prop-types';
-import { useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
-import { Container, Layout, Stack } from '@openedx/paragon';
-import { getConfig } from '@edx/frontend-platform';
-import { useIntl, injectIntl } from '@edx/frontend-platform/i18n';
-import { Warning as WarningIcon } from '@openedx/paragon/icons';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
+import { useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { Container, Layout, Stack } from "@openedx/paragon";
+import { getConfig } from "@edx/frontend-platform";
+import { useIntl, injectIntl } from "@edx/frontend-platform/i18n";
+import { Warning as WarningIcon } from "@openedx/paragon/icons";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
-import DraggableList from '../editors/sharedComponents/DraggableList';
-import { getProcessingNotification } from '../generic/processing-notification/data/selectors';
-import SubHeader from '../generic/sub-header/SubHeader';
-import { RequestStatus } from '../data/constants';
-import getPageHeadTitle from '../generic/utils';
-import AlertMessage from '../generic/alert-message';
-import { PasteComponent } from '../generic/clipboard';
-import ProcessingNotification from '../generic/processing-notification';
-import { SavingErrorAlert } from '../generic/saving-error-alert';
-import ConnectionErrorAlert from '../generic/ConnectionErrorAlert';
-import Loading from '../generic/Loading';
-import AddComponent from './add-component/AddComponent';
-import CourseXBlock from './course-xblock/CourseXBlock';
-import HeaderTitle from './header-title/HeaderTitle';
-import Breadcrumbs from './breadcrumbs/Breadcrumbs';
-import HeaderNavigations from './header-navigations/HeaderNavigations';
-import Sequence from './course-sequence';
-import Sidebar from './sidebar';
-import { useCourseUnit } from './hooks';
-import messages from './messages';
-import PublishControls from './sidebar/PublishControls';
-import LocationInfo from './sidebar/LocationInfo';
-import TagsSidebarControls from '../content-tags-drawer/tags-sidebar-controls';
-import { PasteNotificationAlert } from './clipboard';
+import DraggableList from "../editors/sharedComponents/DraggableList";
+import { getProcessingNotification } from "../generic/processing-notification/data/selectors";
+import SubHeader from "../generic/sub-header/SubHeader";
+import { RequestStatus } from "../data/constants";
+import getPageHeadTitle from "../generic/utils";
+import AlertMessage from "../generic/alert-message";
+import { PasteComponent } from "../generic/clipboard";
+import ProcessingNotification from "../generic/processing-notification";
+import { SavingErrorAlert } from "../generic/saving-error-alert";
+import ConnectionErrorAlert from "../generic/ConnectionErrorAlert";
+import Loading from "../generic/Loading";
+import AddComponent from "./add-component/AddComponent";
+import CourseXBlock from "./course-xblock/CourseXBlock";
+import HeaderTitle from "./header-title/HeaderTitle";
+import Breadcrumbs from "./breadcrumbs/Breadcrumbs";
+import HeaderNavigations from "./header-navigations/HeaderNavigations";
+import Sequence from "./course-sequence";
+import Sidebar from "./sidebar";
+import { useCourseUnit } from "./hooks";
+import messages from "./messages";
+import PublishControls from "./sidebar/PublishControls";
+import LocationInfo from "./sidebar/LocationInfo";
+import TagsSidebarControls from "../content-tags-drawer/tags-sidebar-controls";
+import { PasteNotificationAlert } from "./clipboard";
+import Attempts from "./sidebar/Attempts";
+import AccessCode from "./sidebar/AccessCode";
+import { base_url } from "../compugrade-constants";
+import InstructionXBlock from "../compugrade/components/InstructionXBlock.jsx";
 
 const CourseUnit = ({ courseId }) => {
   const { blockId } = useParams();
   const intl = useIntl();
+  const navigate = useNavigate();
   const {
     isLoading,
     sequenceId,
@@ -60,11 +68,47 @@ const CourseUnit = ({ courseId }) => {
     canPasteComponent,
   } = useCourseUnit({ courseId, blockId });
 
-  const initialXBlocksData = useMemo(() => courseVerticalChildren.children ?? [], [courseVerticalChildren.children]);
+  const initialXBlocksData = useMemo(
+    () => courseVerticalChildren.children ?? [],
+    [courseVerticalChildren.children]
+  );
   const [unitXBlocks, setUnitXBlocks] = useState(initialXBlocksData);
 
+  const [unitData, setUnitData] = useState(null);
+
+  const handleCreateCompugradeXBlock = (type) => {
+    navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type}`);
+  };
+
   useEffect(() => {
-    document.title = getPageHeadTitle('', unitTitle);
+    const fetchData = async () => {
+      try {
+        const encodedBlockId = encodeURIComponent(blockId); // Encode the block ID
+        const response = await fetch(
+          `${base_url}/api/openedx/get_rubric?openedx_based_id=${encodedBlockId}`,
+          {
+            method: "POST", // Set method to POST
+            headers: {
+              "Content-Type": "application/json", // Set content type
+            },
+            body: JSON.stringify({ name: "Hello" }), // Add body
+          }
+        );
+
+        const result = await response.json();
+        setUnitData(result); // Save the API response to state
+        // console.log(result);
+      } catch (err) {
+        // setError(err.message); // Capture any errors
+        console.log(err);
+      }
+    };
+
+    blockId && fetchData();
+  }, [blockId]);
+
+  useEffect(() => {
+    document.title = getPageHeadTitle("", unitTitle);
   }, [unitTitle]);
 
   useEffect(() => {
@@ -89,9 +133,12 @@ const CourseUnit = ({ courseId }) => {
   }
 
   const finalizeXBlockOrder = () => (newXBlocks) => {
-    handleXBlockDragAndDrop(newXBlocks.map(xBlock => xBlock.id), () => {
-      setUnitXBlocks(initialXBlocksData);
-    });
+    handleXBlockDragAndDrop(
+      newXBlocks.map((xBlock) => xBlock.id),
+      () => {
+        setUnitXBlocks(initialXBlocksData);
+      }
+    );
   };
 
   return (
@@ -100,7 +147,7 @@ const CourseUnit = ({ courseId }) => {
         <section className="course-unit-container mb-4 mt-5">
           <SubHeader
             hideBorder
-            title={(
+            title={
               <HeaderTitle
                 unitTitle={unitTitle}
                 isTitleEditFormOpen={isTitleEditFormOpen}
@@ -108,15 +155,13 @@ const CourseUnit = ({ courseId }) => {
                 handleTitleEditSubmit={handleTitleEditSubmit}
                 handleConfigureSubmit={handleConfigureSubmit}
               />
-            )}
-            breadcrumbs={(
-              <Breadcrumbs />
-            )}
-            headerActions={(
+            }
+            breadcrumbs={<Breadcrumbs />}
+            headerActions={
               <HeaderNavigations
                 headerNavigationsActions={headerNavigationsActions}
               />
-            )}
+            }
           />
           <Sequence
             courseId={courseId}
@@ -158,29 +203,41 @@ const CourseUnit = ({ courseId }) => {
                     items={unitXBlocks}
                     strategy={verticalListSortingStrategy}
                   >
-                    {unitXBlocks.map(({
-                      name, id, blockType: type, shouldScroll, userPartitionInfo, validationMessages,
-                    }) => (
-                      <CourseXBlock
-                        id={id}
-                        key={id}
-                        title={name}
-                        type={type}
-                        blockId={blockId}
-                        validationMessages={validationMessages}
-                        shouldScroll={shouldScroll}
-                        handleConfigureSubmit={handleConfigureSubmit}
-                        unitXBlockActions={unitXBlockActions}
-                        data-testid="course-xblock"
-                        userPartitionInfo={userPartitionInfo}
-                      />
-                    ))}
+                    {unitXBlocks.map(
+                      ({
+                        name,
+                        id,
+                        blockType: type,
+                        shouldScroll,
+                        userPartitionInfo,
+                        validationMessages,
+                      }) => (
+                        <CourseXBlock
+                          id={id}
+                          key={id}
+                          title={name}
+                          type={type}
+                          blockId={blockId}
+                          validationMessages={validationMessages}
+                          shouldScroll={shouldScroll}
+                          handleConfigureSubmit={handleConfigureSubmit}
+                          unitXBlockActions={unitXBlockActions}
+                          data-testid="course-xblock"
+                          userPartitionInfo={userPartitionInfo}
+                        />
+                      )
+                    )}
+                   {unitData?.description	 && <InstructionXBlock title={"Overview"} data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.skills && <InstructionXBlock title={"Skills"} data={unitData.skills} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
+
                   </SortableContext>
                 </DraggableList>
               </Stack>
               <AddComponent
                 blockId={blockId}
                 handleCreateNewCourseXBlock={handleCreateNewCourseXBlock}
+                handleCreateCompugradeXBlock={handleCreateCompugradeXBlock}
               />
               {showPasteXBlock && canPasteComponent && (
                 <PasteComponent
@@ -195,10 +252,22 @@ const CourseUnit = ({ courseId }) => {
                 <Sidebar data-testid="course-unit-sidebar">
                   <PublishControls blockId={blockId} />
                 </Sidebar>
-                {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === 'true'
-                && (
+                {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === "true" && (
                   <Sidebar className="tags-sidebar">
                     <TagsSidebarControls />
+                  </Sidebar>
+                )}
+                {unitData && (
+                  <Sidebar data-testid="course-unit-attempts-sidebar">
+                    <Attempts
+                      attempts={unitData.num_of_attempts}
+                      blockId={blockId}
+                    />
+                  </Sidebar>
+                )}
+                {unitData && (
+                  <Sidebar data-testid="course-unit-access-code-sidebar">
+                    <AccessCode accessCode={unitData.access_id} />
                   </Sidebar>
                 )}
                 <Sidebar data-testid="course-unit-location-sidebar">

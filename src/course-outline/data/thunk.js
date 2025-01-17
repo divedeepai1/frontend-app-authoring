@@ -1,15 +1,15 @@
-import { RequestStatus } from '../../data/constants';
-import { updateClipboardData } from '../../generic/data/slice';
-import { NOTIFICATION_MESSAGES } from '../../constants';
-import { API_ERROR_TYPES, COURSE_BLOCK_NAMES } from '../constants';
+import { RequestStatus } from "../../data/constants";
+import { updateClipboardData } from "../../generic/data/slice";
+import { NOTIFICATION_MESSAGES } from "../../constants";
+import { API_ERROR_TYPES, COURSE_BLOCK_NAMES } from "../constants";
 import {
   hideProcessingNotification,
   showProcessingNotification,
-} from '../../generic/processing-notification/data/slice';
+} from "../../generic/processing-notification/data/slice";
 import {
   getCourseBestPracticesChecklist,
   getCourseLaunchChecklist,
-} from '../utils/getChecklistForStatusBar';
+} from "../utils/getChecklistForStatusBar";
 import {
   addNewCourseItem,
   deleteCourseItem,
@@ -31,7 +31,7 @@ import {
   setCourseItemOrderList,
   pasteBlock,
   dismissNotification,
-} from './api';
+} from "./api";
 import {
   addSection,
   addSubsection,
@@ -52,13 +52,18 @@ import {
   reorderSectionList,
   setPasteFileNotices,
   updateCourseLaunchQueryStatus,
-} from './slice';
+} from "./slice";
+import { base_url } from "../../compugrade-constants";
+import axios from "axios";
 
 const getErrorDetails = (error, dismissible = true) => {
   const errorInfo = { dismissible };
   if (error.response?.data) {
     const { data } = error.response;
-    if ((typeof data === 'string' && !data.includes('</html>')) || typeof data === 'object') {
+    if (
+      (typeof data === "string" && !data.includes("</html>")) ||
+      typeof data === "object"
+    ) {
       errorInfo.data = JSON.stringify(data);
     }
     errorInfo.status = error.response.status;
@@ -74,7 +79,9 @@ const getErrorDetails = (error, dismissible = true) => {
 
 export function fetchCourseOutlineIndexQuery(courseId) {
   return async (dispatch) => {
-    dispatch(updateOutlineIndexLoadingStatus({ status: RequestStatus.IN_PROGRESS }));
+    dispatch(
+      updateOutlineIndexLoadingStatus({ status: RequestStatus.IN_PROGRESS })
+    );
 
     try {
       const outlineIndex = await getCourseOutlineIndex(courseId);
@@ -89,20 +96,26 @@ export function fetchCourseOutlineIndexQuery(courseId) {
       } = outlineIndex;
       dispatch(fetchOutlineIndexSuccess(outlineIndex));
       dispatch(updateClipboardData(outlineIndex.initialUserClipboard));
-      dispatch(updateStatusBar({
-        courseReleaseDate,
-        highlightsEnabledForMessaging,
-        videoSharingOptions,
-        videoSharingEnabled,
-      }));
+      dispatch(
+        updateStatusBar({
+          courseReleaseDate,
+          highlightsEnabledForMessaging,
+          videoSharingOptions,
+          videoSharingEnabled,
+        })
+      );
       dispatch(updateCourseActions(actions));
 
-      dispatch(updateOutlineIndexLoadingStatus({ status: RequestStatus.SUCCESSFUL }));
+      dispatch(
+        updateOutlineIndexLoadingStatus({ status: RequestStatus.SUCCESSFUL })
+      );
     } catch (error) {
-      dispatch(updateOutlineIndexLoadingStatus({
-        status: RequestStatus.FAILED,
-        errors: getErrorDetails(error, false),
-      }));
+      dispatch(
+        updateOutlineIndexLoadingStatus({
+          status: RequestStatus.FAILED,
+          errors: getErrorDetails(error, false),
+        })
+      );
     }
   };
 }
@@ -114,20 +127,31 @@ export function fetchCourseLaunchQuery({
   all = true,
 }) {
   return async (dispatch) => {
-    dispatch(updateCourseLaunchQueryStatus({ status: RequestStatus.IN_PROGRESS }));
+    dispatch(
+      updateCourseLaunchQueryStatus({ status: RequestStatus.IN_PROGRESS })
+    );
     try {
       const data = await getCourseLaunch({
-        courseId, gradedOnly, validateOras, all,
+        courseId,
+        gradedOnly,
+        validateOras,
+        all,
       });
-      dispatch(fetchStatusBarSelPacedSuccess({ isSelfPaced: data.isSelfPaced }));
+      dispatch(
+        fetchStatusBarSelPacedSuccess({ isSelfPaced: data.isSelfPaced })
+      );
       dispatch(fetchStatusBarChecklistSuccess(getCourseLaunchChecklist(data)));
 
-      dispatch(updateCourseLaunchQueryStatus({ status: RequestStatus.SUCCESSFUL }));
+      dispatch(
+        updateCourseLaunchQueryStatus({ status: RequestStatus.SUCCESSFUL })
+      );
     } catch (error) {
-      dispatch(updateCourseLaunchQueryStatus({
-        status: RequestStatus.FAILED,
-        errors: getErrorDetails(error),
-      }));
+      dispatch(
+        updateCourseLaunchQueryStatus({
+          status: RequestStatus.FAILED,
+          errors: getErrorDetails(error),
+        })
+      );
     }
   };
 }
@@ -139,8 +163,14 @@ export function fetchCourseBestPracticesQuery({
 }) {
   return async (dispatch) => {
     try {
-      const data = await getCourseBestPractices({ courseId, excludeGraded, all });
-      dispatch(fetchStatusBarChecklistSuccess(getCourseBestPracticesChecklist(data)));
+      const data = await getCourseBestPractices({
+        courseId,
+        excludeGraded,
+        all,
+      });
+      dispatch(
+        fetchStatusBarChecklistSuccess(getCourseBestPracticesChecklist(data))
+      );
 
       return true;
     } catch (error) {
@@ -190,34 +220,46 @@ export function fetchCourseReindexQuery(courseId, reindexLink) {
 
     try {
       await restartIndexingOnCourse(reindexLink);
-      dispatch(updateReindexLoadingStatus({ status: RequestStatus.SUCCESSFUL }));
+      dispatch(
+        updateReindexLoadingStatus({ status: RequestStatus.SUCCESSFUL })
+      );
     } catch (error) {
-      dispatch(updateReindexLoadingStatus({
-        status: RequestStatus.FAILED,
-        errors: getErrorDetails(error),
-      }));
+      dispatch(
+        updateReindexLoadingStatus({
+          status: RequestStatus.FAILED,
+          errors: getErrorDetails(error),
+        })
+      );
     }
   };
 }
 
 export function fetchCourseSectionQuery(sectionIds, shouldScroll = false) {
   return async (dispatch) => {
-    dispatch(updateFetchSectionLoadingStatus({ status: RequestStatus.IN_PROGRESS }));
+    dispatch(
+      updateFetchSectionLoadingStatus({ status: RequestStatus.IN_PROGRESS })
+    );
     try {
       const sections = {};
-      const results = await Promise.all(sectionIds.map((sectionId) => getCourseItem(sectionId)));
+      const results = await Promise.all(
+        sectionIds.map((sectionId) => getCourseItem(sectionId))
+      );
       results.forEach((data) => {
         // eslint-disable-next-line no-param-reassign
         data.shouldScroll = shouldScroll;
         sections[data.id] = data;
       });
       dispatch(updateSectionList(sections));
-      dispatch(updateFetchSectionLoadingStatus({ status: RequestStatus.SUCCESSFUL }));
+      dispatch(
+        updateFetchSectionLoadingStatus({ status: RequestStatus.SUCCESSFUL })
+      );
     } catch (error) {
-      dispatch(updateFetchSectionLoadingStatus({
-        status: RequestStatus.FAILED,
-        errors: getErrorDetails(error),
-      }));
+      dispatch(
+        updateFetchSectionLoadingStatus({
+          status: RequestStatus.FAILED,
+          errors: getErrorDetails(error),
+        })
+      );
     }
   };
 }
@@ -228,13 +270,15 @@ export function updateCourseSectionHighlightsQuery(sectionId, highlights) {
     dispatch(showProcessingNotification(NOTIFICATION_MESSAGES.saving));
 
     try {
-      await updateCourseSectionHighlights(sectionId, highlights).then(async (result) => {
-        if (result) {
-          await dispatch(fetchCourseSectionQuery([sectionId]));
-          dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
-          dispatch(hideProcessingNotification());
+      await updateCourseSectionHighlights(sectionId, highlights).then(
+        async (result) => {
+          if (result) {
+            await dispatch(fetchCourseSectionQuery([sectionId]));
+            dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
+            dispatch(hideProcessingNotification());
+          }
         }
-      });
+      );
     } catch (error) {
       dispatch(hideProcessingNotification());
       dispatch(updateSavingStatus({ status: RequestStatus.FAILED }));
@@ -282,12 +326,17 @@ export function configureCourseItemQuery(sectionId, configureFn) {
   };
 }
 
-export function configureCourseSectionQuery(sectionId, isVisibleToStaffOnly, startDatetime) {
+export function configureCourseSectionQuery(
+  sectionId,
+  isVisibleToStaffOnly,
+  startDatetime
+) {
   return async (dispatch) => {
-    dispatch(configureCourseItemQuery(
-      sectionId,
-      async () => configureCourseSection(sectionId, isVisibleToStaffOnly, startDatetime),
-    ));
+    dispatch(
+      configureCourseItemQuery(sectionId, async () =>
+        configureCourseSection(sectionId, isVisibleToStaffOnly, startDatetime)
+      )
+    );
   };
 }
 
@@ -309,40 +358,53 @@ export function configureCourseSubsectionQuery(
   isPrereq,
   prereqUsageKey,
   prereqMinScore,
-  prereqMinCompletion,
+  prereqMinCompletion
 ) {
   return async (dispatch) => {
-    dispatch(configureCourseItemQuery(
-      sectionId,
-      async () => configureCourseSubsection(
-        itemId,
-        isVisibleToStaffOnly,
-        releaseDate,
-        graderType,
-        dueDate,
-        isTimeLimited,
-        isProctoredExam,
-        isOnboardingExam,
-        isPracticeExam,
-        examReviewRules,
-        defaultTimeLimitMin,
-        hideAfterDue,
-        showCorrectness,
-        isPrereq,
-        prereqUsageKey,
-        prereqMinScore,
-        prereqMinCompletion,
-      ),
-    ));
+    dispatch(
+      configureCourseItemQuery(sectionId, async () =>
+        configureCourseSubsection(
+          itemId,
+          isVisibleToStaffOnly,
+          releaseDate,
+          graderType,
+          dueDate,
+          isTimeLimited,
+          isProctoredExam,
+          isOnboardingExam,
+          isPracticeExam,
+          examReviewRules,
+          defaultTimeLimitMin,
+          hideAfterDue,
+          showCorrectness,
+          isPrereq,
+          prereqUsageKey,
+          prereqMinScore,
+          prereqMinCompletion
+        )
+      )
+    );
   };
 }
 
-export function configureCourseUnitQuery(itemId, sectionId, isVisibleToStaffOnly, groupAccess, discussionEnabled) {
+export function configureCourseUnitQuery(
+  itemId,
+  sectionId,
+  isVisibleToStaffOnly,
+  groupAccess,
+  discussionEnabled
+) {
   return async (dispatch) => {
-    dispatch(configureCourseItemQuery(
-      sectionId,
-      async () => configureCourseUnit(itemId, isVisibleToStaffOnly, groupAccess, discussionEnabled),
-    ));
+    dispatch(
+      configureCourseItemQuery(sectionId, async () =>
+        configureCourseUnit(
+          itemId,
+          isVisibleToStaffOnly,
+          groupAccess,
+          discussionEnabled
+        )
+      )
+    );
   };
 }
 
@@ -357,6 +419,21 @@ export function editCourseItemQuery(itemId, sectionId, displayName) {
           await dispatch(fetchCourseSectionQuery([sectionId]));
           dispatch(hideProcessingNotification());
           dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
+
+          const apiResponse = await fetch(
+            base_url + "/api/openedx/update_rubric",
+            {
+              method: "PATCH",
+              headers: {
+                Accept: "application/json, text/plain, */*",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                openedx_based_id: itemId,
+                title: displayName,
+              }),
+            }
+          );
         }
       });
     } catch (error) {
@@ -391,28 +468,31 @@ function deleteCourseItemQuery(itemId, deleteItemFn) {
 
 export function deleteCourseSectionQuery(sectionId) {
   return async (dispatch) => {
-    dispatch(deleteCourseItemQuery(
-      sectionId,
-      () => deleteSection({ itemId: sectionId }),
-    ));
+    dispatch(
+      deleteCourseItemQuery(sectionId, () =>
+        deleteSection({ itemId: sectionId })
+      )
+    );
   };
 }
 
 export function deleteCourseSubsectionQuery(subsectionId, sectionId) {
   return async (dispatch) => {
-    dispatch(deleteCourseItemQuery(
-      subsectionId,
-      () => deleteSubsection({ itemId: subsectionId, sectionId }),
-    ));
+    dispatch(
+      deleteCourseItemQuery(subsectionId, () =>
+        deleteSubsection({ itemId: subsectionId, sectionId })
+      )
+    );
   };
 }
 
 export function deleteCourseUnitQuery(unitId, subsectionId, sectionId) {
   return async (dispatch) => {
-    dispatch(deleteCourseItemQuery(
-      unitId,
-      () => deleteUnit({ itemId: unitId, subsectionId, sectionId }),
-    ));
+    dispatch(
+      deleteCourseItemQuery(unitId, () =>
+        deleteUnit({ itemId: unitId, subsectionId, sectionId })
+      )
+    );
   };
 }
 
@@ -445,36 +525,34 @@ function duplicateCourseItemQuery(itemId, parentLocator, duplicateFn) {
 
 export function duplicateSectionQuery(sectionId, courseBlockId) {
   return async (dispatch) => {
-    dispatch(duplicateCourseItemQuery(
-      sectionId,
-      courseBlockId,
-      async (locator) => {
+    dispatch(
+      duplicateCourseItemQuery(sectionId, courseBlockId, async (locator) => {
         const duplicatedItem = await getCourseItem(locator);
         // Page should scroll to newly duplicated item.
         duplicatedItem.shouldScroll = true;
         dispatch(duplicateSection({ id: sectionId, duplicatedItem }));
-      },
-    ));
+      })
+    );
   };
 }
 
 export function duplicateSubsectionQuery(subsectionId, sectionId) {
   return async (dispatch) => {
-    dispatch(duplicateCourseItemQuery(
-      subsectionId,
-      sectionId,
-      async () => dispatch(fetchCourseSectionQuery([sectionId], true)),
-    ));
+    dispatch(
+      duplicateCourseItemQuery(subsectionId, sectionId, async () =>
+        dispatch(fetchCourseSectionQuery([sectionId], true))
+      )
+    );
   };
 }
 
 export function duplicateUnitQuery(unitId, subsectionId, sectionId) {
   return async (dispatch) => {
-    dispatch(duplicateCourseItemQuery(
-      unitId,
-      subsectionId,
-      async () => dispatch(fetchCourseSectionQuery([sectionId], true)),
-    ));
+    dispatch(
+      duplicateCourseItemQuery(unitId, subsectionId, async () =>
+        dispatch(fetchCourseSectionQuery([sectionId], true))
+      )
+    );
   };
 }
 
@@ -486,23 +564,26 @@ export function duplicateUnitQuery(unitId, subsectionId, sectionId) {
  * @param {(data) => {}} addItemFn
  * @returns {}
  */
-function addNewCourseItemQuery(parentLocator, category, displayName, addItemFn) {
+function addNewCourseItemQuery(
+  parentLocator,
+  category,
+  displayName,
+  addItemFn
+) {
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
     dispatch(showProcessingNotification(NOTIFICATION_MESSAGES.saving));
 
     try {
-      await addNewCourseItem(
-        parentLocator,
-        category,
-        displayName,
-      ).then(async (result) => {
-        if (result) {
-          await addItemFn(result);
-          dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
-          dispatch(hideProcessingNotification());
+      await addNewCourseItem(parentLocator, category, displayName).then(
+        async (result) => {
+          if (result) {
+            await addItemFn(result);
+            dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
+            dispatch(hideProcessingNotification());
+          }
         }
-      });
+      );
     } catch (error) {
       dispatch(hideProcessingNotification());
       dispatch(updateSavingStatus({ status: RequestStatus.FAILED }));
@@ -512,44 +593,105 @@ function addNewCourseItemQuery(parentLocator, category, displayName, addItemFn) 
 
 export function addNewSectionQuery(parentLocator) {
   return async (dispatch) => {
-    dispatch(addNewCourseItemQuery(
-      parentLocator,
-      COURSE_BLOCK_NAMES.chapter.id,
-      COURSE_BLOCK_NAMES.chapter.name,
-      async (result) => {
-        const data = await getCourseItem(result.locator);
-        // Page should scroll to newly created section.
-        data.shouldScroll = true;
-        dispatch(addSection(data));
-      },
-    ));
+    dispatch(
+      addNewCourseItemQuery(
+        parentLocator,
+        COURSE_BLOCK_NAMES.chapter.id,
+        COURSE_BLOCK_NAMES.chapter.name,
+        async (result) => {
+          console.log(result);
+
+          const data = await getCourseItem(result.locator);
+          console.log("DATA", data);
+
+          // Page should scroll to newly created section.
+          data.shouldScroll = true;
+          dispatch(addSection(data));
+        }
+      )
+    );
   };
 }
 
-export function addNewSubsectionQuery(parentLocator) {
+export function addNewSubsectionQuery(parentLocator, courseId) {
   return async (dispatch) => {
-    dispatch(addNewCourseItemQuery(
-      parentLocator,
-      COURSE_BLOCK_NAMES.sequential.id,
-      COURSE_BLOCK_NAMES.sequential.name,
-      async (result) => {
-        const data = await getCourseItem(result.locator);
-        // Page should scroll to newly created subsection.
-        data.shouldScroll = true;
-        dispatch(addSubsection({ parentLocator, data }));
-      },
-    ));
+    dispatch(
+      addNewCourseItemQuery(
+        parentLocator,
+        COURSE_BLOCK_NAMES.sequential.id,
+        COURSE_BLOCK_NAMES.sequential.name,
+        async (result) => {
+          const data = await getCourseItem(result.locator);
+          // Page should scroll to newly created subsection.
+          data.shouldScroll = true;
+          try {
+            const response = await fetch(base_url + "/api/openedx/create_subsection", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: data.displayName,
+                openedx_based_id: data.id,
+                course_id: courseId,
+              }),
+            });
+          
+            if (!response.ok) {
+              // Handle non-2xx responses
+              const errorData = await response.json();
+              console.error("Error in API call:", errorData);
+            } else {
+              const responseData = await response.json();
+              console.log("API call successful:", responseData);
+            }
+          } catch (error) {
+            // Handle network or other errors
+            console.error("Error in API call:", error.message);
+          }
+          
+          dispatch(addSubsection({ parentLocator, data }));
+          console.log({
+            title: data.displayName,
+            openedx_based_id: data.id,
+            course_id: courseId,
+          });
+
+          
+        }
+      )
+    );
   };
 }
 
-export function addNewUnitQuery(parentLocator, callback) {
+export function addNewUnitQuery(parentLocator, courseId, callback) {
+  
   return async (dispatch) => {
-    dispatch(addNewCourseItemQuery(
-      parentLocator,
-      COURSE_BLOCK_NAMES.vertical.id,
-      COURSE_BLOCK_NAMES.vertical.name,
-      async (result) => callback(result.locator),
-    ));
+    dispatch(
+      addNewCourseItemQuery(
+        parentLocator,
+        COURSE_BLOCK_NAMES.vertical.id,
+        COURSE_BLOCK_NAMES.vertical.name,
+        async (result) => {
+          const response = await fetch(
+            base_url + '/api/openedx/create_rubric',
+            {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                openedx_based_id: result.locator,
+                course_id: courseId,
+                user_id: 1,
+                subsection_id:parentLocator
+              }),
+            }
+          );
+          return callback(result.locator)}
+      )
+    );
   };
 }
 
@@ -558,7 +700,7 @@ function setBlockOrderListQuery(
   blockIds,
   apiFn,
   restoreCallback,
-  successCallback,
+  successCallback
 ) {
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
@@ -580,15 +722,21 @@ function setBlockOrderListQuery(
   };
 }
 
-export function setSectionOrderListQuery(courseId, sectionListIds, restoreCallback) {
+export function setSectionOrderListQuery(
+  courseId,
+  sectionListIds,
+  restoreCallback
+) {
   return async (dispatch) => {
-    dispatch(setBlockOrderListQuery(
-      courseId,
-      sectionListIds,
-      setSectionOrderList,
-      restoreCallback,
-      () => dispatch(reorderSectionList(sectionListIds)),
-    ));
+    dispatch(
+      setBlockOrderListQuery(
+        courseId,
+        sectionListIds,
+        setSectionOrderList,
+        restoreCallback,
+        () => dispatch(reorderSectionList(sectionListIds))
+      )
+    );
   };
 }
 
@@ -596,22 +744,24 @@ export function setSubsectionOrderListQuery(
   sectionId,
   prevSectionId,
   subsectionListIds,
-  restoreCallback,
+  restoreCallback
 ) {
   return async (dispatch) => {
-    dispatch(setBlockOrderListQuery(
-      sectionId,
-      subsectionListIds,
-      setCourseItemOrderList,
-      restoreCallback,
-      () => {
-        const sectionIds = [sectionId];
-        if (prevSectionId && prevSectionId !== sectionId) {
-          sectionIds.push(prevSectionId);
+    dispatch(
+      setBlockOrderListQuery(
+        sectionId,
+        subsectionListIds,
+        setCourseItemOrderList,
+        restoreCallback,
+        () => {
+          const sectionIds = [sectionId];
+          if (prevSectionId && prevSectionId !== sectionId) {
+            sectionIds.push(prevSectionId);
+          }
+          dispatch(fetchCourseSectionQuery(sectionIds));
         }
-        dispatch(fetchCourseSectionQuery(sectionIds));
-      },
-    ));
+      )
+    );
   };
 }
 
@@ -620,22 +770,24 @@ export function setUnitOrderListQuery(
   subsectionId,
   prevSectionId,
   unitListIds,
-  restoreCallback,
+  restoreCallback
 ) {
   return async (dispatch) => {
-    dispatch(setBlockOrderListQuery(
-      subsectionId,
-      unitListIds,
-      setCourseItemOrderList,
-      restoreCallback,
-      () => {
-        const sectionIds = [sectionId];
-        if (prevSectionId && prevSectionId !== sectionId) {
-          sectionIds.push(prevSectionId);
+    dispatch(
+      setBlockOrderListQuery(
+        subsectionId,
+        unitListIds,
+        setCourseItemOrderList,
+        restoreCallback,
+        () => {
+          const sectionIds = [sectionId];
+          if (prevSectionId && prevSectionId !== sectionId) {
+            sectionIds.push(prevSectionId);
+          }
+          dispatch(fetchCourseSectionQuery(sectionIds));
         }
-        dispatch(fetchCourseSectionQuery(sectionIds));
-      },
-    ));
+      )
+    );
   };
 }
 

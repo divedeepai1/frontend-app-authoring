@@ -21,6 +21,7 @@ import * as hooks from './hooks';
 import messages from './messages';
 import './index.scss';
 import usePromptIfDirty from '../../../generic/promptIfDirty/usePromptIfDirty';
+import { useParams } from 'react-router';
 
 interface WrapperProps {
   children: React.ReactNode;
@@ -76,6 +77,8 @@ const EditorContainer: React.FC<Props> = ({
 }) => {
   const intl = useIntl();
   const dispatch = useDispatch();
+  const {courseId, unitId} = useParams()
+  const redirect_url = `/course-authoring/course/${courseId}/container/${unitId}`
   // Required to mark data as not dirty on save
   const [saved, setSaved] = React.useState(false);
   const isInitialized = hooks.isInitialized();
@@ -89,6 +92,7 @@ const EditorContainer: React.FC<Props> = ({
     getContent,
     validateEntry,
     returnFunction,
+    redirect_url
   });
 
   const onSave = () => {

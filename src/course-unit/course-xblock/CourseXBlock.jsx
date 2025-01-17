@@ -25,6 +25,7 @@ const CourseXBlock = ({
   id, title, type, unitXBlockActions, shouldScroll, userPartitionInfo,
   handleConfigureSubmit, validationMessages, ...props
 }) => {
+
   const courseXBlockElementRef = useRef(null);
   const [isDeleteModalOpen, openDeleteModal, closeDeleteModal] = useToggle(false);
   const [isConfigureModalOpen, openConfigureModal, closeConfigureModal] = useToggle(false);
@@ -47,6 +48,7 @@ const CourseXBlock = ({
     userPartitionInfo,
     showCorrectness: 'always',
   };
+console.log(currentItemData);
 
   const onDeleteSubmit = () => {
     unitXBlockActions.handleDelete(id);

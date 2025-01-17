@@ -24,9 +24,12 @@ export const handleSaveClicked = ({
   getContent,
   validateEntry,
   returnFunction,
+  redirect_url
 }) => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const returnUrl = useSelector(selectors.app.returnUrl);
+  // const returnUrl = useSelector(selectors.app.returnUrl);
+
+  const returnUrl = redirect_url;
   const destination = returnFunction ? '' : returnUrl;
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const analytics = useSelector(selectors.app.analytics);

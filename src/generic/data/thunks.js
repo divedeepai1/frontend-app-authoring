@@ -21,7 +21,9 @@ import {
   getCourseRerun,
   updateClipboard,
   getClipboard,
+  createOrRerunCourseExternal,
 } from './api';
+import { base_url } from '../../compugrade-constants';
 
 export function fetchOrganizationsQuery() {
   return async (dispatch) => {
@@ -47,22 +49,53 @@ export function fetchCourseRerunQuery(courseId) {
   };
 }
 
-export function updateCreateOrRerunCourseQuery(courseData) {
+export function updateCreateOrRerunCourseQuery(courseData, courseType) {
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
 
     try {
       const response = await createOrRerunCourse(courseData);
+
+      console.log('Response from createOrRerunCourse:', response);
+
       dispatch(updateRedirectUrlObj('url' in response ? response : {}));
       dispatch(updatePostErrors('errMsg' in response ? response : {}));
       dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
+
+      // Validate course_key existence
+      if (!response.courseKey) {
+        throw new Error('course_key is missing in the response.');
+      }
+
+      const apiResponse = await fetch(
+        base_url+'/api/course/create_course',
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...courseData,
+            course_type: courseType,
+            openedx_based_id: response.courseKey,
+          }),
+        }
+      );
+
+      const result = await apiResponse.json();
+      console.log('Response from API call:', result);
+
       return true;
     } catch (error) {
+      console.error('Error occurred:', error);
       dispatch(updateSavingStatus({ status: RequestStatus.FAILED }));
       return false;
     }
   };
 }
+
+
 
 export function copyToClipboard(usageKey) {
   const POLL_INTERVAL_MS = 1000; // Timeout duration for polling in milliseconds

@@ -82,6 +82,22 @@ const messages = defineMessages({
     id: 'course-authoring.create-or-rerun-course.create.rerun.help-text',
     defaultMessage: 'The term in which the new course will run. (This value is often different than the original course run value.){strong}',
   },
+  courseTypeLabel: {
+    id: 'course-authoring.create-or-rerun-course.run.label',
+    defaultMessage: 'Course type',
+  },
+  courseTypePlaceholder: {
+    id: 'course-authoring.create-or-rerun-course.run.placeholder',
+    defaultMessage: 'e.g. MS Word',
+  },
+  courseTypeCreateHelpText: {
+    id: 'course-authoring.create-or-rerun-course.create.run.help-text',
+    defaultMessage: 'The application for which you want to create the course.',
+  },
+  courseTypeRerunHelpText: {
+    id: 'course-authoring.create-or-rerun-course.create.rerun.help-text',
+    defaultMessage: 'The term in which the new course will run. (This value is often different than the original course run value.){strong}',
+  },
   defaultPlaceholder: {
     id: 'course-authoring.create-or-rerun-course.default-placeholder',
     defaultMessage: 'Label',
