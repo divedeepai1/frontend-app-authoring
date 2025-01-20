@@ -42,6 +42,7 @@ export const saveBlock = ({
   returnFunction,
   validateEntry,
 }) => {
+  
   if (!content) {
     return;
   }
@@ -53,6 +54,7 @@ export const saveBlock = ({
   } else {
     attemptSave = true;
   }
+
   if (attemptSave) {
     dispatch(thunkActions.app.saveBlock(
       content,

@@ -82,7 +82,7 @@ const UnitCard = ({
 
   const handleEditSubmit = (titleValue) => {
     if (displayName !== titleValue) {
-      onEditSubmit(id, section.id, titleValue);
+      onEditSubmit(id, section.id, titleValue, namePrefix);
       return;
     }
 

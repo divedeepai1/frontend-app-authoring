@@ -408,7 +408,8 @@ export function configureCourseUnitQuery(
   };
 }
 
-export function editCourseItemQuery(itemId, sectionId, displayName) {
+export function editCourseItemQuery(itemId, sectionId, displayName,namePrefix) {
+  
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
     dispatch(showProcessingNotification(NOTIFICATION_MESSAGES.saving));
@@ -421,7 +422,7 @@ export function editCourseItemQuery(itemId, sectionId, displayName) {
           dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
 
           const apiResponse = await fetch(
-            base_url + "/api/openedx/update_rubric",
+            base_url + `/api/openedx/${namePrefix === "subsection"? "update_subsection" : "update_rubric"}`,
             {
               method: "PATCH",
               headers: {

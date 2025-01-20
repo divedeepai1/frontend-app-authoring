@@ -83,7 +83,7 @@ const EditorContainer: React.FC<Props> = ({
   const [saved, setSaved] = React.useState(false);
   const isInitialized = hooks.isInitialized();
   const { isCancelConfirmOpen, openCancelConfirmModal, closeCancelConfirmModal } = hooks.cancelConfirmModalToggle();
-  const handleCancel = hooks.handleCancel({ onClose, returnFunction });
+  const handleCancel = hooks.handleCancel({ onClose, returnFunction, redirect_url });
   const disableSave = !isInitialized;
   const saveFailed = hooks.saveFailed();
   const clearSaveFailed = hooks.clearSaveError({ dispatch });
@@ -94,8 +94,9 @@ const EditorContainer: React.FC<Props> = ({
     returnFunction,
     redirect_url
   });
-
-  const onSave = () => {
+  console.log(getContent);
+  
+  const onSave = () => {    
     setSaved(true);
     handleSave();
   };
