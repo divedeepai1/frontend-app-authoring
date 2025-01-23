@@ -5,10 +5,10 @@ import { base_url } from "../../compugrade-constants";
 const Attempts = ({ attempts, blockId }) => {
   const [attemptValue, setAttemptValue] = useState(attempts);
   const attemptsObject = {
-    label: "No. of Attempts",
+    label: "No of Attempts",
     name: "attempts",
     disabled: false,
-    options: [1, 2, 3, 4],
+    options: [1, 2, 3, 4, 5,6,7,8,9,10],
   };
 
   const handleAttemptChange = async (value) => {
@@ -39,7 +39,8 @@ const Attempts = ({ attempts, blockId }) => {
       <h3 className="course-unit-sidebar-header-title m-0">
         {attemptsObject.label}
       </h3>
-      <Dropdown className="mt-3 w-100">
+      <p style={{fontSize:"14px", marginTop:"5px"}}>It's for selecting the number of attempts for students for this particular lesson.</p>
+      <Dropdown className="mt-[5px] w-100">
         <Dropdown.Toggle
           id="type-dropdown"
           variant="outline-primary"

@@ -31,6 +31,7 @@ AddComponentIcon.propTypes = {
     "overview",
     "skills",
     "tools",
+    "text"
   ]).isRequired,
 };
 

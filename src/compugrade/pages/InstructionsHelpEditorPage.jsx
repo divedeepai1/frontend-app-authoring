@@ -20,6 +20,9 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
     } else if (blockType === "overview") {
       setBlockInfo({ key: "description", title: "Overview" });
     }
+    else if (blockType === "text") {
+      setBlockInfo({ key: "text", title: "Document Text" });
+    }
 
     const fetchData = async () => {
       try {

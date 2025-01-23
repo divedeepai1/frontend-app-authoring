@@ -156,7 +156,13 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompug
             type={"tools"}
           />
         </li>
-        
+        <li>
+          <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("text")}
+            displayName={"Document Text"}
+            type={"text"}
+          />
+        </li>
       </ul>
     </div>
   );

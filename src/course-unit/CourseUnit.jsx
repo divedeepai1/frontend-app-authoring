@@ -39,6 +39,7 @@ import Attempts from "./sidebar/Attempts";
 import AccessCode from "./sidebar/AccessCode";
 import { base_url } from "../compugrade-constants";
 import InstructionXBlock from "../compugrade/components/InstructionXBlock.jsx";
+import Timer from "./sidebar/Timer";
 
 const CourseUnit = ({ courseId }) => {
   const { blockId } = useParams();
@@ -230,6 +231,7 @@ const CourseUnit = ({ courseId }) => {
                    {unitData?.description	 && <InstructionXBlock title={"Overview"} data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.skills && <InstructionXBlock title={"Skills"} data={unitData.skills} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.text && <InstructionXBlock title={"Document Text"} data={unitData.text} type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
 
                   </SortableContext>
                 </DraggableList>
@@ -261,6 +263,14 @@ const CourseUnit = ({ courseId }) => {
                   <Sidebar data-testid="course-unit-attempts-sidebar">
                     <Attempts
                       attempts={unitData.num_of_attempts}
+                      blockId={blockId}
+                    />
+                  </Sidebar>
+                )}
+                 {unitData && (
+                  <Sidebar data-testid="course-unit-attempts-sidebar">
+                    <Timer
+                      attempts={unitData?.time_allowed}
                       blockId={blockId}
                     />
                   </Sidebar>

@@ -64,8 +64,8 @@ const InstructionXBlock = ({ title, data, handleEdit, type }) => {
         />
         <Card.Section>
           <div
-            className="w-100 bg-gray-100 p-1"
-            style={{ height: 200 }}
+            className="w-100 bg-gray-100 p-2 overflow-auto h-100"
+            style={{ maxHeight:"400px" }}
             dangerouslySetInnerHTML={{ __html: data }}
           ></div>
         </Card.Section>

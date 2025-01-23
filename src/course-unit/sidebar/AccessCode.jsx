@@ -57,7 +57,7 @@ const AccessCode = ({accessCode}) => {
               aria-label="Copy Access Code"
               className="mt-3"
             >
-              Copy
+              Copy Code
             </Button>
         </Form.Group>
       </Form>
