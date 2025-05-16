@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom';
 import classNames from 'classnames';
@@ -35,7 +35,7 @@ const CreateOrRerunCourseForm = ({
   const { allowToCreateNewOrg } = useSelector(getStudioHomeData);
   const runFieldReference = useRef(null);
   const displayNameFieldReference = useRef(null);
-  const [courseType, setCourseType] = useState("MS Word")
+
   const {
     intl,
     errors,
@@ -132,19 +132,6 @@ const CreateOrRerunCourseForm = ({
     },
   ];
 
-  const courseTypeField = {
-    label: intl.formatMessage(messages.courseTypeLabel),
-    helpText: messages.courseTypeCreateHelpText,
-    name: 'type',
-    value: courseType,
-    // options: organizations,
-    placeholder: intl.formatMessage(messages.courseTypePlaceholder),
-    disabled: false,
-    options: [
-      "MS Word", "MS Excel", "MS Powerpoint", "Google Docs", "Google Sheets", "Google Slides"
-    ]
-  }
-
   const errorMessage = errors[TOTAL_LENGTH_KEY] || postErrors?.errMsg;
 
   const createButtonState = {
@@ -157,8 +144,7 @@ const CreateOrRerunCourseForm = ({
 
   const handleOnClickCreate = () => {
     const courseData = isCreateNewCourse ? values : { ...values, sourceCourseKey: courseId };
-    dispatch(updateCreateOrRerunCourseQuery(courseData, courseType));
-
+    dispatch(updateCreateOrRerunCourseQuery(courseData));
   };
 
   const handleOnClickCancel = () => {
@@ -192,7 +178,6 @@ const CreateOrRerunCourseForm = ({
     <Dropdown className="mr-2">
       <Dropdown.Toggle id={`${field.name}-dropdown`} variant="outline-primary">
         {field.value || intl.formatMessage(messages.courseOrgNoOptions)}
-        {console.log(field.value)}
       </Dropdown.Toggle>
       <Dropdown.Menu>
         {field.options?.map((value) => (
@@ -268,38 +253,6 @@ const CreateOrRerunCourseForm = ({
             )}
           </Form.Group>
         ))}
-        <Form.Group
-          className={classNames('form-group-custom', {
-            'form-group-custom_isInvalid': hasErrorField(courseTypeField.name),
-          })}
-        >
-          <Dropdown className="mr-2" >
-            <Form.Label>Course type</Form.Label>
-            <Dropdown className="mr-2" style={{ backgroundColor: "white", width: "100%" }}>
-              <Dropdown.Toggle id="type-dropdown" variant="outline-primary">
-                {courseTypeField.value || intl.formatMessage(messages.courseOrgNoOptions)}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                {courseTypeField.options.map((value) => (
-                  <Dropdown.Item key={value} onClick={() => setCourseType(value)}>
-                    {value}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown.Menu>
-            </Dropdown>
-            <Form.Text>{intl.formatMessage(courseTypeField.helpText)}</Form.Text>
-
-          </Dropdown>
-          {hasErrorField(courseTypeField.name) && (
-            <Form.Control.Feedback
-              className="feedback-error"
-              type="invalid"
-              hasIcon={false}
-            >
-              {errors[courseTypeField.name]}
-            </Form.Control.Feedback>
-          )}
-        </Form.Group>
         <ActionRow className="justify-content-start">
           <Button
             variant="outline-primary"

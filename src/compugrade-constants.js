@@ -1,1 +1,0 @@
-export const base_url = "https://wordaddin.educating.ai"

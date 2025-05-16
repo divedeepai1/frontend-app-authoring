@@ -8,7 +8,6 @@ import { handleResponseErrors } from '../../generic/saving-error-alert';
 import { RequestStatus } from '../../data/constants';
 import { NOTIFICATION_MESSAGES } from '../../constants';
 import { updateModel, updateModels } from '../../generic/model-store';
-import { updateClipboardData } from '../../generic/data/slice';
 import {
   getCourseUnitData,
   editUnitDisplayName,
@@ -39,7 +38,6 @@ import {
   reorderXBlockList,
 } from './slice';
 import { getNotificationMessage } from './utils';
-import { base_url } from '../../compugrade-constants';
 
 export function fetchCourseUnitQuery(courseId) {
   return async (dispatch) => {
@@ -76,7 +74,6 @@ export function fetchCourseSectionVerticalData(courseId, sequenceId) {
       }));
       dispatch(fetchStaticFileNoticesSuccess(JSON.parse(localStorage.getItem('staticFileNotices'))));
       localStorage.removeItem('staticFileNotices');
-      dispatch(updateClipboardData(courseSectionVerticalData.userClipboard));
       dispatch(fetchSequenceSuccess({ sequenceId }));
       return true;
     } catch (error) {
@@ -95,21 +92,6 @@ export function editCourseItemQuery(itemId, displayName, sequenceId) {
     try {
       await editUnitDisplayName(itemId, displayName).then(async (result) => {
         if (result) {
-          const apiResponse = await fetch(
-            base_url+'/api/openedx/update_rubric',
-            {
-              method: 'PATCH',
-              headers: {
-                Accept: 'application/json, text/plain, */*',
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                openedx_based_id: itemId,
-                title: displayName,
-              }),
-            }
-          );
-
           const courseUnit = await getCourseUnitData(itemId);
           const courseSectionVerticalData = await getCourseSectionVerticalData(itemId);
           dispatch(fetchCourseSectionVerticalDataSuccess(courseSectionVerticalData));
@@ -230,8 +212,6 @@ export function deleteUnitItemQuery(itemId, xblockId) {
     try {
       await deleteUnitItem(xblockId);
       dispatch(deleteXBlock(xblockId));
-      const { userClipboard } = await getCourseSectionVerticalData(itemId);
-      dispatch(updateClipboardData(userClipboard));
       const courseUnit = await getCourseUnitData(itemId);
       dispatch(fetchCourseItemSuccess(courseUnit));
       dispatch(hideProcessingNotification());

@@ -1,22 +1,21 @@
-import PropTypes from "prop-types";
-import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { useIntl } from "@edx/frontend-platform/i18n";
-import { useToggle } from "@openedx/paragon";
+import PropTypes from 'prop-types';
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { useIntl } from '@edx/frontend-platform/i18n';
+import { useToggle } from '@openedx/paragon';
 
-import { getCourseSectionVertical } from "../data/selectors";
-import { COMPONENT_TYPES } from "../../generic/block-type-utils/constants";
-import ComponentModalView from "./add-component-modals/ComponentModalView";
-import AddComponentButton from "./add-component-btn";
-import messages from "./messages";
+import { getCourseSectionVertical } from '../data/selectors';
+import { COMPONENT_TYPES } from '../../generic/block-type-utils/constants';
+import ComponentModalView from './add-component-modals/ComponentModalView';
+import AddComponentButton from './add-component-btn';
+import messages from './messages';
 
-const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompugradeXBlock }) => {
+const AddComponent = ({ blockId, handleCreateNewCourseXBlock }) => {
   const navigate = useNavigate();
   const intl = useIntl();
   const [isOpenAdvanced, openAdvanced, closeAdvanced] = useToggle(false);
   const [isOpenHtml, openHtml, closeHtml] = useToggle(false);
-  const [isOpenOpenAssessment, openOpenAssessment, closeOpenAssessment] =
-    useToggle(false);
+  const [isOpenOpenAssessment, openOpenAssessment, closeOpenAssessment] = useToggle(false);
   const { componentTemplates } = useSelector(getCourseSectionVertical);
 
   const handleCreateNewXBlock = (type, moduleName) => {
@@ -27,47 +26,33 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompug
         break;
       case COMPONENT_TYPES.problem:
       case COMPONENT_TYPES.video:
-        handleCreateNewCourseXBlock(
-          { type, parentLocator: blockId },
-          ({ courseKey, locator }) => {
-            navigate(`/course/${courseKey}/editor/${type}/${locator}`);
-          }
-        );
-        break;
-      // TODO: The library functional will be a bit different of current legacy (CMS)
-      //  behaviour and this ticket is on hold (blocked by other development team).
-      case COMPONENT_TYPES.library:
-        handleCreateNewCourseXBlock({
-          type,
-          category: "library_content",
-          parentLocator: blockId,
+        handleCreateNewCourseXBlock({ type, parentLocator: blockId }, ({ courseKey, locator }) => {
+          navigate(`/course/${courseKey}/editor/${type}/${locator}`);
         });
+        break;
+        // TODO: The library functional will be a bit different of current legacy (CMS)
+        //  behaviour and this ticket is on hold (blocked by other development team).
+      case COMPONENT_TYPES.library:
+        handleCreateNewCourseXBlock({ type, category: 'library_content', parentLocator: blockId });
         break;
       case COMPONENT_TYPES.advanced:
         handleCreateNewCourseXBlock({
-          type: moduleName,
-          category: moduleName,
-          parentLocator: blockId,
+          type: moduleName, category: moduleName, parentLocator: blockId,
         });
         break;
       case COMPONENT_TYPES.openassessment:
         handleCreateNewCourseXBlock({
-          boilerplate: moduleName,
-          category: type,
-          parentLocator: blockId,
+          boilerplate: moduleName, category: type, parentLocator: blockId,
         });
         break;
       case COMPONENT_TYPES.html:
-        handleCreateNewCourseXBlock(
-          {
-            type,
-            boilerplate: moduleName,
-            parentLocator: blockId,
-          },
-          ({ courseKey, locator }) => {
-            navigate(`/course/${courseKey}/editor/html/${locator}/${blockId}`);
-          }
-        );
+        handleCreateNewCourseXBlock({
+          type,
+          boilerplate: moduleName,
+          parentLocator: blockId,
+        }, ({ courseKey, locator }) => {
+          navigate(`/course/${courseKey}/editor/html/${locator}`);
+        });
         break;
       default:
     }
@@ -77,12 +62,9 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompug
     return null;
   }
 
-
   return (
     <div className="py-4">
-      <h5 className="h3 mb-4 text-center">
-        {intl.formatMessage(messages.title)}
-      </h5>
+      <h5 className="h3 mb-4 text-center">{intl.formatMessage(messages.title)}</h5>
       <ul className="new-component-type list-unstyled m-0 d-flex flex-wrap justify-content-center">
         {componentTemplates.map((component) => {
           const { type, displayName } = component;
@@ -135,34 +117,6 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompug
             />
           );
         })}
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("overview")}
-            displayName={"Overview"}
-            type={"overview"}
-          />
-        </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("skills")}
-            displayName={"Skills"}
-            type={"skills"}
-          />
-        </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("tools")}
-            displayName={"Tools and Terms"}
-            type={"tools"}
-          />
-        </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("text")}
-            displayName={"Document Text"}
-            type={"text"}
-          />
-        </li>
       </ul>
     </div>
   );

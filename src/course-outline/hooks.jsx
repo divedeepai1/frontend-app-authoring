@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useToggle } from '@openedx/paragon';
 import { getConfig } from '@edx/frontend-platform';
 
-import { copyToClipboard } from '../generic/data/thunks';
 import { getSavingStatus as getGenericSavingStatus } from '../generic/data/selectors';
 import { RequestStatus } from '../data/constants';
 import { COURSE_BLOCK_NAMES } from './constants';
@@ -54,7 +53,6 @@ import {
   pasteClipboardContent,
   dismissNotificationQuery,
 } from './data/thunk';
-import { base_url } from '../compugrade-constants';
 
 const useCourseOutline = ({ courseId }) => {
   const dispatch = useDispatch();
@@ -73,6 +71,7 @@ const useCourseOutline = ({ courseId }) => {
     mfeProctoredExamSettingsUrl,
     advanceSettingsUrl,
   } = useSelector(getOutlineIndexData);
+
   const { outlineIndexLoadingStatus, reIndexLoadingStatus } = useSelector(getLoadingStatus);
   const statusBarData = useSelector(getStatusBarData);
   const savingStatus = useSelector(getSavingStatus);
@@ -96,10 +95,6 @@ const useCourseOutline = ({ courseId }) => {
 
   const isSavingStatusFailed = savingStatus === RequestStatus.FAILED || genericSavingStatus === RequestStatus.FAILED;
 
-  const handleCopyToClipboardClick = (usageKey) => {
-    dispatch(copyToClipboard(usageKey));
-  };
-
   const handlePasteClipboardClick = (parentLocator, sectionId) => {
     dispatch(pasteClipboardContent(parentLocator, sectionId));
   };
@@ -109,7 +104,7 @@ const useCourseOutline = ({ courseId }) => {
   };
 
   const handleNewSubsectionSubmit = (sectionId) => {
-    dispatch(addNewSubsectionQuery(sectionId, courseId));
+    dispatch(addNewSubsectionQuery(sectionId));
   };
 
   const getUnitUrl = (locator) => {
@@ -118,36 +113,9 @@ const useCourseOutline = ({ courseId }) => {
     }
     return `${getConfig().STUDIO_BASE_URL}/container/${locator}`;
   };
-  // async function createRubric(subsectionId) {
-  //   try {
-  //     const response = await fetch(`${base_url}/api/openedx/create_rubric`, {
-  //       method: "POST",
-  //       headers: {
-  //         Accept: "application/json, text/plain, */*",
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({
-  //         openedx_based_id: locator,
-  //         course_id: courseId,
-  //         user_id: 1,
-  //         subsection_id: subsectionId,
-  //       }),
-  //     });
 
-  //     if (!response.ok) {
-  //       throw new Error(`API call failed with status ${response.status}`);
-  //     }
-
-  //     const data = await response.json();
-  //     console.log("API call successful:", data);
-  //   } catch (error) {
-  //     console.error("Error in createRubric:", error);
-  //   }
-  // }
-
-  const openUnitPage = async (locator) => {
+  const openUnitPage = (locator) => {
     const url = getUnitUrl(locator);
- 
     if (getConfig().ENABLE_UNIT_PAGE === 'true') {
       navigate(url);
     } else {
@@ -156,7 +124,7 @@ const useCourseOutline = ({ courseId }) => {
   };
 
   const handleNewUnitSubmit = (subsectionId) => {
-    dispatch(addNewUnitQuery(subsectionId, courseId, openUnitPage));
+    dispatch(addNewUnitQuery(subsectionId, openUnitPage));
   };
 
   const headerNavigationsActions = {
@@ -226,8 +194,8 @@ const useCourseOutline = ({ courseId }) => {
     handleConfigureModalClose();
   };
 
-  const handleEditSubmit = (itemId, sectionId, displayName, namePrefix) => {
-    dispatch(editCourseItemQuery(itemId, sectionId, displayName,namePrefix));
+  const handleEditSubmit = (itemId, sectionId, displayName) => {
+    dispatch(editCourseItemQuery(itemId, sectionId, displayName));
   };
 
   const handleDeleteItemSubmit = () => {
@@ -367,7 +335,6 @@ const useCourseOutline = ({ courseId }) => {
     openUnitPage,
     handleNewUnitSubmit,
     handleVideoSharingOptionChange,
-    handleCopyToClipboardClick,
     handlePasteClipboardClick,
     notificationDismissUrl,
     discussionsSettings,

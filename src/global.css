@@ -1,0 +1,27 @@
+
+
+.primary-button {
+  color :white;
+  border-radius: 4px;
+  background-color: #255A71;
+}
+
+.brown-button {
+  color :white;
+  border-radius: 4px;
+  background-color: #6A6A6A;
+
+}
+
+.outline-white-button {
+  border-radius: 5px;
+  border: 1px solid #FFF;
+  color :white;
+  background-color: transparent !important;
+
+}
+.outline-black-button {
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.60);
+  background-color: transparent !important;
+}

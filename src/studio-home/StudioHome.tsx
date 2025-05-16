@@ -25,6 +25,7 @@ import CreateNewCourseForm from './create-new-course-form';
 import messages from './messages';
 import { useStudioHome } from './hooks';
 import AlertMessage from '../generic/alert-message';
+import TeacherDashboard from '../cms-edx-frontend/pages/main';
 
 const StudioHome = () => {
   const intl = useIntl();
@@ -169,7 +170,8 @@ const StudioHome = () => {
   return (
     <>
       <Header isHiddenMainMenu />
-      <Container size="xl" className="p-4 mt-3">
+      <TeacherDashboard heading={"Teacher Dashboard"} bg={"#F7F7F7"} color={"black"} outline={"outline-black-button"} />
+      {/* <Container size="xl" className="p-4 mt-3">
         <section className="mb-4">
           <article className="studio-home-sub-header">
             <section>
@@ -188,7 +190,7 @@ const StudioHome = () => {
           isQueryPending={anyQueryIsPending}
         />
       </div>
-      <StudioFooter />
+      <StudioFooter /> */}
     </>
   );
 };

@@ -1,10 +1,3 @@
-import { logError } from '@edx/frontend-platform/logging';
-
-import { CLIPBOARD_STATUS, NOTIFICATION_MESSAGES } from '../../constants';
-import {
-  hideProcessingNotification,
-  showProcessingNotification,
-} from '../processing-notification/data/slice';
 import { RequestStatus } from '../../data/constants';
 import {
   fetchOrganizations,
@@ -13,17 +6,12 @@ import {
   updateRedirectUrlObj,
   updateCourseRerunData,
   updateSavingStatus,
-  updateClipboardData,
 } from './slice';
 import {
   createOrRerunCourse,
   getOrganizations,
   getCourseRerun,
-  updateClipboard,
-  getClipboard,
-  createOrRerunCourseExternal,
 } from './api';
-import { base_url } from '../../compugrade-constants';
 
 export function fetchOrganizationsQuery() {
   return async (dispatch) => {
@@ -49,80 +37,19 @@ export function fetchCourseRerunQuery(courseId) {
   };
 }
 
-export function updateCreateOrRerunCourseQuery(courseData, courseType) {
+export function updateCreateOrRerunCourseQuery(courseData) {
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
 
     try {
       const response = await createOrRerunCourse(courseData);
-
-      console.log('Response from createOrRerunCourse:', response);
-
       dispatch(updateRedirectUrlObj('url' in response ? response : {}));
       dispatch(updatePostErrors('errMsg' in response ? response : {}));
       dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
-
-      // Validate course_key existence
-      if (!response.courseKey) {
-        throw new Error('course_key is missing in the response.');
-      }
-
-      const apiResponse = await fetch(
-        base_url+'/api/course/create_course',
-        {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json, text/plain, */*',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...courseData,
-            course_type: courseType,
-            openedx_based_id: response.courseKey,
-          }),
-        }
-      );
-
-      const result = await apiResponse.json();
-      console.log('Response from API call:', result);
-
       return true;
     } catch (error) {
-      console.error('Error occurred:', error);
       dispatch(updateSavingStatus({ status: RequestStatus.FAILED }));
       return false;
-    }
-  };
-}
-
-
-
-export function copyToClipboard(usageKey) {
-  const POLL_INTERVAL_MS = 1000; // Timeout duration for polling in milliseconds
-
-  return async (dispatch) => {
-    dispatch(showProcessingNotification(NOTIFICATION_MESSAGES.copying));
-    dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
-
-    try {
-      let clipboardData = await updateClipboard(usageKey);
-
-      while (clipboardData.content?.status === CLIPBOARD_STATUS.loading) {
-        // eslint-disable-next-line no-await-in-loop,no-promise-executor-return
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-        clipboardData = await getClipboard(); // eslint-disable-line no-await-in-loop
-      }
-
-      if (clipboardData.content?.status === CLIPBOARD_STATUS.ready) {
-        dispatch(updateClipboardData(clipboardData));
-        dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
-      } else {
-        throw new Error(`Unexpected clipboard status "${clipboardData.content?.status}" in successful API response.`);
-      }
-    } catch (error) {
-      logError('Error copying to clipboard:', error);
-    } finally {
-      dispatch(hideProcessingNotification());
     }
   };
 }

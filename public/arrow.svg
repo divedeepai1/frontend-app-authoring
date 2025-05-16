@@ -1,0 +1,10 @@
+<svg width="24" height="12" viewBox="0 0 24 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="weui:arrow-outlined" clip-path="url(#clip0_994_2496)">
+<path id="Vector" d="M6.58023 2.45199L5.52024 3.51299L11.2972 9.29199C11.3898 9.38514 11.4999 9.45907 11.6211 9.50952C11.7424 9.55997 11.8724 9.58594 12.0037 9.58594C12.1351 9.58594 12.2651 9.55997 12.3863 9.50952C12.5076 9.45907 12.6177 9.38514 12.7102 9.29199L18.4902 3.51299L17.4302 2.45299L12.0052 7.87699L6.58023 2.45199Z" fill="white" fill-opacity="0.6"/>
+</g>
+<defs>
+<clipPath id="clip0_994_2496">
+<rect width="12" height="24" fill="white" transform="matrix(0 1 1 0 0 0)"/>
+</clipPath>
+</defs>
+</svg>
