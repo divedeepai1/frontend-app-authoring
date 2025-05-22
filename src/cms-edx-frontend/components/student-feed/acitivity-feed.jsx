@@ -69,9 +69,11 @@ const ActivityFeed = () => {
   return (
     <div>
       <div className="activity-header">
+        
         <h2 className="text-white">Real-time Student Activity Feed</h2>
-        <span className="ml-auto mr-2">Select Class : </span>
-        <div className="">
+        <div className="d-flex align-items-center">
+        <span className="mr-3">Select Class : </span>
+        <div>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
@@ -85,6 +87,7 @@ const ActivityFeed = () => {
             <option value="Keyboard Class">Keyboard Class</option>
             </div>
           </select>
+        </div>
         </div>
       </div>
 

@@ -36,6 +36,8 @@ import 'react-datepicker/dist/react-datepicker.css';
 import './index.scss';
 import './global.css';
 import Classes from "../src/cms-edx-frontend/pages/classes";
+import ManageClasses from '../src/cms-edx-frontend/pages/manage-classes';
+import Courses from '../src/cms-edx-frontend/pages/courses';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +67,8 @@ const App = () => {
       <Route>
         <Route path="/home" element={<StudioHome />} />
         <Route path="/classes" element={<Classes />} />
+        <Route path="/Curriculum" element={<Courses />} />
+        <Route path="/manage-classes" element={<ManageClasses />} />
         <Route path="/libraries" element={<StudioHome />} />
         <Route path="/libraries-v1" element={<StudioHome />} />
         <Route path="/library/create" element={<CreateLibrary />} />

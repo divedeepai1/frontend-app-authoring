@@ -10,7 +10,7 @@ export function ManagementSection() {
             <ManagementCard title="Manage Classes & Students" />
           </Col>
           <Col md={3}>
-            <ManagementCard title="Manage Courses & Curriculum" />
+            <ManagementCard  title="Manage Courses & Curriculum" />
           </Col>
           <Col md={3}>
             <ManagementCard title="Reports" />

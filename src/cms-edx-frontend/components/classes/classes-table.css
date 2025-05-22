@@ -6,7 +6,7 @@
     align-items: center;
     background-color: #255A71;
     color: white;
-    padding: 21px 118px 21px 30px;
+    padding: 21px 8px 21px 30px;
   }
   
   .activity-header h2 {
@@ -14,9 +14,6 @@
     font-size: 18px;
   }
   
- 
-  
-
 
   
   .activity-table {
