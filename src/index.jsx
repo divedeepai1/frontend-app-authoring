@@ -34,6 +34,15 @@ import { ToastProvider } from './generic/toast-context';
 
 import 'react-datepicker/dist/react-datepicker.css';
 import './index.scss';
+import './global.css';
+
+
+
+import Main from './cms-edx-frontend/pages/main';
+import Classes from './cms-edx-frontend/pages/classes';
+import Courses from './cms-edx-frontend/pages/courses';
+import ManageClasses from './cms-edx-frontend/pages/manage-classes';
+
 
 const queryClient = new QueryClient();
 
@@ -56,6 +65,11 @@ const App = () => {
     createRoutesFromElements(
       <Route>
         <Route path="/home" element={<StudioHome />} />
+        <Route path="/teacher-dashboard" element={<Main />} />
+        <Route path="/classes" element={<Classes />} />
+        <Route path="/curriculum" element={<Courses />} />
+        <Route path="/manage-classes" element={<ManageClasses />} />
+    
         <Route path="/libraries" element={<StudioHome />} />
         <Route path="/libraries-v1" element={<StudioHome />} />
         <Route path="/library/create" element={<CreateLibrary />} />

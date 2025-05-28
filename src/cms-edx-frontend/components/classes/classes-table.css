@@ -1,0 +1,43 @@
+
+  
+  .activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #255A71;
+    color: white;
+    padding: 21px 8px 21px 30px;
+  }
+  
+  .activity-header h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+  
+
+  
+  .activity-table {
+    margin-bottom: 0;
+  }
+  
+  .activity-table thead {
+    background-color: #F7F7F7;
+  }
+  
+  .activity-table th {
+    font-weight: 600;
+    font-size: 18px;
+    font-style: bold;
+    text-align: center;
+  }
+  
+
+  .activity-table td {
+    text-align: left;
+    font-size: 14px;
+    vertical-align: middle;
+    
+  }
+
+  
+  
