@@ -1,0 +1,1 @@
+export const base_url = "https://studio.prod.educating.ai/myplugin"

@@ -79,6 +79,8 @@ const App = () => {
         <Route path="/legacy/preview-changes/:usageKey" element={<PreviewChangesEmbed />} />
         <Route path="/course/:courseId/*" element={<CourseAuthoringRoutes />} />
         <Route path="/course_rerun/:courseId" element={<CourseRerun />} />
+        <Route path="/course_edit/:courseId" element={<CourseRerun  edit={true}/>} />
+
         {getConfig().ENABLE_ACCESSIBILITY_PAGE === 'true' && (
           <Route path="/accessibility" element={<AccessibilityPage />} />
         )}

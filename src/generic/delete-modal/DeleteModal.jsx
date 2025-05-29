@@ -17,7 +17,7 @@ const DeleteModal = ({
   title,
   description,
   variant,
-  btnState,
+  btnState="default",
   btnDefaultLabel,
   btnPendingLabel,
 }) => {

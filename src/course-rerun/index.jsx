@@ -20,7 +20,7 @@ import CourseRerunSideBar from './course-rerun-sidebar';
 import messages from './messages';
 import { useCourseRerun } from './hooks';
 
-const CourseRerun = () => {
+const CourseRerun = ({edit}) => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const {
@@ -49,9 +49,9 @@ const CourseRerun = () => {
             <section>
               <header className="d-flex">
                 <Stack>
-                  <h2>
+                  {edit ? <h2>Edit Course</h2>:<h2>
                     {intl.formatMessage(messages.rerunTitle)} {displayName}
-                  </h2>
+                  </h2>}
                   <span className="large">{originalCourseData}</span>
                 </Stack>
                 <ActionRow className="ml-auto">
@@ -72,12 +72,13 @@ const CourseRerun = () => {
           >
             <Layout.Element>
               <CourseRerunForm
+                edit={edit}
                 initialFormValues={initialFormValues}
                 onClickCancel={handleRerunCourseCancel}
               />
             </Layout.Element>
             <Layout.Element>
-              <CourseRerunSideBar />
+             {edit ? <></> :<CourseRerunSideBar />}
             </Layout.Element>
           </Layout>
         </section>

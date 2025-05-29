@@ -16,6 +16,12 @@ import { COURSE_CREATOR_STATES } from '../../constants';
 import { getStudioHomeData } from '../data/selectors';
 import messages from '../messages';
 import { trimSlashes } from './utils';
+import DeleteModal from '../../generic/delete-modal/DeleteModal';
+import { base_url } from './../../cms-constant';
+
+
+
+
 
 interface BaseProps {
   displayName: string;
@@ -54,11 +60,38 @@ const CardItem: React.FC<Props> = ({
   path,
   url,
 }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  // const {setShowNewCourseContainer} = useStudioHome();
+
+  const deleteCourse = async () => {
+    try {
+      const response = await fetch(`${base_url}/courses/${courseKey}/delete/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to delete course: ${response.statusText}`);
+      }
+      // const result = await response.json();
+      console.log('Course deletion response:');
+      setIsOpen(!isOpen);
+      window.location.reload();
+      console.log('Course deleted successfully:');
+    } catch (error) {
+      console.error('Error deleting course:');
+    }
+  };
+
   const intl = useIntl();
   const {
     allowCourseReruns,
     courseCreatorStatus,
     rerunCreatorStatus,
+    deleteCourseStatus,
+    editCourseStatus,
   } = useSelector(getStudioHomeData);
   const destinationUrl: string = path ?? new URL(url, getConfig().STUDIO_BASE_URL).toString();
   const subtitle = isLibraries ? `${org} / ${number}` : `${org} / ${number} / ${run}`;
@@ -97,10 +130,17 @@ const CardItem: React.FC<Props> = ({
                 {isShowRerunLink && (
                   <Dropdown.Item href={trimSlashes(rerunLink ?? '')}>
                     {messages.btnReRunText.defaultMessage}
-                  </Dropdown.Item>
+                   
+                 </Dropdown.Item>
                 )}
-                <Dropdown.Item href={lmsLink}>
+                  <Dropdown.Item href={lmsLink}>
                   {intl.formatMessage(messages.viewLiveBtnText)}
+                </Dropdown.Item>
+                <Dropdown.Item href={`course_edit/${courseKey ?? ''}`}>
+                <span> Edit Course</span> 
+                </Dropdown.Item>
+                <Dropdown.Item>
+                 <span onClick={()=>setIsOpen(true)}> Delete Course</span>
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -122,10 +162,20 @@ const CardItem: React.FC<Props> = ({
               >
                 {intl.formatMessage(messages.viewLiveBtnText)}
               </Hyperlink>
+              <Dropdown.Item href={`course_edit/${courseKey ?? ''}`}>
+                  Edit Course
+                </Dropdown.Item>
+               
+                <Dropdown.Item>
+                 <span onClick={()=>setIsOpen(true)}> Delete Course</span>
+                 
+                </Dropdown.Item>
+                
             </ActionRow>
           )
         )}
       />
+       <DeleteModal category="component" title="Are you sure you want to delete" isOpen={isOpen} close={()=>setIsOpen(!isOpen)} description={"course will be deleted from course list"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={deleteCourse}/>
     </Card>
   );
 };
