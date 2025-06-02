@@ -17,7 +17,8 @@ import { getStudioHomeData } from '../data/selectors';
 import messages from '../messages';
 import { trimSlashes } from './utils';
 import DeleteModal from '../../generic/delete-modal/DeleteModal';
-import { base_url } from './../../cms-constant';
+import { fetchCsrfToken } from '../../cms-csrftoken';
+import { updatePostErrors } from 'generic/data/slice';
 
 
 
@@ -61,26 +62,47 @@ const CardItem: React.FC<Props> = ({
   url,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   // const {setShowNewCourseContainer} = useStudioHome();
+  function getEdxJwtFromCookies() {
+    const name = "edx-jwt-cookie-header-payload=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookies = decodedCookie.split(';');
+  
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.startsWith(name)) {
+        return cookie.substring(name.length);
+      }
+    }
+    return null;
+  }
 
   const deleteCourse = async () => {
+
+    const token= await fetchCsrfToken();
+    setLoading(true);
     try {
-      const response = await fetch(`${base_url}/courses/${courseKey}/delete/`, {
+      const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/courses/${courseKey}/delete/`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-        },
+          'X-CSRFToken': token,    
+        }
       });
   
       if (!response.ok) {
         throw new Error(`Failed to delete course: ${response.statusText}`);
       }
-      // const result = await response.json();
-      console.log('Course deletion response:');
+  
+      setLoading(false)
       setIsOpen(!isOpen);
       window.location.reload();
-      console.log('Course deleted successfully:');
+  
     } catch (error) {
+      setLoading(false);
+     
       console.error('Error deleting course:');
     }
   };
@@ -175,7 +197,7 @@ const CardItem: React.FC<Props> = ({
           )
         )}
       />
-       <DeleteModal category="component" title="Are you sure you want to delete" isOpen={isOpen} close={()=>setIsOpen(!isOpen)} description={"course will be deleted from course list"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={deleteCourse}/>
+       <DeleteModal loading={loading}category="component" title="Are you sure you want to delete" isOpen={isOpen} close={()=>setIsOpen(!isOpen)} description={"course will be deleted from course list"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={deleteCourse}/>
     </Card>
   );
 };

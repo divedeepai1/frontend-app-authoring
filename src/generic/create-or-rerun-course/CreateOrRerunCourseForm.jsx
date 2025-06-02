@@ -23,7 +23,10 @@ import { updatePostErrors } from '../data/slice';
 import { updateCreateOrRerunCourseQuery } from '../data/thunks';
 import { useCreateOrRerunCourse } from './hooks';
 import messages from './messages';
-import { base_url } from './../../cms-constant';
+import { fetchCsrfToken } from '../../cms-csrftoken';
+import { set } from 'lodash';
+import { getConfig } from '@edx/frontend-platform';
+
 
 const CreateOrRerunCourseForm = ({
   edit,
@@ -39,6 +42,7 @@ const CreateOrRerunCourseForm = ({
   const runFieldReference = useRef(null);
   const displayNameFieldReference = useRef(null);
   const [courseType, setCourseType] = useState("MS Word");
+  const [loading, setLoading] = useState(false);
 
   const {
     intl,
@@ -137,7 +141,7 @@ const CreateOrRerunCourseForm = ({
   ];
   console.log('newCourseFields:', newCourseFields.map(f => f.name));
   const filteredCourseFields = edit
-    ? newCourseFields.filter(field => ['displayName', 'org'].includes(field.name))
+    ? newCourseFields.filter(field => ['displayName'].includes(field.name))
     : newCourseFields;
 
   const courseTypeField = {
@@ -166,44 +170,38 @@ const CreateOrRerunCourseForm = ({
     const courseData = isCreateNewCourse ? values : { ...values, sourceCourseKey: courseId };
     dispatch(updateCreateOrRerunCourseQuery(courseData, courseType));
   };
-  function getEdxJwtFromCookies() {
-    const name = "edx-jwt-cookie-header-payload=";
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookies = decodedCookie.split(';');
+
   
-    for (let cookie of cookies) {
-      cookie = cookie.trim();
-      if (cookie.startsWith(name)) {
-        return cookie.substring(name.length);
-      }
-    }
-    return null;
-  }
-
-
    const handleOnClickEdit = async () => {
-    const token=  getEdxJwtFromCookies();
-    console.log('Token:', token);
+    const token= await fetchCsrfToken();
+    setLoading(true);
     const data = JSON.stringify({
       display_name: values.displayName,
-      org: values.org,
+     
     });
-      try {
-        const response = await fetch(`${base_url}/courses/${courseId}/update/`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: data,
-        });
+    try {
+      const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/courses/${courseId}/update/`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': token,
+        },
+        body: data,
+      });
     
-        if (!response.ok) {
-          throw new Error(`Failed to edit course: ${response.statusText}`);
-        }
-        navigate("/home")
-      } catch (error) {
-        console.error('Error edit course:');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to edit course: ${response.status} ${errorText}`);
       }
+      setLoading(false);
+      navigate("/home");
+    } catch (error) {
+      console.error('Error editing course:', error.message);
+      setLoading(false);
+      dispatch(updatePostErrors({ errMsg: error.message }));
+    }
+    
     };
 
   const handleOnClickCancel = () => {
@@ -344,7 +342,8 @@ const CreateOrRerunCourseForm = ({
             {intl.formatMessage(messages.cancelButton)}
           </Button>
           {edit ? (
-            <Button variant="primary" className="ml-3" onClick={handleOnClickEdit}>
+            <Button variant="primary" className="ml-3 " disabled={!values.displayName || loading} onClick={handleOnClickEdit}>
+              {loading &&<span className="spinner-border mr-2"></span>}
               Edit Course
             </Button>
           ) : (

@@ -10,6 +10,7 @@ import { useIntl } from '@edx/frontend-platform/i18n';
 import messages from './messages';
 
 const DeleteModal = ({
+  loading,
   category,
   isOpen,
   close,
@@ -46,19 +47,10 @@ const DeleteModal = ({
           >
             {intl.formatMessage(messages.cancelButton)}
           </Button>
-          <StatefulButton
-            data-testid="delete-confirm-button"
-            state={btnState}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDeleteSubmit();
-            }}
-            labels={{
-              default: defaultBtnLabel,
-              pending: pendingBtnLabel,
-            }}
-          />
+           <Button variant="primary" className="ml-3 " disabled={loading} onClick={onDeleteSubmit}>
+                        {loading &&<span className="spinner-border mr-2"></span>}
+                        Delete
+                      </Button>
         </ActionRow>
       )}
     >
