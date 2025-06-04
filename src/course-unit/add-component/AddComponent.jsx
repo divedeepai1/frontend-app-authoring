@@ -163,6 +163,14 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompug
             type={"text"}
           />
         </li>
+        <li>
+          <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("engine")}
+            displayName={"Comugrade Write Engine"}
+            type={"engine"}
+          />
+        </li>
+        
       </ul>
     </div>
   );

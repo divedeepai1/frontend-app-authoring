@@ -232,6 +232,7 @@ const CourseUnit = ({ courseId }) => {
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.skills && <InstructionXBlock title={"Skills"} data={unitData.skills} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.text && <InstructionXBlock title={"Document Text"} data={unitData.text} type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {/* <InstructionXBlock title={"CompuGrade Write Engine"} data={"CompuGrade Write Engine"} type={"engine"} handleEdit={handleCreateCompugradeXBlock}/> */}
 
                   </SortableContext>
                 </DraggableList>
