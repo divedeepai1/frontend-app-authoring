@@ -169,10 +169,10 @@ const WriterEngine = () => {
             >
               + Add Skills Covered
             </p>}
-            {showSelect && <MultiSelectInput search={search} setSearch={setSearch} selected={selected} setSelected={setSelected} />}
+            {content && <MultiSelectInput search={search} setSearch={setSearch} selected={selected} setSelected={setSelected} />}
            
           </form>
-          {content &&<div className="py-3 d-flex justify-content-between ">
+          {content &&<div className="py-3 d-flex justify-content-between mt-3">
             {" "}
             <div>
             <button className="secondary-button py-1 px-3">
@@ -197,8 +197,7 @@ const WriterEngine = () => {
             </select>
 
           </div>}
-          {content&& <Editor
-                  // apiKey="your-tinymce-api-key" // Replace with your TinyMCE API key
+          {content&& <Editor 
                   onInit={(evt, editor) => (editorRef.current = editor)}
                   initialValue={content}
                   id="question"

@@ -69,7 +69,6 @@ const App = () => {
         <Route path="/classes" element={<Classes />} />
         <Route path="/curriculum" element={<Courses />} />
         <Route path="/manage-classes" element={<ManageClasses />} />
-    
         <Route path="/libraries" element={<StudioHome />} />
         <Route path="/libraries-v1" element={<StudioHome />} />
         <Route path="/library/create" element={<CreateLibrary />} />

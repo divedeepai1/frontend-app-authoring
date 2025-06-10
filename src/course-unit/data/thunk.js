@@ -1,5 +1,6 @@
 import { camelCaseObject } from '@edx/frontend-platform';
 
+
 import {
   hideProcessingNotification,
   showProcessingNotification,
@@ -39,7 +40,6 @@ import {
   reorderXBlockList,
 } from './slice';
 import { getNotificationMessage } from './utils';
-import { base_url } from '../../compugrade-constants';
 
 export function fetchCourseUnitQuery(courseId) {
   return async (dispatch) => {
@@ -173,6 +173,9 @@ export function createNewCourseXBlock(body, callback, blockId) {
 
     try {
       await createCourseXblock(body).then(async (result) => {
+        
+
+
         if (result) {
           const formattedResult = camelCaseObject(result);
           if (body.category === 'vertical') {
@@ -187,6 +190,8 @@ export function createNewCourseXBlock(body, callback, blockId) {
               localStorage.removeItem('staticFileNotices');
             }
           }
+     
+
           const courseVerticalChildrenData = await getCourseVerticalChildren(blockId);
           dispatch(updateCourseVerticalChildren(courseVerticalChildrenData));
           dispatch(hideProcessingNotification());

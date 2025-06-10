@@ -12,6 +12,8 @@ export const getXBlockBaseApiUrl = (itemId) => `${getStudioBaseUrl()}/xblock/${i
 export const getCourseSectionVerticalApiUrl = (itemId) => `${getStudioBaseUrl()}/api/contentstore/v1/container_handler/${itemId}`;
 export const getCourseVerticalChildrenApiUrl = (itemId) => `${getStudioBaseUrl()}/api/contentstore/v1/container/vertical/${itemId}/children`;
 export const postXBlockBaseApiUrl = () => `${getStudioBaseUrl()}/xblock/`;
+import { base_url } from '../../compugrade-constants';
+
 
 /**
  * Get course unit.
@@ -79,6 +81,23 @@ export async function createCourseXblock({
   const { data } = await getAuthenticatedHttpClient()
     .post(postXBlockBaseApiUrl(), body);
 
+         const response = await fetch(
+                base_url + '/api/openedx/create_rubric',
+                {
+                  method: 'POST',
+                  headers: {
+                    Accept: 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    openedx_based_id: data.locator,
+                    course_id: data.courseKey,
+                    user_id: 1,
+                    subsection_id:body.parentLocator
+                  }),
+                }
+              );
+  
   return data;
 }
 

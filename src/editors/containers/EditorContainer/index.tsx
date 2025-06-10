@@ -78,7 +78,7 @@ const EditorContainer: React.FC<Props> = ({
   const intl = useIntl();
   const dispatch = useDispatch();
   const {courseId, unitId} = useParams()
-  const redirect_url = `/course-authoring/course/${courseId}/container/${unitId}`
+  const redirect_url = `/authoring/course/${courseId}/container/${unitId}`
   // Required to mark data as not dirty on save
   const [saved, setSaved] = React.useState(false);
   const isInitialized = hooks.isInitialized();

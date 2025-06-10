@@ -19,6 +19,7 @@ import { trimSlashes } from './utils';
 import DeleteModal from '../../generic/delete-modal/DeleteModal';
 import { fetchCsrfToken } from '../../cms-csrftoken';
 import { updatePostErrors } from 'generic/data/slice';
+import { base_url } from '../../compugrade-constants';
 
 
 
@@ -79,9 +80,25 @@ const CardItem: React.FC<Props> = ({
   }
 
   const deleteCourse = async () => {
+    const encodedCourseId=encodeURIComponent(courseKey)
 
     const token= await fetchCsrfToken();
-    setLoading(true);
+    try {
+      const response = await fetch(`${base_url}/api/course/delete_course?course_id=${encodedCourseId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json', 
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to delete course: ${response.statusText}`);
+      }
+
+  
+    } catch (error) {
+      console.error('Error deleting course:');
+    }
     try {
       const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/courses/${courseKey}/delete/`, {
         method: 'DELETE',
@@ -102,7 +119,6 @@ const CardItem: React.FC<Props> = ({
   
     } catch (error) {
       setLoading(false);
-     
       console.error('Error deleting course:');
     }
   };

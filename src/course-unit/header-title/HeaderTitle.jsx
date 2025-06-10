@@ -52,20 +52,30 @@ const HeaderTitle = ({
     <>
       <div className="d-flex align-items-center lead" data-testid="unit-header-title">
         {isTitleEditFormOpen ? (
-          <Form.Group className="m-0">
+          <Form.Group className="m-0" isInvalid={!titleValue.trim()}>
             <Form.Control
               ref={(e) => e && e.focus()}
               value={titleValue}
               name="displayName"
               onChange={(e) => setTitleValue(e.target.value)}
               aria-label={intl.formatMessage(messages.ariaLabelButtonEdit)}
-              onBlur={() => handleTitleEditSubmit(titleValue)}
+              onBlur={() => {
+                if (!titleValue.trim()) return; 
+                handleTitleEditSubmit(titleValue);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
+                  if (!titleValue.trim()) return; 
                   handleTitleEditSubmit(titleValue);
                 }
               }}
+             
             />
+             {!titleValue.trim() && (
+                <Form.Control.Feedback type="invalid">
+                  This field is required.
+                </Form.Control.Feedback>
+              )}
           </Form.Group>
         ) : unitTitle}
         <IconButton

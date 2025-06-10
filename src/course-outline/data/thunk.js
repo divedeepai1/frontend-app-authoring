@@ -450,13 +450,30 @@ export function editCourseItemQuery(itemId, sectionId, displayName,namePrefix) {
  * @param {() => {}} deleteItemFn
  * @returns {}
  */
-function deleteCourseItemQuery(itemId, deleteItemFn) {
+function deleteCourseItemQuery(itemId, deleteItemFn,name) {
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
     dispatch(showProcessingNotification(NOTIFICATION_MESSAGES.deleting));
 
+    
+
     try {
       await deleteCourseItem(itemId);
+      if(name =="subsection" || name=="unit"){
+      const encodedUnitId = encodeURIComponent(itemId);
+
+      const apiResponse = await fetch(
+        base_url + `/api/openedx/${name =="unit" ? "delete_rubric" :"delete_subsection"}?${name=="unit" ?"openedx_based_id" :"subsection_openedx_id"}=${encodedUnitId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
       dispatch(deleteItemFn());
       dispatch(hideProcessingNotification());
       dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
@@ -471,7 +488,7 @@ export function deleteCourseSectionQuery(sectionId) {
   return async (dispatch) => {
     dispatch(
       deleteCourseItemQuery(sectionId, () =>
-        deleteSection({ itemId: sectionId })
+        deleteSection({ itemId: sectionId }),name="section"
       )
     );
   };
@@ -481,7 +498,7 @@ export function deleteCourseSubsectionQuery(subsectionId, sectionId) {
   return async (dispatch) => {
     dispatch(
       deleteCourseItemQuery(subsectionId, () =>
-        deleteSubsection({ itemId: subsectionId, sectionId })
+        deleteSubsection({ itemId: subsectionId, sectionId }),name="subsection"
       )
     );
   };
@@ -491,7 +508,7 @@ export function deleteCourseUnitQuery(unitId, subsectionId, sectionId) {
   return async (dispatch) => {
     dispatch(
       deleteCourseItemQuery(unitId, () =>
-        deleteUnit({ itemId: unitId, subsectionId, sectionId })
+        deleteUnit({ itemId: unitId, subsectionId, sectionId }),name="unit"
       )
     );
   };
