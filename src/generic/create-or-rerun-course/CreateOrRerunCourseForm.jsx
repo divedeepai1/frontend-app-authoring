@@ -26,6 +26,7 @@ import messages from './messages';
 import { fetchCsrfToken } from '../../cms-csrftoken';
 import { set } from 'lodash';
 import { getConfig } from '@edx/frontend-platform';
+import { base_url } from '../../compugrade-constants';
 
 
 const CreateOrRerunCourseForm = ({
@@ -195,6 +196,17 @@ const CreateOrRerunCourseForm = ({
         throw new Error(`Failed to edit course: ${response.status} ${errorText}`);
       }
       setLoading(false);
+      const response2 = await fetch(`${base_url}/api/course/update_course_name`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          course_title:values.displayName,
+          course_id:courseId
+        }),
+      });
+
       navigate("/home");
     } catch (error) {
       console.error('Error editing course:', error.message);

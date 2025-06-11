@@ -233,7 +233,7 @@ const WriterEngine = () => {
             />
             <button
               type="submit"
-              disabled={!theme.trim() || loading}
+              disabled={theme?.trim() =="" || loading}
               className="primary-button my-3 py-2 px-4"
             >
               {loading && (
