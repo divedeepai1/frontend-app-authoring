@@ -7,7 +7,7 @@ import { base_url } from "../../compugrade-constants";
 import { useNavigate, useParams } from "react-router";
 
 
-const InstructionsPreviewEngine = ({ data,text }) => {
+const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,grade,difficulty }) => {
   const navigate = useNavigate();
   const { blockId,sequenceId,courseId } = useParams();
 
@@ -66,6 +66,8 @@ const InstructionsPreviewEngine = ({ data,text }) => {
       }
   
       const result = await response.json();
+
+      const skillValues = selectedSkills.map(skill => skill.value);
   
       const response2 = await fetch(base_url+ '/api/openedx/update_rubric', {
         method: 'PATCH',
@@ -75,12 +77,19 @@ const InstructionsPreviewEngine = ({ data,text }) => {
         body: JSON.stringify({ 
           openedx_based_id: blockId,
           text_to_display: text,
+          skills_used: skillValues,
+          theme: theme,
+          theme_description: description,
+          grade_level:grade,
+          difficulty_level:difficulty,
+
         }),
       });
   
       if (!response2.ok) {
         throw new Error(`Failed to update rubric: ${response2.status} ${response2.statusText}`);
       }
+      sessionStorage.removeItem("unitData")
       navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
 
     } catch (error) {

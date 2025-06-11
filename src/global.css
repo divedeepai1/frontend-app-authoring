@@ -20,7 +20,7 @@ color: #255A71;
 .custom-select-black {
   background-color: transparent !important;
   color: black !important;
-  font-weight: 600 !important;
+  font-weight: 400 !important;
   border-radius: 3px !important;
   border-color: 0.5px solid rgba(0, 0, 0, 0.60);
   appearance: none !important;
@@ -29,8 +29,14 @@ color: #255A71;
   -moz-appearance: none !important;
   background-repeat: no-repeat !important;
   background-position: right 10px center !important;
-  background-size: 30px 20px !important;
+  background-size: 25px 20px !important;
   padding-right: 40px !important;
+}
+.answer-key{
+  border-radius: 5px;
+  border:none;
+  color:white;
+background: #428FB0;
 }
 
 .class-div-style{

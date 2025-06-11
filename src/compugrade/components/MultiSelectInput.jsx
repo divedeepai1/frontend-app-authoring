@@ -1,39 +1,40 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './MultiSelectInput.css';
-import { fetchCsrfToken } from "../../cms-csrftoken";
-import { getConfig } from '@edx/frontend-platform';
+import { base_url } from '../../compugrade-constants';
 
 
 
-const OPTIONS = [
- 
-];
+
 
 export default function MultiSelectInput({search, setSearch, selected, setSelected}) {
 
   const wrapperRef = useRef(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [options, setOptions] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
-    const token= await fetchCsrfToken(); 
       try {
-        const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/writer-engine/skills-list/`, {
-          method: 'GET',
-          credentials: 'include',
+        const response = await fetch(`${base_url}/api/openedx/get_skills`, {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': token, 
           },
         });
         const data = await response.json();
-        data?.skills?.forEach((item) => {
-          OPTIONS.push({
-            label: item,
-            value: item,
-            color: item.color || 'orange',
-          });
-        });
+      const fetchedOptions = data?.skills?.map((item) => {
+        const rubricString = item.rubric_titles?.join(', ') || '';
+        const label = rubricString
+          ? `${item.skill} - Already used in lesson: ${rubricString}`
+          : item.skill;
+
+        return {
+          label: label,
+          value: item.skill,
+          color: item.color || 'orange',
+        };
+      }) || [];
+      setOptions(fetchedOptions);
       } catch (error) {
         console.error('Error fetching options:', error);
       }
@@ -55,7 +56,7 @@ export default function MultiSelectInput({search, setSearch, selected, setSelect
     };
   }, []);
 
-  const filteredOptions = OPTIONS.filter(
+  const filteredOptions = options.filter(
     (opt) =>
       opt.label.toLowerCase().includes(search.toLowerCase()) &&
       !selected.find((sel) => sel.value === opt.value)
@@ -71,14 +72,14 @@ export default function MultiSelectInput({search, setSearch, selected, setSelect
   };
 
   return (
-    <div className="multi-select-wrapper" ref={wrapperRef}>
+    <div className="multi-select-wrapper mt-3" ref={wrapperRef}>
       <div className="input-container" onClick={() => setIsDropdownOpen(true)}>
         {selected.map((item) => (
           <span
             key={item.value}
             className={`badge mt-2 ${item.color === 'red' ? 'badge-red' : 'badge-orange'}`}
           >
-            {item.label}
+            {item.value}
             <button onClick={() => handleRemove(item.value)}>&times;</button>
           </span>
         ))}

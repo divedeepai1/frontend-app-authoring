@@ -78,10 +78,15 @@ const CourseUnit = ({ courseId }) => {
   const [unitData, setUnitData] = useState(null);
 
   const handleCreateCompugradeXBlock = (type) => {
-    navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type}`);
+    
+     if(type=="text"){
+      sessionStorage.setItem("unitData", JSON.stringify(unitData));
+     }
+     navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type}`);
   };
 
   useEffect(() => {
+    sessionStorage.removeItem("unitData");
     const fetchData = async () => {
       try {
         const encodedBlockId = encodeURIComponent(blockId); // Encode the block ID
@@ -98,7 +103,6 @@ const CourseUnit = ({ courseId }) => {
 
         const result = await response.json();
         setUnitData(result); // Save the API response to state
-        // console.log(result);
       } catch (err) {
         // setError(err.message); // Capture any errors
         console.log(err);

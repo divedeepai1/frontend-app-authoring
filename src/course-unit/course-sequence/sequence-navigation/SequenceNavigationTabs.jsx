@@ -11,6 +11,7 @@ import messages from '../messages';
 import { useIndexOfLastVisibleChild } from '../hooks';
 import SequenceNavigationDropdown from './SequenceNavigationDropdown';
 import UnitButton from './UnitButton';
+import { base_url } from '../../../compugrade-constants';
 
 const SequenceNavigationTabs = ({
   unitIds, unitId, handleCreateNewCourseXBlock, showPasteUnit,
@@ -29,8 +30,26 @@ const SequenceNavigationTabs = ({
   const shouldDisplayDropdown = indexOfLastVisibleChild === -1;
 
   const handleAddNewSequenceUnit = () => {
+
+   
     dispatch(updateQueryPendingStatus(true));
     handleCreateNewCourseXBlock({ parentLocator: sequenceId, category: 'vertical', displayName: 'Unit' }, ({ courseKey, locator }) => {
+      const response = fetch(
+        base_url + '/api/openedx/create_rubric',
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            openedx_based_id: locator,
+            course_id: courseId,
+            user_id: 1,
+            subsection_id:sequenceId
+          }),
+        }
+      )
       navigate(`/course/${courseKey}/container/${locator}/${sequenceId}`, courseId);
       dispatch(changeEditTitleFormOpen(true));
     });

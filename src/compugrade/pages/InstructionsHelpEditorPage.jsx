@@ -13,6 +13,7 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
   const navigate = useNavigate()
 
   useEffect(() => {
+    
     // Conditional logic for setting blockInfo based on blockType
     if (blockType === "tools") {
       setBlockInfo({ key: "tools", title: "Tools and Terms" });
