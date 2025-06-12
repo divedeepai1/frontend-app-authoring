@@ -678,6 +678,7 @@ export function addNewSubsectionQuery(parentLocator, courseId) {
                 title: data.displayName,
                 openedx_based_id: data.id,
                 course_id: courseId,
+                section_id:parentLocator,
               }),
             });
           
