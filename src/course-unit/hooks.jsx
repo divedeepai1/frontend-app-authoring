@@ -75,7 +75,6 @@ export const useCourseUnit = ({ courseId, blockId }) => {
     if (unitTitle !== displayName) {
       dispatch(editCourseItemQuery(blockId, displayName, sequenceId));
     }
-
     handleTitleEdit();
   };
 

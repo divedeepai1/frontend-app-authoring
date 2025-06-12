@@ -105,7 +105,7 @@ const useCourseOutline = ({ courseId }) => {
   };
 
   const handleNewSectionSubmit = () => {
-    dispatch(addNewSectionQuery(courseStructure.id));
+    dispatch(addNewSectionQuery(courseStructure.id,courseId));
   };
 
   const handleNewSubsectionSubmit = (sectionId) => {

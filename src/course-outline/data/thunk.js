@@ -409,6 +409,7 @@ export function configureCourseUnitQuery(
 }
 
 export function editCourseItemQuery(itemId, sectionId, displayName,namePrefix) {
+  console.log(namePrefix)
   
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
@@ -422,7 +423,7 @@ export function editCourseItemQuery(itemId, sectionId, displayName,namePrefix) {
           dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
 
           const apiResponse = await fetch(
-            base_url + `/api/openedx/${namePrefix === "subsection"? "update_subsection" : "update_rubric"}`,
+            base_url + `/api/openedx/${namePrefix == "subsection"? "update_subsection" : namePrefix == "section" ?"update_section":"update_rubric"}`,
             {
               method: "PATCH",
               headers: {
@@ -459,11 +460,11 @@ function deleteCourseItemQuery(itemId, deleteItemFn,name) {
 
     try {
       await deleteCourseItem(itemId);
-      if(name =="subsection" || name=="unit"){
+      if(name =="subsection" || name=="unit" || name =="section"){
       const encodedUnitId = encodeURIComponent(itemId);
 
       const apiResponse = await fetch(
-        base_url + `/api/openedx/${name =="unit" ? "delete_rubric" :"delete_subsection"}?${name=="unit" ?"openedx_based_id" :"subsection_openedx_id"}=${encodedUnitId}`,
+        base_url + `/api/openedx/${name =="unit" ? "delete_rubric" : name =="section"?"delete_section":"delete_subsection"}?${name=="unit" || name =="section"?"openedx_based_id" :"subsection_openedx_id"}=${encodedUnitId}`,
         {
           method: "DELETE",
           headers: {
@@ -609,7 +610,7 @@ function addNewCourseItemQuery(
   };
 }
 
-export function addNewSectionQuery(parentLocator) {
+export function addNewSectionQuery(parentLocator,courseId) {
   return async (dispatch) => {
     dispatch(
       addNewCourseItemQuery(
@@ -621,6 +622,31 @@ export function addNewSectionQuery(parentLocator) {
 
           const data = await getCourseItem(result.locator);
           console.log("DATA", data);
+          try {
+            const response = await fetch(base_url + "/api/openedx/create_section", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: data.displayName,
+                openedx_based_id: data.id,
+                course_id: courseId,
+              }),
+            });
+          
+            if (!response.ok) {
+              // Handle non-2xx responses
+              const errorData = await response.json();
+              console.error("Error in API call:", errorData);
+            } else {
+              const responseData = await response.json();
+              console.log("API call successful:", responseData);
+            }
+          } catch (error) {
+            // Handle network or other errors
+            console.error("Error in API call:", error.message);
+          }
 
           // Page should scroll to newly created section.
           data.shouldScroll = true;

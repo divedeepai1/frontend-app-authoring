@@ -7,7 +7,7 @@ import {
 } from '@openedx/paragon';
 import { EditOutline as EditIcon, MoreVert as MoveVertIcon } from '@openedx/paragon/icons';
 import { useIntl } from '@edx/frontend-platform/i18n';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { getCanEdit, getCourseId } from 'CourseAuthoring/course-unit/data/selectors';
 import DeleteModal from '../../generic/delete-modal/DeleteModal';
@@ -32,7 +32,13 @@ const CourseXBlock = ({
   const dispatch = useDispatch();
   const canEdit = useSelector(getCanEdit);
   const courseId = useSelector(getCourseId);
+  const navigate=useNavigate();
   const intl = useIntl();
+
+  const { blockId,sequenceId, blockType } = useParams();
+
+
+
 
   const [searchParams] = useSearchParams();
   const locatorId = searchParams.get('show');
@@ -58,6 +64,8 @@ console.log(currentItemData);
   const handleEdit = () => {
     switch (type) {
       case COMPONENT_TYPES.html:
+        navigate(`/course/${courseId}/editor/html/${id}/${blockId}`);
+       break;
       case COMPONENT_TYPES.problem:
       case COMPONENT_TYPES.video:
         // Not using useNavigate from react router to use browser navigation

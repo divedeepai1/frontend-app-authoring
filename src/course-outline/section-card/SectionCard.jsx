@@ -19,6 +19,8 @@ import TitleButton from '../card-header/TitleButton';
 import XBlockStatus from '../xblock-status/XBlockStatus';
 import { getItemStatus, getItemStatusBorder, scrollToElement } from '../utils';
 import messages from './messages';
+const namePrefix = 'section';
+
 
 const SectionCard = ({
   section,
@@ -140,7 +142,7 @@ const SectionCard = ({
   const handleEditSubmit = (titleValue) => {
     if (displayName !== titleValue) {
       // both itemId and sectionId are same
-      onEditSectionSubmit(id, id, titleValue);
+      onEditSectionSubmit(id, id, titleValue,namePrefix);
       return;
     }
 

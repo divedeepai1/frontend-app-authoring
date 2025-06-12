@@ -40,6 +40,7 @@ import {
   reorderXBlockList,
 } from './slice';
 import { getNotificationMessage } from './utils';
+import { base_url } from '../../compugrade-constants';
 
 export function fetchCourseUnitQuery(courseId) {
   return async (dispatch) => {
@@ -94,13 +95,13 @@ export function editCourseItemQuery(itemId, displayName, sequenceId) {
 
     try {
       await editUnitDisplayName(itemId, displayName).then(async (result) => {
-        if (result) {
+        if (result?.id) {
+          
           const apiResponse = await fetch(
             base_url+'/api/openedx/update_rubric',
             {
               method: 'PATCH',
               headers: {
-                Accept: 'application/json, text/plain, */*',
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({

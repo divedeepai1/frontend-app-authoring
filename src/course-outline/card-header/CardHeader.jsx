@@ -118,7 +118,7 @@ const CardHeader = ({
               onChange={(e) => setTitleValue(e.target.value)}
               aria-label="edit field"
               onBlur={() => {
-                if (!titleValue.trim()) return; // don't submit if empty
+                if (!titleValue.trim()) return; 
                 onEditSubmit(titleValue);
               }}
               onKeyDown={(e) => {
