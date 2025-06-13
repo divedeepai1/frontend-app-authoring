@@ -18,7 +18,8 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
 
   useEffect(() => {
     setTasks(data || []);
-    console.log(text)
+    console.log(data)
+  
   }, [data]);
 
   const handleEditClick = (index, currentText) => {
@@ -27,7 +28,10 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
 
   const handleSaveClick = () => {
     const updatedTasks = [...tasks];
-    updatedTasks[tempEdit.index] = tempEdit.value;
+    updatedTasks[tempEdit.index] = {
+      ...updatedTasks[tempEdit.index],
+      instruction: tempEdit.value,
+    };
     setTasks(updatedTasks);
     setTempEdit({ index: null, value: "" });
   };
@@ -42,10 +46,27 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
   };
 
   const handleSaving = async () => {
-    const data = tasks.map(task => ({
-      natural_text: task,
-      instruction_category: "AB"
-    }));
+    const data = tasks.map(task => {
+      const base = {
+        instruction_category: task.skill_type,
+        objective_type:task.question_type || ""
+      };
+    
+      if (task.skill_type.match(/\((.*?)\)/)?.[1] == "OB") {
+        return {
+          ...base,
+          objective_json: {
+            natural_text: task.instruction
+          }
+        };
+      } else {
+        return {
+          ...base,
+          natural_text: task.instruction
+        };
+      }
+    });
+    
   
     setLoading(true);
   
@@ -111,7 +132,9 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
                 key={index}
                 style={{
                   padding: "12px 16px",
-                  backgroundColor: "rgba(255, 89, 89, 0.10)",
+                  backgroundColor: task.skill_type.match(/\((.*?)\)/)?.[1] == "AB"
+                  ? "#104E7F30"
+                  : "#F3B17A30",
                   borderRadius: "3px",
                   marginTop: "10px",
                 }}
@@ -123,7 +146,7 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
                       padding: "0 10px",
                       border: "none",
                     }}
-                    onClick={() => handleEditClick(index, task)}
+                    onClick={() => handleEditClick(index, task.instruction)}
                   >
                     <img src={editIcon} alt="edit" width={20} height={20} />
                   </button>
@@ -147,12 +170,13 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
                     border: "0.2px solid #104E7F50",
                     borderLeftWidth: "2px",
                     borderLeftStyle: "solid",
-                    borderLeftColor: "#a8551c",
+                    borderLeftColor: task.skill_type.match(/\((.*?)\)/)?.[1] == "AB" ? "#104E7F" : "#F3B17A",
                     borderRadius: "0px 4px 4px 0px",
                   }}
                 >
                   {tempEdit.index === index ? (
-                    <input
+                    <textarea
+                      rows={3}
                       style={{
                         fontSize: "14px",
                         color: "#000000",
@@ -168,7 +192,8 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
                       }
                     />
                   ) : (
-                    <input
+                    <textarea
+                      rows={3}
                       style={{
                         fontSize: "14px",
                         color: "#000000",
@@ -179,7 +204,7 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
                         outline: "none",
                         backgroundColor: "transparent",
                       }}
-                      value={task}
+                      value={task.instruction}
                       disabled
                     />
                   )}

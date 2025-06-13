@@ -145,7 +145,10 @@ const CardHeader = ({
               iconAs={EditIcon}
               onClick={onClickEdit}
             />
+            
+            
           </>
+          
         )}
         <div className="ml-auto d-flex">
           {(isVertical || isSequential) && (

@@ -1,20 +1,26 @@
 // @ts-check
-import React, { useEffect, useRef } from 'react';
-import PropTypes from 'prop-types';
-import { useDispatch } from 'react-redux';
-import { useToggle } from '@openedx/paragon';
-import { isEmpty } from 'lodash';
-import { useSearchParams } from 'react-router-dom';
+// @ts-ignore
+import React, { useEffect, useRef, useState } from "react";
+import PropTypes from "prop-types";
+import { useDispatch } from "react-redux";
+import { useToggle } from "@openedx/paragon";
+import { isEmpty } from "lodash";
+import { useSearchParams } from "react-router-dom";
 
-import { setCurrentItem, setCurrentSection, setCurrentSubsection } from '../data/slice';
-import { RequestStatus } from '../../data/constants';
-import CardHeader from '../card-header/CardHeader';
-import SortableItem from '../../generic/drag-helper/SortableItem';
-import TitleLink from '../card-header/TitleLink';
-import XBlockStatus from '../xblock-status/XBlockStatus';
-import { getItemStatus, getItemStatusBorder, scrollToElement } from '../utils';
+import {
+  setCurrentItem,
+  setCurrentSection,
+  setCurrentSubsection,
+} from "../data/slice";
+import { RequestStatus } from "../../data/constants";
+import CardHeader from "../card-header/CardHeader";
+import SortableItem from "../../generic/drag-helper/SortableItem";
+import TitleLink from "../card-header/TitleLink";
+import XBlockStatus from "../xblock-status/XBlockStatus";
+import { getItemStatus, getItemStatusBorder, scrollToElement } from "../utils";
 
 const UnitCard = ({
+  skills,
   unit,
   subsection,
   section,
@@ -34,12 +40,13 @@ const UnitCard = ({
   discussionsSettings,
 }) => {
   const currentRef = useRef(null);
+  const [unitSkills, setunitSkills] = useState([]);
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const locatorId = searchParams.get('show');
+  const locatorId = searchParams.get("show");
   const isScrolledToElement = locatorId === unit.id;
   const [isFormOpen, openForm, closeForm] = useToggle(false);
-  const namePrefix = 'unit';
+  const namePrefix = "unit";
 
   const {
     id,
@@ -55,6 +62,7 @@ const UnitCard = ({
   } = unit;
 
   // re-create actions object for customizations
+
   const actions = { ...unitActions };
   // add actions to control display of move up & down menu buton.
   const moveUpDetails = getPossibleMoves(index, -1);
@@ -113,7 +121,20 @@ const UnitCard = ({
     // if this items has been newly added, scroll to it.
     // we need to check section.shouldScroll as whole section is fetched when a
     // unit is duplicated under it.
-    if (currentRef.current && (section.shouldScroll || unit.shouldScroll || isScrolledToElement)) {
+    
+    const filteredSkills = skills.filter((skill) => skill.unit_id == unit.id);
+    setunitSkills(filteredSkills[0]?.skills_used);
+  }, []);
+
+  useEffect(() => {
+    // if this items has been newly added, scroll to it.
+    // we need to check section.shouldScroll as whole section is fetched when a
+    // unit is duplicated under it.
+
+    if (
+      currentRef.current &&
+      (section.shouldScroll || unit.shouldScroll || isScrolledToElement)
+    ) {
       // Align element closer to the top of the screen if scrolling for search result
       const alignWithTop = !!isScrolledToElement;
       scrollToElement(currentRef.current, alignWithTop);
@@ -130,7 +151,8 @@ const UnitCard = ({
     return null;
   }
 
-  const isDraggable = actions.draggable && (actions.allowMoveUp || actions.allowMoveDown);
+  const isDraggable =
+    actions.draggable && (actions.allowMoveUp || actions.allowMoveDown);
 
   return (
     <SortableItem
@@ -140,12 +162,28 @@ const UnitCard = ({
       isDraggable={isDraggable}
       isDroppable={actions.childAddable}
       componentStyle={{
-        background: '#fdfdfd',
+        background: "#fdfdfd",
         ...borderStyle,
       }}
     >
+      <style 
+// @ts-ignore
+      jsx>{`
+        .skill-tag {
+          background-color: white;
+          border: 2px solid #F0CC00;
+          border-radius: 16px;
+          padding: 4px 8px;
+          font-size: 10px;
+          font-weight: 500;
+          color: #1f2937;
+          display: inline-block;
+          white-space: nowrap;
+        }
+      `}</style>
+
       <div
-        className={`unit-card ${isScrolledToElement ? 'highlight' : ''}`}
+        className={`unit-card ${isScrolledToElement ? "highlight" : ""}`}
         data-testid="unit-card"
         ref={currentRef}
       >
@@ -176,7 +214,21 @@ const UnitCard = ({
           discussionsSettings={discussionsSettings}
           parentInfo={parentInfo}
         />
-        <div className="unit-card__content item-children" data-testid="unit-card__content">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          
+         
+          {unitSkills.length > 0 &&
+          
+            unitSkills?.map((skill, index) => (
+              <span key={index} className="skill-tag">
+                {skill}
+              </span>
+            ))}
+        </div>
+        <div
+          className="unit-card__content item-children"
+          data-testid="unit-card__content"
+        >
           <XBlockStatus
             isSelfPaced={isSelfPaced}
             isCustomRelativeDatesActive={isCustomRelativeDatesActive}

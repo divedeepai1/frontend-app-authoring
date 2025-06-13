@@ -55,6 +55,7 @@ import {
 import { useCourseOutline } from './hooks';
 import messages from './messages';
 import { getTagsExportFile } from './data/api';
+import { base_url } from '../compugrade-constants';
 
 const CourseOutline = ({ courseId }) => {
   const intl = useIntl();
@@ -123,8 +124,40 @@ const CourseOutline = ({ courseId }) => {
 
   // Use `setToastMessage` to show the toast.
   const [toastMessage, setToastMessage] = useState(/** @type{null|string} */ (null));
+  const [skills,setSkills]=useState([])
 
   useEffect(() => {
+    const encodedCourseId = encodeURIComponent(courseId);
+
+     const fetchRubricSkills= async () => {
+            try {
+              const response = await fetch(
+                `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                 
+                }
+              );
+        
+              if (!response.ok) {
+                throw new Error("Network response was not ok");
+              }
+        
+              const data = await response.json();
+              setSkills(data)
+        
+            
+              // 
+            } catch (err) {
+              console.error(err);
+            }
+          };
+
+    fetchRubricSkills();
+
     // Wait for the course data to load before exporting tags.
     if (courseId && courseName && location.hash === '#export-tags') {
       setToastMessage(intl.formatMessage(messages.exportTagsCreatingToastMessage));
@@ -375,6 +408,7 @@ const CourseOutline = ({ courseId }) => {
                                             {subsection.childInfo.children.map((unit, unitIndex) => (
                                               <UnitCard
                                                 key={unit.id}
+                                                skills={skills}
                                                 unit={unit}
                                                 subsection={subsection}
                                                 section={section}
