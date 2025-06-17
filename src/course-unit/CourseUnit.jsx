@@ -37,6 +37,7 @@ import TagsSidebarControls from "../content-tags-drawer/tags-sidebar-controls";
 import { PasteNotificationAlert } from "./clipboard";
 import Attempts from "./sidebar/Attempts";
 import AccessCode from "./sidebar/AccessCode";
+import DueDate from "./sidebar/DueDate";
 import { base_url } from "../compugrade-constants";
 import InstructionXBlock from "../compugrade/components/InstructionXBlock.jsx";
 import Timer from "./sidebar/Timer";
@@ -283,6 +284,11 @@ const CourseUnit = ({ courseId }) => {
                 {unitData && (
                   <Sidebar data-testid="course-unit-access-code-sidebar">
                     <AccessCode accessCode={unitData.access_id} />
+                  </Sidebar>
+                )}
+                {unitData && (
+                  <Sidebar data-testid="course-unit-access-code-sidebar">
+                    <DueDate date={unitData.due_date} blockId={blockId} />
                   </Sidebar>
                 )}
                 <Sidebar data-testid="course-unit-location-sidebar">

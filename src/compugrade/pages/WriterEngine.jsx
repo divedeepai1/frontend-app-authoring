@@ -129,6 +129,14 @@ const WriterEngine = () => {
 
   const generateInstuctions = async () => {
     const token = await fetchCsrfToken();
+    if (editorRef.current) {
+      const content = editorRef.current.getContent(); 
+      setContent(content); // Update state with the content
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = content || "";
+      const plainText = tempDiv.textContent || tempDiv.innerText || "";
+      setContentText(plainText);
+    
     setLoadingInstructions(true);
     try {
       const skills = selected.map((item) => item.value);
@@ -146,7 +154,7 @@ const WriterEngine = () => {
           },
           body: JSON.stringify({
             skills: skills,
-            text: contentText,
+            text: plainText,
             grade_level: grade,
             difficulty_level: difficulty,
           }),
@@ -161,6 +169,7 @@ const WriterEngine = () => {
     } finally {
       setLoadingInstructions(false);
     }
+  }
   };
   return (
     <div className="bg-white min-vh-100">

@@ -1,7 +1,7 @@
 import React from 'react';
 
 const ClassDetails = ({ formData, handleInputChange, nextStep }) => (
-  <div className="p-4 class-div-style">
+  <form onSubmit={nextStep} className="p-4 class-div-style">
     <h3 className="primary-text mb-4">Class Details</h3>
     <div className="mb-3">
       <label htmlFor="className" className="form-label">Class Name *</label>
@@ -45,7 +45,7 @@ const ClassDetails = ({ formData, handleInputChange, nextStep }) => (
       <button className="primary-button px-4 py-2" onClick={nextStep}>Next</button>
       <button className="secondary-button px-3  py-2 ml-3">Cancel</button>
     </div>
-  </div>
+  </form>
 );
 
 export default ClassDetails;
