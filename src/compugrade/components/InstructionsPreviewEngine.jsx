@@ -3,7 +3,6 @@ import { Button } from "@openedx/paragon";
 import editIcon from "../../compugrade-assets/edit.svg";
 import deleteIcon from "../../compugrade-assets/delete.svg";
 import { base_url } from "../../compugrade-constants";
-import { Container, Draggable } from 'react-smooth-dnd';
 
 import { useNavigate, useParams } from "react-router";
 
@@ -16,12 +15,37 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tempEdit, setTempEdit] = useState({ index: null, value: "" });
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [draggedIndex, setDraggedIndex] = useState(null);
 
   useEffect(() => {
     setTasks(data || []);
     console.log(data)
   
   }, [data]);
+
+  const handleDragStart = (index) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    setDragOverIndex(index); 
+  };
+  
+  const handleDrop = (index) => {
+    if (draggedIndex === null || draggedIndex === index) return;
+  
+    const updatedTasks = [...tasks];
+    const draggedItem = updatedTasks[draggedIndex];
+  
+    updatedTasks.splice(draggedIndex, 1);
+    updatedTasks.splice(index, 0, draggedItem);
+  
+    setTasks(updatedTasks);
+    setDraggedIndex(null);
+    setDragOverIndex(null); 
+  };
 
   const handleEditClick = (index, currentText) => {
     setTempEdit({ index, value: currentText });
@@ -137,22 +161,22 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
   return (
     <div style={{ maxHeight: "90%"}}>
       <div  className="overflow-auto"  style={{ position: "relative" }} >
-      <Container
-  onDrop={({ removedIndex, addedIndex }) => {
-    const updatedTasks = [...tasks];
-    const [moved] = updatedTasks.splice(removedIndex, 1);
-    updatedTasks.splice(addedIndex, 0, moved);
-    setTasks(updatedTasks);
-  }}
-  dragHandleSelector=".drag-handle"
-  dropPlaceholder={{ showOnTop: true, animationDuration: 200 }}
->
+     <div>
   {tasks.length > 0 ? (
     tasks.map((task, index) => (
-      <Draggable key={index}>
+      
         <div
-          className="drag-handle"
+        onDragStart={() => handleDragStart(index)}
+        onDragOver={(e) => handleDragOver(e, index)}
+        onDrop={() => handleDrop(index)}
+        onDragLeave={() => setDragOverIndex(null)}
+          key={index}
+          draggable
           style={{
+            transition: "transform 0.2s ease",
+    transform:
+      dragOverIndex === index ? "translateY(-4px)" : "translateY(0)",
+   
             padding: "12px 16px",
             backgroundColor: task.skill_type.match(/\((.*?)\)/)?.[1] === "AB"
               ? "#104E7F30"
@@ -280,7 +304,7 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
             </div>
           )}
         </div>
-      </Draggable>
+      
     ))
   ) : (
     <div
@@ -293,7 +317,8 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
       className="loader"
     />
   )}
-</Container>
+  </div>
+
       </div>
       <div className="d-flex">
 
