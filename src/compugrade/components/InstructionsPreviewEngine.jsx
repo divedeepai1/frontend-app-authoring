@@ -3,6 +3,7 @@ import { Button } from "@openedx/paragon";
 import editIcon from "../../compugrade-assets/edit.svg";
 import deleteIcon from "../../compugrade-assets/delete.svg";
 import { base_url } from "../../compugrade-constants";
+import { Container, Draggable } from 'react-smooth-dnd';
 
 import { useNavigate, useParams } from "react-router";
 
@@ -120,128 +121,179 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
       setLoading(false);
     }
   };
+
+  const handleItemTypeChange = async (taskId, newItemType) => {
+    const updatedTasks = tasks.map((task) => {
+      if (task.instruction == taskId) {
+        return { ...task, question_type: newItemType };
+      }
+      return task;
+    });
+
+    setTasks(updatedTasks);
+  };
   
 
   return (
     <div style={{ maxHeight: "90%"}}>
       <div  className="overflow-auto"  style={{ position: "relative" }} >
-        <div>
-          {tasks.length > 0 ? (
-            tasks.map((task, index) => (
-              <div
-                key={index}
-                style={{
-                  padding: "12px 16px",
-                  backgroundColor: task.skill_type.match(/\((.*?)\)/)?.[1] == "AB"
-                  ? "#104E7F30"
-                  : "#F3B17A30",
-                  borderRadius: "3px",
-                  marginTop: "10px",
-                }}
-              >
-                <div className="d-flex justify-content-end" style={{ gap: "8px" }}>
-                  <button
-                    style={{
-                      backgroundColor: "white",
-                      padding: "0 10px",
-                      border: "none",
-                    }}
-                    onClick={() => handleEditClick(index, task.instruction)}
-                  >
-                    <img src={editIcon} alt="edit" width={20} height={20} />
-                  </button>
-                  <button
-                    style={{
-                      backgroundColor: "white",
-                      padding: "0 10px",
-                      border: "none",
-                    }}
-                    onClick={() => handleDeleteClick(index)}
-                  >
-                    <img src={deleteIcon} alt="delete" width={20} height={20} />
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    backgroundColor: "white",
-                    padding: "10px 12px",
-                    marginTop: "8px",
-                    border: "0.2px solid #104E7F50",
-                    borderLeftWidth: "2px",
-                    borderLeftStyle: "solid",
-                    borderLeftColor: task.skill_type.match(/\((.*?)\)/)?.[1] == "AB" ? "#104E7F" : "#F3B17A",
-                    borderRadius: "0px 4px 4px 0px",
-                  }}
-                >
-                  {tempEdit.index === index ? (
-                    <textarea
-                      rows={3}
+      <Container
+  onDrop={({ removedIndex, addedIndex }) => {
+    const updatedTasks = [...tasks];
+    const [moved] = updatedTasks.splice(removedIndex, 1);
+    updatedTasks.splice(addedIndex, 0, moved);
+    setTasks(updatedTasks);
+  }}
+  dragHandleSelector=".drag-handle"
+  dropPlaceholder={{ showOnTop: true, animationDuration: 200 }}
+>
+  {tasks.length > 0 ? (
+    tasks.map((task, index) => (
+      <Draggable key={index}>
+        <div
+          className="drag-handle"
+          style={{
+            padding: "12px 16px",
+            backgroundColor: task.skill_type.match(/\((.*?)\)/)?.[1] === "AB"
+              ? "#104E7F30"
+              : "#F3B17A30",
+            borderRadius: "3px",
+            marginTop: "10px",
+            cursor: "move",
+          }}
+        >
+          <div className={`d-flex ${task?.question_type ? "justify-content-between":"justify-content-end"}`} style={{ gap: "8px" }}>
+                     
+                     {task?.question_type &&<select
                       style={{
-                        fontSize: "14px",
-                        color: "#000000",
-                        fontWeight: "500",
-                        margin: "0px",
-                        width: "100%",
                         border: "none",
+                        backgroundColor: "white",
+                        fontSize:"13px",
                         outline: "none",
                       }}
-                      value={tempEdit.value}
+                      value={task?.question_type}
                       onChange={(e) =>
-                        setTempEdit({ ...tempEdit, value: e.target.value })
+                        handleItemTypeChange(task.instruction, e.target.value)
                       }
-                    />
-                  ) : (
-                    <textarea
-                      rows={3}
-                      style={{
-                        fontSize: "14px",
-                        color: "#000000",
-                        fontWeight: "500",
-                        margin: "0px",
-                        width: "100%",
-                        border: "none",
-                        outline: "none",
-                        backgroundColor: "transparent",
-                      }}
-                      value={task.instruction}
-                      disabled
-                    />
-                  )}
-                </div>
+                    >
+                      <option value="Multiple Choice Question">Multiple Choice Question</option>
+                      <option value="True/False Question">True/False Question</option>
+                      
+               </select>}
+            <div>
+            <button
+              style={{
+                backgroundColor: "white",
+                padding: "0 10px",
+                marginRight: "8px",
+                border: "none",
+              }}
+              onClick={() => handleEditClick(index, task.instruction)}
+            >
+              <img src={editIcon} alt="edit" width={20} height={20} />
+            </button>
+            <button
+              style={{
+                backgroundColor: "white",
+                padding: "0 10px",
+              
+                border: "none",
+              }}
+              onClick={() => handleDeleteClick(index)}
+            >
+              <img src={deleteIcon} alt="delete" width={20} height={20} />
+            </button>
+            </div>
+          </div>
 
-                {tempEdit.index === index && (
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <Button variant="primary" size="sm" onClick={handleSaveClick}>
-                        Save
-                      </Button>
-                      <Button variant="outline-primary" size="sm" onClick={handleCancelClick}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "10px 12px",
+              marginTop: "8px",
+              border: "0.2px solid #104E7F50",
+              borderLeftWidth: "2px",
+              borderLeftStyle: "solid",
+              borderLeftColor:
+                task.skill_type.match(/\((.*?)\)/)?.[1] === "AB"
+                  ? "#104E7F"
+                  : "#F3B17A",
+              borderRadius: "0px 4px 4px 0px",
+            }}
+          >
+            {tempEdit.index === index ? (
+              <textarea
+                rows={3}
+                style={{
+                  fontSize: "14px",
+                  color: "#000000",
+                  fontWeight: "500",
+                  margin: "0px",
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                }}
+                value={tempEdit.value}
+                onChange={(e) =>
+                  setTempEdit({ ...tempEdit, value: e.target.value })
+                }
+              />
+            ) : (
+              <textarea
+                rows={3}
+                style={{
+                  fontSize: "14px",
+                  color: "#000000",
+                  fontWeight: "500",
+                  margin: "0px",
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                }}
+                value={task.instruction}
+                disabled
+              />
+            )}
+          </div>
+
+          {tempEdit.index === index && (
             <div
               style={{
-                width: "28px",
-                height: "28px",
-                marginTop: "56px",
-                marginInline: "auto",
+                marginTop: "10px",
+                display: "flex",
+                justifyContent: "space-between",
               }}
-              className="loader"
-            />
+            >
+              <div style={{ display: "flex", gap: "6px" }}>
+                <Button variant="primary" size="sm" onClick={handleSaveClick}>
+                  Save
+                </Button>
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={handleCancelClick}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
           )}
         </div>
+      </Draggable>
+    ))
+  ) : (
+    <div
+      style={{
+        width: "28px",
+        height: "28px",
+        marginTop: "56px",
+        marginInline: "auto",
+      }}
+      className="loader"
+    />
+  )}
+</Container>
       </div>
       <div className="d-flex">
 
