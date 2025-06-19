@@ -56,7 +56,7 @@ const WriterEngine = () => {
             instruction:
               item?.natural_text || item?.objective_json?.natural_text,
             skill_type: item?.instruction_category,
-            question_type: item?.objective_type || "",
+            question_type: item?.objective_type ? (item?.objective_type == "mcq" ? "Multiple Choice Question" :"True/False Question") : "",
           }));
           setinstructions(transformedList);
         } catch (err) {
@@ -74,7 +74,7 @@ const WriterEngine = () => {
         const preselected = parsedData.skills_used.map((item) => ({
           label: item,
           value: item,
-          color: "orange", // You can enhance this if `item.color` is actually available
+          color: "orange", 
         }));
         setSelected(preselected);
       }
