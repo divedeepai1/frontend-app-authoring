@@ -335,7 +335,7 @@ const Main = () => {
                         fontWeight: "500",
                         padding: "4px 12px",
                         borderRadius: "16px",
-                        backgroundColor: quiz.status === "Published" ? "#3b82f6" : "#f59e0b",
+                        backgroundColor: quiz.status === "published" ? "#3b82f6" : "#f59e0b",
                         color: "white",
                         border: "none",
                       }}

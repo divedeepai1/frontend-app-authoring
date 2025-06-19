@@ -179,7 +179,7 @@ export default function QuizPreview() {
     const token = await fetchCsrfToken();
     try {
       const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/publish`,
+        `${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/publish/`,
         {
           method: "POST",
           credentials: "include",
