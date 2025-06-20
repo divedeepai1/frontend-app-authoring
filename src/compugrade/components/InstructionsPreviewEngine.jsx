@@ -7,7 +7,7 @@ import { base_url } from "../../compugrade-constants";
 import { useNavigate, useParams } from "react-router";
 
 
-const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,grade,difficulty }) => {
+const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,grade,difficulty,instruction_count }) => {
   const navigate = useNavigate();
   const { blockId,sequenceId,courseId } = useParams();
 
@@ -73,11 +73,11 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
   const handleSaving = async () => {
     const data = tasks.map(task => {
       const base = {
-        instruction_category: task.skill_type,
-        objective_type:task.question_type || ""
+        instruction_category: task?.ab_or_ob,
+        objective_type:task?.ab_or_ob =="OB" ? task?.question_type : "",
       };
     
-      if (task.skill_type.match(/\((.*?)\)/)?.[1] == "OB") {
+      if (task?.ab_or_ob == "OB") {
         return {
           ...base,
           objective_json: {
@@ -128,6 +128,7 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
           theme_description: description,
           grade_level:grade,
           difficulty_level:difficulty,
+          instruction_count_preference:instruction_count
 
         }),
       });
@@ -146,9 +147,9 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
     }
   };
 
-  const handleItemTypeChange = async (taskId, newItemType) => {
+  const handleItemTypeChange = async (id, newItemType) => {
     const updatedTasks = tasks.map((task) => {
-      if (task.instruction == taskId) {
+      if (task.instruction == id) {
         return { ...task, question_type: newItemType };
       }
       return task;
@@ -178,7 +179,7 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
       dragOverIndex === index ? "translateY(-4px)" : "translateY(0)",
    
             padding: "12px 16px",
-            backgroundColor: task.skill_type.match(/\((.*?)\)/)?.[1] === "AB"
+            backgroundColor: task.ab_or_ob == "AB"
               ? "#104E7F30"
               : "#F3B17A30",
             borderRadius: "3px",
@@ -186,16 +187,16 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
             cursor: "move",
           }}
         >
-          <div className={`d-flex ${task?.question_type ? "justify-content-between":"justify-content-end"}`} style={{ gap: "8px" }}>
+          <div className={`d-flex ${task?.ab_or_ob =="OB" ? "justify-content-between":"justify-content-end"}`} style={{ gap: "8px" }}>
                      
-                     {task?.question_type &&<select
+                     {task?.ab_or_ob =="OB" &&<select
                       style={{
                         border: "none",
                         backgroundColor: "white",
                         fontSize:"13px",
                         outline: "none",
                       }}
-                      value={task?.question_type}
+                      value={task?.question_type ==  "Multiple Choice Question"? "Multiple Choice Question" :"True/False Question"}
                       onChange={(e) =>
                         handleItemTypeChange(task.instruction, e.target.value)
                       }
@@ -239,7 +240,7 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
               borderLeftWidth: "2px",
               borderLeftStyle: "solid",
               borderLeftColor:
-                task.skill_type.match(/\((.*?)\)/)?.[1] === "AB"
+              task.ab_or_ob == "AB"
                   ? "#104E7F"
                   : "#F3B17A",
               borderRadius: "0px 4px 4px 0px",

@@ -10,12 +10,15 @@ import { Container } from "react-bootstrap";
 import { useParams } from "react-router";
 import { base_url } from "../../compugrade-constants";
 import magic from "../../compugrade-assets/magic.svg";
+import { set } from "lodash";
 
 const WriterEngine = () => {
   const [showSelect, setShowSelect] = useState(false);
   const [difficulty, setDifficultiy] = useState("Beginner");
   const [contentText, setContentText] = useState("");
   const [grade, setGrade] = useState("1-5");
+  const [instructionCount, setInstructionCount] = useState(5);
+
   const [themeDescription, setThemeDescription] = useState("");
 
   const editorRef = useRef(null);
@@ -55,7 +58,7 @@ const WriterEngine = () => {
           const transformedList = data?.items.map((item) => ({
             instruction:
               item?.natural_text || item?.objective_json?.natural_text,
-            skill_type: item?.instruction_category,
+            ab_or_ob: item?.instruction_category,
             question_type: item?.objective_type ? (item?.objective_type == "mcq" ? "Multiple Choice Question" :"True/False Question") : "",
           }));
           setinstructions(transformedList);
@@ -69,6 +72,7 @@ const WriterEngine = () => {
 
       setTheme(parsedData?.theme);
       setGrade(parsedData?.grade_level);
+      setInstructionCount(parsedData?.instruction_count_preference || 5);
 
       if (parsedData?.skills_used) {
         const preselected = parsedData.skills_used.map((item) => ({
@@ -113,6 +117,7 @@ const WriterEngine = () => {
           body: JSON.stringify({
             theme: theme,
             theme_description: themeDescription,
+            grade_level: grade,
           }),
         }
       );
@@ -155,8 +160,8 @@ const WriterEngine = () => {
           body: JSON.stringify({
             skills: skills,
             text: plainText,
-            grade_level: grade,
             difficulty_level: difficulty,
+            instructions_count: instructionCount,
           }),
         }
       );
@@ -276,9 +281,9 @@ const WriterEngine = () => {
             )}
 
             {content && (
-              <div className="d-flex justify-content-between mt-3 align-items-end">
+              <div className="d-flex justify-content-between mt-4 align-items-end">
                 <p
-                  className="mt-2"
+                  className="d-flex"
                   onClick={(e) => setShowSelect(true)}
                   style={{
                     width: "max-content",
@@ -290,11 +295,35 @@ const WriterEngine = () => {
                 >
                   + Add Skills Covered
                 </p>
+                <div>
+                <select
+                  id="instruction-count"
+                  className="custom-select-black p-2 mr-3"
+                  value={instructionCount}
+                  style={{ width: "225px" }}
+                  onChange={(e) => setInstructionCount(parseInt(e.target.value))}
+                >
+                  <option value="5">
+                    No of Instructions : 5
+                  </option>
+                  <option value="10">
+                    No of Instuctions : 10
+                  </option>
+                  <option value="15">
+                    No of Instructions : 15
+                  </option>
+                  <option value="20">
+                    No of Instructions : 20
+                  </option>
+                  <option value="25">
+                    No of Instructions : 25
+                  </option>
+                </select>
                 <select
                   id="difficulty"
                   className="custom-select-black p-2"
                   value={difficulty}
-                  style={{ width: "350px" }}
+                  style={{ width: "325px" }}
                   onChange={(e) => setDifficultiy(e.target.value)}
                 >
                   <option value="Beginner">
@@ -307,6 +336,7 @@ const WriterEngine = () => {
                     Instruction Difficulty : Advanced
                   </option>
                 </select>
+                </div>
               </div>
             )}
             {content && (
@@ -349,6 +379,7 @@ const WriterEngine = () => {
                 theme={theme}
                 description={themeDescription}
                 grade={grade}
+                instruction_count={instructionCount}
                 difficulty={difficulty}
               />
             )}
