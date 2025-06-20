@@ -69,7 +69,8 @@ const App = () => {
   const router = createBrowserRouter(
     createRoutesFromElements(
       <Route>
-        <Route path="/home" element={<Main />} />
+        <Route path="/home" element={<StudioHome />} />
+        <Route path="/quiz-dashboard" element={<Main />} />
         <Route path="/create-new-quiz" element={<QuizForm />} />
         <Route path="/publish-quiz" element={<PublishQuiz />} />
         <Route path="/create-multi-quiz" element={<MultiQuiz/>} />

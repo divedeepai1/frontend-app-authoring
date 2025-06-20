@@ -3,13 +3,21 @@ import { useIntl } from '@edx/frontend-platform/i18n';
 import { Button } from '@openedx/paragon';
 
 import messages from './messages';
+import { useNavigate } from 'react-router';
 
 const HeaderNavigations = ({ headerNavigationsActions }) => {
+  const navigate = useNavigate();
   const intl = useIntl();
   const { handleViewLive, handlePreview } = headerNavigationsActions;
 
   return (
     <nav className="header-navigations ml-auto flex-shrink-0">
+      <Button
+        variant="outline-primary"
+        onClick={(e)=>navigate("/quiz-dashboard")}
+      >
+        Quiz X Block
+      </Button>
       <Button
         variant="outline-primary"
         onClick={handleViewLive}
