@@ -31,8 +31,9 @@ const QuestionRenderer = ({ question }) => {
                 name={`question-${question.id}`}
                 label={option.text}
                 value={option.text}
+                disabled
                 checked={option.is_correct}
-                onChange={(e) => handleAnswerChange(e.target.value)}
+                // onChange={(e) => handleAnswerChange(e.target.value)}
                 className="custom-radio"
                 inline
                 style={{display:"flex",gap:"6px"}}
@@ -52,9 +53,10 @@ const QuestionRenderer = ({ question }) => {
                 id={`q${question.id}-${index}`}
                 name={`question-${question.id}`}
                 label={option.text}
+                disabled
                 value={option.text}
                 checked={option.is_correct}
-                onChange={(e) => handleAnswerChange(e.target.value)}
+                // onChange={(e) => handleAnswerChange(e.target.value)}
                 className="custom-radio"
                 inline
                 style={{display:"flex",gap:"6px"}}
@@ -70,7 +72,7 @@ const QuestionRenderer = ({ question }) => {
             <Form.Control
               type="text"
               value={question?.correct_answers[0].answer_text ||""}
-              onChange={(e) => handleAnswerChange(e.target.value)}
+              // onChange={(e) => handleAnswerChange(e.target.value)}
             />
           </div>
         )
@@ -82,8 +84,10 @@ const QuestionRenderer = ({ question }) => {
             <Form.Control
               as="textarea"
               rows={3}
+              disabled
               value={question?.correct_answers[0].answer_text ||""}
-              onChange={(e) => handleAnswerChange(e.target.value)}
+              style={{ resize: "vertical" }}
+              // onChange={(e) => handleAnswerChange(e.target.value)}
             />
           </div>
         )
@@ -95,8 +99,10 @@ const QuestionRenderer = ({ question }) => {
             <Form.Control
               as="textarea"
               rows={6}
+              disabled
               value={question?.correct_answers[0].answer_text ||""}
-              onChange={(e) => handleAnswerChange(e.target.value)}
+              style={{ resize: "vertical" }}
+              // onChange={(e) => handleAnswerChange(e.target.value)}
             />
           </div>
         )
@@ -219,7 +225,7 @@ export default function QuizPreview() {
               {/* <Button variant="outline-secondary" size="sm" className="me-2">
                 Edit Quiz
               </Button> */}
-              <Button variant="primary" onClick={(e)=> handlePublish(e)}  className="primary-button px-2"  size="sm">
+              <Button variant="primary" style={{height:"40px"}} onClick={(e)=> handlePublish(e)}  className="primary-button px-2"  size="sm">
                 Publish
               </Button>
             </Col>
