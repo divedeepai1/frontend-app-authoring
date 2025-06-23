@@ -124,27 +124,27 @@ export default function QuizBuilder() {
     return errors
   }
 
+  // const handleGenerateQuiz = async () => {
+  //   try {
+  //     // Call backend API
+  //     const response = await fetch("/api/generate-quiz", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ questions }),
+  //     })
+
+  //     if (response.ok) {
+  //       console.log("Quiz generated successfully!")
+  //       // Handle success
+  //     }
+  //   } catch (error) {
+  //     console.error("Error generating quiz:", error)
+  //   }
+  // }
+
   const handleGenerateQuiz = async () => {
-    try {
-      // Call backend API
-      const response = await fetch("/api/generate-quiz", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ questions }),
-      })
-
-      if (response.ok) {
-        console.log("Quiz generated successfully!")
-        // Handle success
-      }
-    } catch (error) {
-      console.error("Error generating quiz:", error)
-    }
-  }
-
-  const handleSave = async () => {
     const errors = validateQuestions()
     if (errors.length > 0) {
       setValidationErrors(errors)
@@ -304,15 +304,16 @@ export default function QuizBuilder() {
           </div>
 
           <div className="mt-4" style={{ display:"flex",  gap: "0.5rem" }}>
-            <button  onClick={handleSave} className="px-4 py-2 secondary-button">
+            {/* <button  onClick={handleSave} className="px-4 py-2 secondary-button">
               Save
-            </button>
+            </button> */}
             <button
             
               onClick={handleGenerateQuiz}
-              className="px-4 py-2 primary-button"
+              className="px-4 py-4 primary-button"
               style={{
                 fontWeight: "500",
+                height: "50px",
               }}
             >
               Generate Quiz

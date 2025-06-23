@@ -12,12 +12,7 @@ const HeaderNavigations = ({ headerNavigationsActions }) => {
 
   return (
     <nav className="header-navigations ml-auto flex-shrink-0">
-      <Button
-        variant="outline-primary"
-        onClick={(e)=>navigate("/quiz-dashboard")}
-      >
-        Quiz X Block
-      </Button>
+     
       <Button
         variant="outline-primary"
         onClick={handleViewLive}

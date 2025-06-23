@@ -196,7 +196,7 @@ export default function QuizPreview() {
       }
       const responseData = await response.json();
     
-      navigate("/home");
+      navigate("/quiz-dashboard");
     } catch (error) {''
       console.error("Error:", error);
     }
@@ -216,9 +216,9 @@ export default function QuizPreview() {
               <small className="text-muted">Quiz preview in interactive format</small>
             </Col>
             <Col xs="auto" style={{display:"flex",gap:"5px"}}>
-              <Button variant="outline-secondary" size="sm" className="me-2">
+              {/* <Button variant="outline-secondary" size="sm" className="me-2">
                 Edit Quiz
-              </Button>
+              </Button> */}
               <Button variant="primary" onClick={(e)=> handlePublish(e)}  className="primary-button px-2"  size="sm">
                 Publish
               </Button>

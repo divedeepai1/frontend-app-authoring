@@ -63,7 +63,7 @@ export default function ShortAnswerQuestion({ question, onUpdate }) {
           style={{ width: "150px" }}
           isInvalid={!question.points || question.points <= 0}
         />
-        {!question.points || question.points <= 0 &&<Form.Control.Feedback type="invalid">Points must be greater than 0</Form.Control.Feedback>}
+        {question.points <= 0 &&<Form.Control.Feedback type="invalid">Points must be greater than 0</Form.Control.Feedback>}
 
       </div>
     </>

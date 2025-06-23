@@ -117,6 +117,13 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock }) => {
             />
           );
         })}
+         <li>
+          <AddComponentButton
+            onClick={() => navigate("/quiz-dashboard")}
+            displayName={"Quiz X Block Generator"}
+            type={"text"}
+          />
+        </li>
       </ul>
     </div>
   );
