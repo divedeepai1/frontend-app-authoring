@@ -23,9 +23,10 @@ import { updatePostErrors } from '../data/slice';
 import { updateCreateOrRerunCourseQuery } from '../data/thunks';
 import { useCreateOrRerunCourse } from './hooks';
 import messages from './messages';
-import { fetchCsrfToken } from '../../cms-csrftoken';
+
 import { set } from 'lodash';
 import { getConfig } from '@edx/frontend-platform';
+import { fetchCsrfToken } from '../../cms-csrftoken';
 import { base_url } from '../../compugrade-constants';
 
 

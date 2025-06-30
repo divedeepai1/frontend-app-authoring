@@ -83,3 +83,53 @@ box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.25);
   background-color: #e0f7fa;
   border-radius: 6px;
 }
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.form-check-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 8px;
+}
+
+.checkbox-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-custom {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #d0d0d0;
+  background-color: white;
+  position: relative;
+  transition: all 0.15s ease;
+  border-radius: 4px; /* ← for rounded corners */
+}
+
+.checkbox-input:checked + .checkbox-custom {
+  background-color: #255A71;
+  border-color: #255A71;
+}
+
+.checkmark {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  color: white;
+  pointer-events: none;
+}
+
+
+
+

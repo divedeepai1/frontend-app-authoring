@@ -1,29 +1,33 @@
    const Messages = ({ formData,nextStep, prevStep,handleInputChange }) => (
-   <div className="p-4 class-div-style">
+
+    <form onSubmit={(e)=>nextStep(e)} className="p-4 class-div-style">
+
             <div className='d-flex justify-content-between mb-4'>
             <h3 className="primary-text ">Send Messages to Class</h3>
-            <input type="date" className="form-control bg-transparent" placeholder='Select date range' style ={{width:"35%"}}id="dateRange" name="dateRange" value={formData.dateRange} onChange={handleInputChange} />
+            {/* <input type="date" className="form-control bg-transparent" placeholder='Select date range' style ={{width:"35%"}}id="dateRange" name="dateRange" value={formData.dateRange} onChange={handleInputChange} /> */}
             </div>
             <div className="mb-4">
               <textarea
+                required
                 className="form-control"
                 rows="10"
                 placeholder="Type your message/announcement here..."
-                name="message"
-                value={formData.message}
+                name="announcement"
+                value={formData.announcement}
                 onChange={handleInputChange}
               ></textarea>
             </div>
             
             <div className="d-flex  justify-content-between">
               <div className="d-flex">
-              <button className="primary-button px-4 py-2" onClick={nextStep}>Create Class</button>
+              <button className="primary-button px-4 py-2">{sessionStorage.getItem("classData") ? "Update" :"Create"} Class</button>
               <button className="secondary-button px-4 ml-3" onClick={prevStep}>Back</button>
               </div>
               <div className="ms-auto">
                 <a href="#" className="primary-text">Save Information for Later</a>
               </div>
             </div>
-          </div>
+  </form>
+          
         );
 export default Messages;

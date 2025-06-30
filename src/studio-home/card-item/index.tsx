@@ -213,7 +213,7 @@ const CardItem: React.FC<Props> = ({
           )
         )}
       />
-       <DeleteModal loading={loading}category="component" title="Are you sure you want to delete" isOpen={isOpen} close={()=>setIsOpen(!isOpen)} description={"course will be deleted from course list"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={deleteCourse}/>
+       <DeleteModal loading={loading}  category="component" title="Are you sure you want to delete" isOpen={isOpen} close={()=>setIsOpen(!isOpen)}  description={"course will be deleted from course list"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={deleteCourse}/>
     </Card>
   );
 };

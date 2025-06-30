@@ -28,15 +28,24 @@
     font-weight: 600;
     font-size: 18px;
     font-style: bold;
-    text-align: center;
+    padding: 10px 30px;
+    text-align: left;
   }
+
+
+
   
 
   .activity-table td {
-    text-align: left;
+    text-align: left; 
     font-size: 14px;
+    padding: 10px 30px;
     vertical-align: middle;
     
+  }
+  .activity-table td {
+    border: none !important;
+    border-bottom: 1px solid #E0E0E0 !important;
   }
 
   

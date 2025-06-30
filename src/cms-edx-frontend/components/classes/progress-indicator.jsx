@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ProgressIndicator = ({ activeStep }) => {
+const ProgressIndicator = ({ activeStep,activeStepList }) => {
   const steps = [
     { id: 1, name: 'Class Details' },
     { id: 2, name: 'Add Students' },
@@ -14,7 +14,7 @@ const ProgressIndicator = ({ activeStep }) => {
       {steps.map((step) => (
         <div key={step.id} className="position-relative d-flex align-items-center" style={{ width: '20%' }}>
           <div
-            className={`w-100 py-3 text-center text-white ${activeStep === step.id ? 'primary-shape' : 'secondary-shape'}`}
+            className={`w-100 py-3 text-center text-white ${activeStep === step.id || activeStepList?.includes(step.id) ? 'primary-shape' : 'secondary-shape'}`}
             style={{
               clipPath: 'polygon(0% 0%, 90% 0%, 100% 50%, 90% 100%, 0% 100%, 10% 50%)',
               paddingLeft: '10px',

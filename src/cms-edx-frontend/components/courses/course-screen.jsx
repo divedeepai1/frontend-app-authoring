@@ -7,7 +7,7 @@ import viewIcon from "../../assests/view-button.svg"
 
 
 
-function CourseScreen() {
+function  CourseScreen() {
   const [selectedClass, setSelectedClass] = useState("Grade -3")
   const [selectedCourse, setSelectedCourse] = useState("LBD Microsoft Word Level-1")
 

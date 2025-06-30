@@ -80,12 +80,12 @@ const ActivityFeed = () => {
             className="custom-select"
             style={{width:"300px"}}
           >
-            <div className="text-black">
-            <option value="All Classes">All Classes</option>
-            <option value="Computer- College">Computer- College</option>
-            <option value="Technical Knowledge">Technical Knowledge</option>
-            <option value="Keyboard Class">Keyboard Class</option>
-            </div>
+            
+            <option className="text-black" value="All Classes">All Classes</option>
+            <option className="text-black"   value="Computer- College">Computer- College</option>
+            <option className="text-black"  value="Technical Knowledge">Technical Knowledge</option>
+            <option className="text-black"  value="Keyboard Class">Keyboard Class</option>
+            
           </select>
         </div>
         </div>

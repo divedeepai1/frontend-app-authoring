@@ -1,0 +1,198 @@
+.student-dashboard {
+    padding: 20px;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+  }
+  
+  .breadcrumb-header {
+    color: #6c757d;
+    font-size: 14px;
+    margin-bottom: 0;
+  }
+  
+  .progress-card {
+    background-color: #e9ecef;
+    border: none;
+    border-radius: 8px;
+  }
+  
+  .progress-title {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  
+  .progress-description {
+    color: #6c757d;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  
+  .highlight-red {
+    color: #dc3545;
+    font-weight: 600;
+  }
+  
+  .highlight-green {
+    color: #28a745;
+    font-weight: 600;
+  }
+  
+  .send-message-btn {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    border-radius: 4px;
+    padding: 8px 20px;
+  }
+  
+  .send-message-btn:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+  }
+  
+  .large-progress-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .large-circular-progress {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .progress-text {
+    position: absolute;
+    text-align: center;
+  }
+  
+  .progress-percentage {
+    font-size: 18px;
+    font-weight: bold;
+    color: #495057;
+  }
+  
+  .progress-label {
+    font-size: 10px;
+    color: #6c757d;
+    margin-top: -2px;
+  }
+  
+  .circular-progress {
+    display: inline-block;
+  }
+  
+  .progress-table {
+    background-color: white;
+  }
+  
+  .table-header {
+    background-color: #17a2b8;
+    color: white;
+  }
+  
+  .table-header th {
+    border: none;
+    padding: 12px 15px;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  
+  .chapter-header {
+    background-color: #f8f9fa;
+    font-weight: 600;
+  }
+  
+  .chapter-header.clickable {
+    cursor: pointer;
+  }
+  
+  .chapter-header:hover {
+    background-color: #e9ecef;
+  }
+  
+  .arrow {
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s ease;
+    font-size: 12px;
+  }
+  
+  .arrow.expanded {
+    transform: rotate(0deg);
+  }
+  
+  .arrow:not(.expanded) {
+    transform: rotate(-90deg);
+  }
+  
+  .lesson-row {
+    background-color: white;
+  }
+  
+  .lesson-indent {
+    padding-left: 30px !important;
+  }
+  
+  .course-average-row {
+    background-color: #17a2b8;
+    color: white;
+  }
+  
+  .course-average-row td {
+    padding: 12px 15px;
+    border-color: #17a2b8;
+  }
+  
+  .due-date-red {
+    color: #dc3545;
+    font-weight: 500;
+  }
+  
+  .progress-table td {
+    padding: 12px 15px;
+    vertical-align: middle;
+    border-color: #dee2e6;
+    font-size: 14px;
+  }
+  
+  .progress-table tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .dropdown-toggle {
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .student-dashboard {
+      padding: 10px;
+    }
+  
+    .progress-table {
+      font-size: 12px;
+    }
+  
+    .progress-table td {
+      padding: 8px 10px;
+    }
+  
+    .large-circular-progress {
+      width: 60px !important;
+      height: 60px !important;
+    }
+  
+    .progress-percentage {
+      font-size: 14px;
+    }
+  
+    .progress-label {
+      font-size: 8px;
+    }
+  }
+  

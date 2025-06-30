@@ -1,16 +1,20 @@
 import React from 'react';
+import { useNavigate } from 'react-router';
 
-const ClassDetails = ({ formData, handleInputChange, nextStep }) => (
-  <form onSubmit={nextStep} className="p-4 class-div-style">
+const ClassDetails = ({ formData, handleInputChange, nextStep }) => {
+  const navigate = useNavigate();
+
+  return (
+  <form onSubmit={(e)=>nextStep(e)} className="p-4 class-div-style">
     <h3 className="primary-text mb-4">Class Details</h3>
     <div className="mb-3">
-      <label htmlFor="className" className="form-label">Class Name *</label>
+      <label htmlFor="name" className="form-label">Class Name *</label>
       <input
         type="text"
         className="form-control bg-transparent"
-        id="className"
-        name="className"
-        value={formData.className}
+        id="name"
+        name="name"
+        value={formData.name}
         onChange={handleInputChange}
         required
       />
@@ -19,7 +23,12 @@ const ClassDetails = ({ formData, handleInputChange, nextStep }) => (
       <div className="col-md-6">
         <label htmlFor="grade" className="form-label">Grade*</label>
         <input
-          type="text"
+          type="number"
+          min="1"
+          step="1"
+          onKeyDown={(e) => {
+            if (e.key === '-' || e.key === 'e' ||  e.key == 0) e.preventDefault();
+          }}
           className="form-control bg-transparent"
           id="grade"
           name="grade"
@@ -29,23 +38,30 @@ const ClassDetails = ({ formData, handleInputChange, nextStep }) => (
         />
       </div>
       <div className="col-md-6">
-        <label htmlFor="periodNumber" className="form-label">Period Number*</label>
+        <label htmlFor="period" className="form-label">Period Number*</label>
         <input
-          type="text"
+          type="number"
+          min="1"
+          step="1"
+          onKeyDown={(e) => {
+            if (e.key === '-' || e.key === 'e' ||  e.key == 0) e.preventDefault();
+          }}
           className="form-control bg-transparent"
-          id="periodNumber"
-          name="periodNumber"
-          value={formData.periodNumber}
+          id="period"
+          name="period"
+          value={formData.period}
           onChange={handleInputChange}
           required
         />
       </div>
     </div>
     <div className="d-flex mt-4">
-      <button className="primary-button px-4 py-2" onClick={nextStep}>Next</button>
-      <button className="secondary-button px-3  py-2 ml-3">Cancel</button>
+      <button className="primary-button px-4 py-2" >Next</button>
+      <button className="secondary-button px-3  py-2 ml-3" onClick={(e)=> navigate("/classes")}>Cancel</button>
     </div>
   </form>
 );
+
+}
 
 export default ClassDetails;

@@ -1,11 +1,34 @@
 import { Container, Row, Col } from "react-bootstrap"
 import { OnboardingStep } from "./onboarding-step"
+import { useEffect, useState } from "react";
 
 export function WelcomeSection() {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+
+    const raw = getCookie("edx-user-info");
+    if (raw) {
+      try {
+        const fixed = raw.replace(/\\054/g, ",");
+        const parsed = JSON.parse(fixed);
+        setData(JSON.parse(parsed));
+      } catch (error) {
+        console.error("Failed to parse edx-user-info cookie:", error);
+      }
+    }
+  }, []);
   return (
     <section className="py-4 px-5 text-white" style={{ background: "linear-gradient(90deg, #255A71 48.06%, #0096D7 100%)" }}>
       <Container>
-        <h2 className="display-5 fw-bold mb-2 text-white">Welcome, Mr. Jones – Let's Get You Started!</h2>
+      
+        <h2 className="display-5 fw-bold mb-2 text-white">Welcome, {data?.username.charAt(0).toUpperCase() + data?.username.slice(1)} – Let's Get You Started!</h2>
         <p className="mb-4">
           Follow these steps to set up your account and tools for success. We've tailored this checklist based on your
           purchases
