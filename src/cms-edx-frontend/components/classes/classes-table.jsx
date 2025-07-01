@@ -33,7 +33,7 @@ const ActivityFeed = ({ classes ,setClasses}) => {
     );
   };
 
-  const isAllSelected = selectedClasses.length === classes.length;
+  const isAllSelected = selectedClasses.length > 0 && selectedClasses.length === classes.length;
 
   
   const handleEdit = (e, cls) => {

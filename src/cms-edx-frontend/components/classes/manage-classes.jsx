@@ -38,10 +38,10 @@ const ClassManagementForm = () => {
   
     if (data) {
       const parsedData = JSON.parse(data);
-      const classIds = parsedData.courses?.map(course => course.id) || [];
+      const courseIds = parsedData.courses?.map(course => course.id) || [];
       setFormData({
         ...parsedData,
-        courses: classIds,
+        courses: courseIds,
       });
     }
   

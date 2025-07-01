@@ -18,52 +18,55 @@ const AssignCourses = ({
     </p>
 
     <div className="row mb-4">
-      <div className="col-md-6">
-        <div
-          className="card position-relative "
-          style={{ height: "100%", width: "60%" }}
-        > 
-          {courses &&
-            courses.map((course, index) => (
-              <div
-                key={course.id || index}
-                className="card-body d-flex justify-content-center position-relative"
-              >
-                <div className="text-center">
-                 <File className="mb-2" size={40} />
-                  <h5 className="mt-2">{course.display_name}</h5>
-                </div>
-                <div className="checkbox-wrapper form-check position-absolute"
-                 style={{ top: "-8px", right: "-8px" }}
-                >
-                <label htmlFor={course.id} className="form-check-label">
-                  <input
-                    type="checkbox"
-                    id={course.id}
-                    name={"class-header"}
-                    checked={formData.courses.includes(course.id)}
-
-                    onChange={() => handleCourseSelection(course.id)}
-                    className="checkbox-input"
-                  />
-                  <span className="checkbox-custom">
-                    {formData.courses.includes(course.id) && (
-                      <svg className="checkmark" viewBox="0 0 24 24">
-                        <path
-                          fill="currentColor"
-                          d="M20.285 6.709l-11.4 11.4-5.6-5.6L5.7 10.09l3.186 3.186 9.714-9.714z"
-                        />
-                      </svg>
-                    )}
-                  </span>
-                </label>
-              </div>
-               
-              </div>
-            ))}
-        </div>
-      </div>
+  <div className="col-md-12">
+    <div className="d-flex flex-wrap" style={{ alignItems: "stretch" , gap:"20px" }}>
+      {courses &&
+        courses.map((course, index) => (
+          <div
+            key={course.id || index}
+            className="card position-relative d-flex justify-content-center"
+            style={{
+              width: "200px",
+              minHeight: "180px",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <div className="text-center p-3">
+              <File className="mb-2" size={40} />
+              <h5 className="mt-2">{course.display_name}</h5>
+            </div>
+            <div
+              className="checkbox-wrapper form-check position-absolute"
+              style={{ top: "-8px", right: "-8px" }}
+            >
+              <label htmlFor={course.id} className="form-check-label">
+                <input
+                  type="checkbox"
+                  id={course.id}
+                  name="class-header"
+                  checked={formData.courses.includes(course.id)}
+                  onChange={() => handleCourseSelection(course.id)}
+                  className="checkbox-input"
+                />
+                <span className="checkbox-custom">
+                  {formData.courses.includes(course.id) && (
+                    <svg className="checkmark" viewBox="0 0 24 24">
+                      <path
+                        fill="currentColor"
+                        d="M20.285 6.709l-11.4 11.4-5.6-5.6L5.7 10.09l3.186 3.186 9.714-9.714z"
+                      />
+                    </svg>
+                  )}
+                </span>
+              </label>
+            </div>
+          </div>
+        ))}
     </div>
+  </div>
+</div>
+
 
     <button className="btn btn-outline-primary mb-4"
     //  onClick={(e)=> navigate("/curriculum")}

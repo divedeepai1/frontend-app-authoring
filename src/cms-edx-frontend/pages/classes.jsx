@@ -2,6 +2,8 @@
 import HeaderTop from '../../header';
 import { Header } from '../components/header';
 import ClassesaTable from '../components/classes/classes-table';
+import { ManagementSection } from "../components/management-section"
+
 import { Container} from "react-bootstrap"
 import { useNavigate } from "react-router";
 import { fetchCsrfToken } from "../../cms-csrftoken";
@@ -47,7 +49,8 @@ const Classes = () => {
          <HeaderTop isHiddenMainMenu/>
         <div className="min-vh-100 bg-white">
         <Header heading="Manage Classes & Students" bg="linear-gradient(90deg, #255A71 0%, #0096D7 100%)"  color="white" outline="outline-white-button"/>
-        <section className="py-2 px-5">
+        <ManagementSection />
+        <section className="px-5">
            <Container>
           <div className="py-3">
             <button className="outline-black-button py-2 px-3" onClick={(e)=> navigate(`/manage-classes/${1}`)}>+ Add a New Class</button>

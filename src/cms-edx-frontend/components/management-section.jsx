@@ -3,7 +3,7 @@ import { ManagementCard } from "./management-card"
 
 export function ManagementSection() {
   return (
-    <section className="py-5 px-5">
+    <section className="py-4 px-5">
       <Container>
         <Row className="g-4">
           <Col md={3}>

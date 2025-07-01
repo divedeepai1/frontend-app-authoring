@@ -326,7 +326,7 @@ const CreateOrRerunCourseForm = ({
             <Dropdown className="mr-2">
               <Form.Label>Course type</Form.Label>
               <Dropdown className="mr-2" style={{ backgroundColor: "white", width: "100%" }}>
-                <Dropdown.Toggle id="type-dropdown" variant="outline-primary">
+                <Dropdown.Toggle id="type-dropdown" style={{ padding: "12px 15px"}} variant="outline-primary">
                   {courseTypeField.value || intl.formatMessage(messages.courseOrgNoOptions)}
                 </Dropdown.Toggle>
                 <Dropdown.Menu>

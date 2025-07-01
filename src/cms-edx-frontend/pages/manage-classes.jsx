@@ -1,4 +1,4 @@
-import HeaderTop from '../../header';
+import HeaderTop from "../../header";
 import { Header } from "../components/header";
 import ClassManagementForm from "../components/classes/manage-classes";
 import { Container } from "react-bootstrap";
@@ -17,18 +17,21 @@ const ManageClasses = () => {
         <section className="py-2 px-5">
           <Container>
             <div className="d-flex">
-            <div style={{width:"70%"}}>
-              <div className="py-3 d-flex justify-content-between">
-                <h3 className="primary-text mb-4">Class Name</h3>
-                <button className="outline-black-button fw-bold px-3">
-                  + Add New Teacher
-                </button>
+              <div style={{ width: "70%" }}>
+                <div className="py-3 d-flex justify-content-between">
+                  <h3 className="primary-text mb-4">
+                    {sessionStorage.getItem("classData")
+                      ? JSON.parse(sessionStorage.getItem("classData") || "{}")
+                          ?.name
+                      : "Class Name"}
+                  </h3>
+                  <button className="outline-black-button fw-bold px-3">
+                    + Add New Teacher
+                  </button>
+                </div>
+                <ClassManagementForm />
               </div>
-              <ClassManagementForm />
-            </div>
-            <div style={{width:"30%"}}>
-
-            </div>
+              <div style={{ width: "30%" }}></div>
             </div>
           </Container>
         </section>
