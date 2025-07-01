@@ -38,7 +38,7 @@ const SingleStudentForm = ({ setSelectedOption ,setAddStudents}) => {
                 email: studentData.email,
               });
               try {
-                const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${1}/add-student/`, {
+                const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${id}/add-student/`, {
                   method: 'POST',
                   credentials: 'include',
                   headers: {
@@ -54,7 +54,6 @@ const SingleStudentForm = ({ setSelectedOption ,setAddStudents}) => {
                 }
                 const result = await response.json();
                 setAddStudents(false);
-                setSelectedOption(null);
               } catch (error) {
                 console.error('Error in adding:', error.message);
                 
