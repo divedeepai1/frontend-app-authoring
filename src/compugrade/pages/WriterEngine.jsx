@@ -7,12 +7,12 @@ import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../cms-csrftoken";
 import InstructionsPreviewEngine from "../../compugrade/components/InstructionsPreviewEngine";
 import { Container } from "react-bootstrap";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { base_url } from "../../compugrade-constants";
 import magic from "../../compugrade-assets/magic.svg";
-import { set } from "lodash";
 
 const WriterEngine = () => {
+  const navigate= useNavigate();
   const [showSelect, setShowSelect] = useState(false);
   const [difficulty, setDifficultiy] = useState("Beginner");
   const [contentText, setContentText] = useState("");
@@ -178,15 +178,19 @@ const WriterEngine = () => {
   };
   return (
     <div className="bg-white min-vh-100">
+
       <div
         className="py-3 border-bottom border-2  d-flex"
         style={{ fontSize: "1.5rem", fontWeight: "600", color: "black" }}
       >
         <Container className="px-4">
-          <span>Compugrade Writer Engine </span>
+          <span><span className="mr-2 mb-3" onClick={()=>navigate(-1)}>
+          <svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M0.292892 6.79289C-0.0976315 7.18342 -0.0976314 7.81658 0.292893 8.20711L6.65686 14.5711C7.04738 14.9616 7.68054 14.9616 8.07107 14.5711C8.46159 14.1805 8.46159 13.5474 8.07107 13.1569L2.41421 7.5L8.07107 1.84315C8.46159 1.45262 8.46159 0.819457 8.07107 0.428933C7.68054 0.0384087 7.04738 0.0384088 6.65685 0.428933L0.292892 6.79289ZM18 7.5L18 6.5L1 6.5L1 7.5L1 8.5L18 8.5L18 7.5Z" fill="black" fill-opacity="0.6"/>
+</svg>
+</span>Compugrade Writer Engine </span>
 
           <span>
-            {" "}
             <img src={editIcon} alt="edit" />
           </span>
         </Container>

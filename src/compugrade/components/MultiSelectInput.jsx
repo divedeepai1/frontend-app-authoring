@@ -2,10 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import './MultiSelectInput.css';
 import { base_url } from '../../compugrade-constants';
 
-
-
-
-
 export default function MultiSelectInput({search, setSearch, selected, setSelected}) {
 
   const wrapperRef = useRef(null);

@@ -4,6 +4,7 @@ import { Button } from "@openedx/paragon";
 import { useNavigate, useParams } from "react-router";
 import { base_url } from "../../compugrade-constants";
 import WriterEngine from "./WriterEngine";
+import NewSkills from "./NewSkills";
 
 const InstructionsHelpEditorPage = ({ courseId }) => {
   const editorRef = useRef(null);
@@ -93,7 +94,8 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
   return (
     <>
     {blockType =="engine"
-      ?<WriterEngine />:
+      ?<WriterEngine />: blockType =="skills"
+      ?<NewSkills />:
     
     <div
       style={{

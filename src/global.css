@@ -131,5 +131,35 @@ box-shadow: 0px 0px 4px 0px rgba(0, 0, 0, 0.25);
 }
 
 
+.custom-radio .form-check-input {
+  width: 20px;
+  height: 20px;
+  border: 0.5px solid rgba(0, 0, 0, 0.60); /* Border color */
+  background-color: transparent;
+  appearance: none;
+  border-radius: 50%;
+  transition: 0.2s all ease-in-out;
+  margin-top: 4px; /* align vertically with label */
+  position: relative;
+}
+
+.custom-radio .form-check-input:checked {
+  border: 0.5px solid rgba(0, 0, 0, 0.60);
+  background: #F7F8FC;
+}
+
+.custom-radio .form-check-input:checked::before {
+  content: "";
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.60) ;
+  border-radius: 50%;
+}
+
+
 
 
