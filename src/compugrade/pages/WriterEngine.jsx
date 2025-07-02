@@ -12,13 +12,13 @@ import { base_url } from "../../compugrade-constants";
 import magic from "../../compugrade-assets/magic.svg";
 
 const WriterEngine = () => {
-  const navigate= useNavigate();
+  const navigate = useNavigate();
   const [showSelect, setShowSelect] = useState(false);
   const [difficulty, setDifficultiy] = useState("Beginner");
   const [contentText, setContentText] = useState("");
   const [grade, setGrade] = useState("1-5");
   const [instructionCount, setInstructionCount] = useState(5);
-
+  const [skills,setSkills]=useState([])
   const [themeDescription, setThemeDescription] = useState("");
 
   const editorRef = useRef(null);
@@ -31,6 +31,33 @@ const WriterEngine = () => {
 
   const { blockId } = useParams();
   const encodedBlockId = encodeURIComponent(blockId);
+
+   useEffect(() => {
+      const fetchSkills = async () => {
+          try {
+            const response = await fetch(
+              `${base_url}/api/skills/get_skills`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+               
+              }
+            );
+  
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            const data = await response.json();
+            setSkills(data?.skills);
+          } catch (err) {
+            console.error(err);
+          }
+        };
+  
+        fetchSkills();   
+    }, []);
 
   useEffect(() => {
     const savedData = sessionStorage.getItem("unitData");
@@ -59,7 +86,11 @@ const WriterEngine = () => {
             instruction:
               item?.natural_text || item?.objective_json?.natural_text,
             ab_or_ob: item?.instruction_category,
-            question_type: item?.objective_type ? (item?.objective_type == "mcq" ? "Multiple Choice Question" :"True/False Question") : "",
+            question_type: item?.objective_type
+              ? item?.objective_type == "mcq"
+                ? "Multiple Choice Question"
+                : "True/False Question"
+              : "",
           }));
           setinstructions(transformedList);
         } catch (err) {
@@ -75,10 +106,11 @@ const WriterEngine = () => {
       setInstructionCount(parsedData?.instruction_count_preference || 5);
 
       if (parsedData?.skills_used) {
-        const preselected = parsedData.skills_used.map((item) => ({
+        const preselected = parsedData.skills_used.map((item,index) => ({
+          id: index+1,
           label: item,
           value: item,
-          color: "orange", 
+          color: "orange",
         }));
         setSelected(preselected);
       }
@@ -135,60 +167,71 @@ const WriterEngine = () => {
   const generateInstuctions = async () => {
     const token = await fetchCsrfToken();
     if (editorRef.current) {
-      const content = editorRef.current.getContent(); 
+      const content = editorRef.current.getContent();
       setContent(content); // Update state with the content
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = content || "";
       const plainText = tempDiv.textContent || tempDiv.innerText || "";
       setContentText(plainText);
-    
-    setLoadingInstructions(true);
-    try {
-      const skills = selected.map((item) => item.value);
-      // const gradeInt = parseInt(grade, 10);
-      const response = await fetch(
-        `${
-          getConfig().STUDIO_BASE_URL
-        }/myplugin/writer-engine/generate-instructions/`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-          body: JSON.stringify({
-            skills: skills,
-            text: plainText,
-            difficulty_level: difficulty,
-            instructions_count: instructionCount,
-          }),
-        }
-      );
-      const data = await response.json();
-      console.log(data?.instructions?.instructions);
-      setinstructions(data?.instructions?.instructions);
-      setLoadingInstructions(false);
-    } catch (error) {
-      console.error("Error generating content:", error);
-    } finally {
-      setLoadingInstructions(false);
+
+      setLoadingInstructions(true);
+      try {
+        const skills = [...new Set(selected.flatMap(item => item.value))];
+        // const gradeInt = parseInt(grade, 10);
+        const response = await fetch(
+          `${
+            getConfig().STUDIO_BASE_URL
+          }/myplugin/writer-engine/generate-instructions/`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+            body: JSON.stringify({
+              skills: skills,
+              text: plainText,
+              difficulty_level: difficulty,
+              instructions_count: instructionCount,
+            }),
+          }
+        );
+        const data = await response.json();
+        setinstructions(data?.instructions?.instructions);
+        setLoadingInstructions(false);
+      } catch (error) {
+        console.error("Error generating content:", error);
+      } finally {
+        setLoadingInstructions(false);
+      }
     }
-  }
   };
   return (
     <div className="bg-white min-vh-100">
-
       <div
         className="py-3 border-bottom border-2  d-flex"
         style={{ fontSize: "1.5rem", fontWeight: "600", color: "black" }}
       >
         <Container className="px-4">
-          <span><span className="mr-2 mb-3" onClick={()=>navigate(-1)}>
-          <svg width="18" height="15" viewBox="0 0 18 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M0.292892 6.79289C-0.0976315 7.18342 -0.0976314 7.81658 0.292893 8.20711L6.65686 14.5711C7.04738 14.9616 7.68054 14.9616 8.07107 14.5711C8.46159 14.1805 8.46159 13.5474 8.07107 13.1569L2.41421 7.5L8.07107 1.84315C8.46159 1.45262 8.46159 0.819457 8.07107 0.428933C7.68054 0.0384087 7.04738 0.0384088 6.65685 0.428933L0.292892 6.79289ZM18 7.5L18 6.5L1 6.5L1 7.5L1 8.5L18 8.5L18 7.5Z" fill="black" fill-opacity="0.6"/>
-</svg>
-</span>Compugrade Writer Engine </span>
+          <span>
+            <span className="mr-2 mb-3" onClick={() => navigate(-1)}>
+              <svg
+                width="18"
+                height="15"
+                viewBox="0 0 18 15"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M0.292892 6.79289C-0.0976315 7.18342 -0.0976314 7.81658 0.292893 8.20711L6.65686 14.5711C7.04738 14.9616 7.68054 14.9616 8.07107 14.5711C8.46159 14.1805 8.46159 13.5474 8.07107 13.1569L2.41421 7.5L8.07107 1.84315C8.46159 1.45262 8.46159 0.819457 8.07107 0.428933C7.68054 0.0384087 7.04738 0.0384088 6.65685 0.428933L0.292892 6.79289ZM18 7.5L18 6.5L1 6.5L1 7.5L1 8.5L18 8.5L18 7.5Z"
+                  fill="black"
+                  fill-opacity="0.6"
+                />
+              </svg>
+            </span>
+            Compugrade Writer Engine{" "}
+          </span>
 
           <span>
             <img src={editIcon} alt="edit" />
@@ -300,56 +343,52 @@ const WriterEngine = () => {
                   + Add Skills Covered
                 </p>
                 <div>
-                <select
-                  id="instruction-count"
-                  className="custom-select-black p-2 mr-3"
-                  value={instructionCount}
-                  style={{ width: "225px" }}
-                  onChange={(e) => setInstructionCount(parseInt(e.target.value))}
-                >
-                  <option value="5">
-                    No of Instructions : 5
-                  </option>
-                  <option value="10">
-                    No of Instuctions : 10
-                  </option>
-                  <option value="15">
-                    No of Instructions : 15
-                  </option>
-                  <option value="20">
-                    No of Instructions : 20
-                  </option>
-                  <option value="25">
-                    No of Instructions : 25
-                  </option>
-                </select>
-                <select
-                  id="difficulty"
-                  className="custom-select-black p-2"
-                  value={difficulty}
-                  style={{ width: "325px" }}
-                  onChange={(e) => setDifficultiy(e.target.value)}
-                >
-                  <option value="Beginner">
-                    Instruction Difficulty : Beginner
-                  </option>
-                  <option value="Intermediate">
-                    Instruction Difficulty : Intermediate
-                  </option>
-                  <option value="Advanced">
-                    Instruction Difficulty : Advanced
-                  </option>
-                </select>
+                  <select
+                    id="instruction-count"
+                    className="custom-select-black p-2 mr-3"
+                    value={instructionCount}
+                    style={{ width: "225px" }}
+                    onChange={(e) =>
+                      setInstructionCount(parseInt(e.target.value))
+                    }
+                  >
+                    <option value="5">No of Instructions : 5</option>
+                    <option value="10">No of Instuctions : 10</option>
+                    <option value="15">No of Instructions : 15</option>
+                    <option value="20">No of Instructions : 20</option>
+                    <option value="25">No of Instructions : 25</option>
+                  </select>
+                  <select
+                    id="difficulty"
+                    className="custom-select-black p-2"
+                    value={difficulty}
+                    style={{ width: "325px" }}
+                    onChange={(e) => setDifficultiy(e.target.value)}
+                  >
+                    <option value="Beginner">
+                      Instruction Difficulty : Beginner
+                    </option>
+                    <option value="Intermediate">
+                      Instruction Difficulty : Intermediate
+                    </option>
+                    <option value="Advanced">
+                      Instruction Difficulty : Advanced
+                    </option>
+                  </select>
                 </div>
               </div>
             )}
             {content && (
-              <MultiSelectInput
+             skills?.length > 0 && (<MultiSelectInput
+          
                 search={search}
                 setSearch={setSearch}
+                skills={skills}
+                customerFacing={true}
+                seSkills={setSkills}
                 selected={selected}
                 setSelected={setSelected}
-              />
+              />)
             )}
 
             {content && (

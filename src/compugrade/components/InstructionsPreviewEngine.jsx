@@ -113,7 +113,7 @@ const InstructionsPreviewEngine = ({ data,text,selectedSkills,theme,description,
   
       const result = await response.json();
 
-      const skillValues = selectedSkills.map(skill => skill.value);
+      const skillValues = selectedSkills.map(skill => skill.label);
   
       const response2 = await fetch(base_url+ '/api/openedx/update_rubric', {
         method: 'PATCH',

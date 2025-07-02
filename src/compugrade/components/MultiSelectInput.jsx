@@ -1,42 +1,66 @@
-import React, { useEffect, useRef, useState } from 'react';
-import './MultiSelectInput.css';
-import { base_url } from '../../compugrade-constants';
+import React, { useEffect, useRef, useState } from "react";
+import "./MultiSelectInput.css";
+import { base_url } from "../../compugrade-constants";
+import { useParams } from "react-router";
 
-export default function MultiSelectInput({search, setSearch, selected, setSelected}) {
-
+export default function MultiSelectInput({
+  search,
+  setSearch,
+  selected,
+  setSelected,
+  setSkills,
+  fromSkills,
+  skills,
+  customerFacing,
+}) {
   const wrapperRef = useRef(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [options, setOptions] = useState([]);
+  const { blockId, sequenceId, courseId } = useParams();
+  const encodedBlockId = encodeURIComponent(blockId);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch(`${base_url}/api/openedx/get_skills`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         });
         const data = await response.json();
-      const fetchedOptions = data?.skills?.map((item) => {
-        const rubricString = item.rubric_titles?.join(', ') || '';
-        const label = rubricString
-          ? `${item.skill} - Already used in lesson: ${rubricString}`
-          : item.skill;
+        const fetchedOptions =
+          data?.skills?.map((item, index) => {
+            const rubricString = item.rubric_titles?.join(", ") || "";
+            const label = rubricString
+              ? `${item.skill} - Already used in lesson: ${rubricString}`
+              : item.skill;
 
-        return {
-          label: label,
-          value: item.skill,
-          color: item.color || 'orange',
-        };
-      }) || [];
-      setOptions(fetchedOptions);
+            return {
+              id: index + 1,
+              label: label,
+              value: item.skill,
+              color: item.color || "orange",
+            };
+          }) || [];
+        setOptions(fetchedOptions);
       } catch (error) {
-        console.error('Error fetching options:', error);
+        console.error("Error fetching options:", error);
       }
     };
 
-    fetchData();
+    if (customerFacing) {
+      console.log(skills)
+      const newOptions = skills.map((item) => ({
+        id: item.id,
+        label: item.customer_facing_name,
+        value: item.skill_json,
+        color: item.color || "orange",
+      }));
+      setOptions(newOptions);
+    } else {
+      fetchData();
+    }
   }, []);
 
   useEffect(() => {
@@ -46,25 +70,52 @@ export default function MultiSelectInput({search, setSearch, selected, setSelect
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
-  const filteredOptions = options.filter(
+  const filteredOptions = options?.filter(
     (opt) =>
       opt.label.toLowerCase().includes(search.toLowerCase()) &&
-      !selected.find((sel) => sel.value === opt.value)
+      !selected.find((sel) => sel.id == opt.id)
   );
 
   const handleSelect = (option) => {
-    setSelected([...selected, option]);
-    setSearch('');
+    setSelected((prev) => [...prev, option]);
+    setSearch("");
+  };
+  
+  const handleRemove = (id) => {
+    setSelected((prev) => prev.filter((s) => s.id !== id));
   };
 
-  const handleRemove = (value) => {
-    setSelected(selected.filter((s) => s.value !== value));
+  useEffect(() => {
+    if (fromSkills) {
+      UpdateRubric();
+    }
+  }, [selected]);
+  
+
+  const UpdateRubric = async () => {
+    const skillValues = selected.map((skill) => skill.label);
+
+    try {
+      const response = await fetch(`${base_url}/api/openedx/update_rubric`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          openedx_based_id: blockId,
+          skills_used: skillValues,
+        }),
+      });
+      const data = await response.json();
+    } catch (error) {
+      console.error("Error updating:", error);
+    }
   };
 
   return (
@@ -72,11 +123,13 @@ export default function MultiSelectInput({search, setSearch, selected, setSelect
       <div className="input-container" onClick={() => setIsDropdownOpen(true)}>
         {selected.map((item) => (
           <span
-            key={item.value}
-            className={`badge mt-2 ${item.color === 'red' ? 'badge-red' : 'badge-orange'}`}
+            key={item.id}
+            className={`badge mt-2 ${
+              item.color === "red" ? "badge-red" : "badge-orange"
+            }`}
           >
-            {item.value}
-            <button onClick={() => handleRemove(item.value)}>&times;</button>
+            {customerFacing ? item.label : item.value}
+            <button onClick={() => handleRemove(item.id)}>&times;</button>
           </span>
         ))}
         <input
@@ -84,32 +137,30 @@ export default function MultiSelectInput({search, setSearch, selected, setSelect
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="form-control p-2"
-          style={{ background: '#EFF6F7', outline: 'none' }}
-          
+          style={{ background: "#EFF6F7", outline: "none" }}
           placeholder=""
           onHover={(e) => {
-            e.target.style.outline = 'none';
-            e.target.style.boxShadow = 'none';
-            e.target.style.borderColor = '#EFF6F7'; 
+            e.target.style.outline = "none";
+            e.target.style.boxShadow = "none";
+            e.target.style.borderColor = "#EFF6F7";
           }}
           onFocus={(e) => {
-            e.target.style.outline = 'none';
-            e.target.style.boxShadow = 'none';
-            e.target.style.borderColor = '#EFF6F7'; 
-            setIsDropdownOpen(true)
+            e.target.style.outline = "none";
+            e.target.style.boxShadow = "none";
+            e.target.style.borderColor = "#EFF6F7";
+            setIsDropdownOpen(true);
           }}
           onBlur={(e) => {
-            e.target.style.outline = 'none';
-            e.target.style.boxShadow = 'none';
-            e.target.style.borderColor = '#EFF6F7';
+            e.target.style.outline = "none";
+            e.target.style.boxShadow = "none";
+            e.target.style.borderColor = "#EFF6F7";
           }}
         />
       </div>
-
       {isDropdownOpen && filteredOptions.length > 0 && (
         <ul className="dropdown-list">
           {filteredOptions.map((opt) => (
-            <li key={opt.value} onClick={() => handleSelect(opt)}>
+            <li key={opt.id} onClick={() => handleSelect(opt)}>
               {opt.label}
             </li>
           ))}

@@ -12,7 +12,11 @@ const NewSkills = () => {
   const navigate = useNavigate();
   const [database, setDataBase] = useState(false);
   const [value, setValue] = useState("CS");
+  const [selectedSkills, setSelectedSkills] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState("");
+  const [searchSkills, setSearchSkills] = useState("");
+  const [CFSkill,setCFSkill]=useState(true);
   const [skills,setSkills]=useState([])
   const [customerSkill, setCustomerSkill] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,7 +48,7 @@ const NewSkills = () => {
       fetchSkills();   
   }, [database]);
 
-  const [search, setSearch] = useState("");
+
 
   const AddMoreSkills = async (e) => {
     e.preventDefault();
@@ -73,7 +77,7 @@ const NewSkills = () => {
       const result = await response.json();
       console.log(result)
       setLoading(false);
-      setDataBase(true)
+      setDataBase(true);
     } catch (error) {
       console.error("Error generating content:", error);
     } finally {
@@ -118,7 +122,10 @@ const NewSkills = () => {
         <div syyle={{ width: "100%" }}>
           {!database ? (
             <button
-              onClick={() => setDataBase(true)}
+              onClick={() => {setDataBase(true),
+                setCFSkill(false);
+              }
+              }
               className="primary-button px-3 py-2 mt-3"
               style={{ float: "right", marginRight: "20%" }}
             >
@@ -133,7 +140,29 @@ const NewSkills = () => {
               Add More Skills
             </button>
           )}
-          {!database ? (
+             {!database && CFSkill && <section className="py-1 px-4" style={{ width: "60%" }}>
+               <h3
+                  className="mt-3 mb-2"
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "black",
+                  }}
+                >
+                  Add Skills Covered
+                </h3>
+                {skills.length > 0 &&<MultiSelectInput
+                  search={searchSkills}
+                  skills={skills}
+                  customerFacing={true}
+                  fromSkills={true}
+                  seSkills={setSkills}
+                  setSearch={setSearchSkills}
+                  selected={selectedSkills}
+                  setSelected={setSelectedSkills}
+                />}
+          </section>}
+          {!database && !CFSkill ? (
             <section className="py-4 px-4" style={{ width: "60%" }}>
               <h3
                 className="mt-1"
@@ -231,7 +260,8 @@ const NewSkills = () => {
               </form>
             </section>
           ) : (
-            <section className="py-4 px-4" style={{ width: "100%" }}>
+
+            !CFSkill &&<section className="py-4 px-4" style={{ width: "100%" }}>
               <SkillsTable  skills={skills}/>
             </section>
           )}

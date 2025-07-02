@@ -9,8 +9,17 @@ import { COMPONENT_TYPES } from "../../generic/block-type-utils/constants";
 import ComponentModalView from "./add-component-modals/ComponentModalView";
 import AddComponentButton from "./add-component-btn";
 import messages from "./messages";
+import writer from "../../cms-edx-frontend/assests/writer.svg";
+import overwiew from "../../cms-edx-frontend/assests/overview.svg";
+import skills from "../../cms-edx-frontend/assests/skills.svg";
+import text from "../../cms-edx-frontend/assests/text.svg";
+import tools from "../../cms-edx-frontend/assests/text.svg";
 
-const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompugradeXBlock }) => {
+const AddComponent = ({
+  blockId,
+  handleCreateNewCourseXBlock,
+  handleCreateCompugradeXBlock,
+}) => {
   const navigate = useNavigate();
   const intl = useIntl();
   const [isOpenAdvanced, openAdvanced, closeAdvanced] = useToggle(false);
@@ -77,13 +86,66 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompug
     return null;
   }
 
-
   return (
     <div className="py-4">
       <h5 className="h3 mb-4 text-center">
         {intl.formatMessage(messages.title)}
       </h5>
       <ul className="new-component-type list-unstyled m-0 d-flex flex-wrap justify-content-center">
+        <li>
+          <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("overview")}
+            displayName={"Overview"}
+            icon={overwiew}
+            type={"overview"}
+            border="1px solid #F3B17A"
+            background="rgba(243, 177, 122, 0.50)"
+            box-shadow=" 0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+          />
+        </li>
+        <li>
+          <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("skills")}
+            displayName={"Skills"}
+            border="1px solid #B878BE"
+            background="rgba(184, 120, 190, 0.50)"
+            boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+            icon={skills}
+            type={"skills"}
+          />
+        </li>
+        <li>
+          <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("tools")}
+            displayName={"Tools and Terms"}
+            type={"tools"}
+            border="1px solid #E2CA12"
+            background="#F8FFBA"
+            box-shadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+          />
+        </li>
+        <li>
+          <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("text")}
+            displayName={"Document Text"}
+            border="1px solid #FF5959"
+            icon={text}
+            background="rgba(255, 89, 89, 0.30)"
+            boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+            type={"text"}
+          />
+        </li>
+        <li>
+          <AddComponentButton
+            border="1px solid #285491"
+            background="rgba(79, 179, 223, 0.30)"
+            boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+            onClick={() => handleCreateCompugradeXBlock("engine")}
+            icon={writer}
+            displayName={"Compugrade Writer Engine"}
+            type={"engine"}
+          />
+        </li>
         {componentTemplates.map((component) => {
           const { type, displayName } = component;
           let modalParams;
@@ -135,42 +197,6 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock, handleCreateCompug
             />
           );
         })}
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("overview")}
-            displayName={"Overview"}
-            type={"overview"}
-          />
-        </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("skills")}
-            displayName={"Skills"}
-            type={"skills"}
-          />
-        </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("tools")}
-            displayName={"Tools and Terms"}
-            type={"tools"}
-          />
-        </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("text")}
-            displayName={"Document Text"}
-            type={"text"}
-          />
-        </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("engine")}
-            displayName={"Compugrade Writer Engine"}
-            type={"engine"}
-          />
-        </li>
-        
       </ul>
     </div>
   );
