@@ -79,7 +79,7 @@ export default function MultiSelectInput({
   const filteredOptions = options?.filter(
     (opt) =>
       opt.label.toLowerCase().includes(search.toLowerCase()) &&
-      !selected.find((sel) => sel.id == opt.id)
+      !selected.find((sel) => sel.label == opt.label)
   );
 
   const handleSelect = (option) => {
@@ -87,36 +87,13 @@ export default function MultiSelectInput({
     setSearch("");
   };
   
-  const handleRemove = (id) => {
-    setSelected((prev) => prev.filter((s) => s.id !== id));
+  const handleRemove = (label) => {
+    setSelected((prev) => prev.filter((s) => s.label !== label));
   };
 
-  useEffect(() => {
-    if (fromSkills) {
-      UpdateRubric();
-    }
-  }, [selected]);
   
 
-  const UpdateRubric = async () => {
-    const skillValues = selected.map((skill) => skill.label);
 
-    try {
-      const response = await fetch(`${base_url}/api/openedx/update_rubric`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          openedx_based_id: blockId,
-          skills_used: skillValues,
-        }),
-      });
-      const data = await response.json();
-    } catch (error) {
-      console.error("Error updating:", error);
-    }
-  };
 
   return (
     <div className="multi-select-wrapper mt-3" ref={wrapperRef}>
@@ -129,7 +106,7 @@ export default function MultiSelectInput({
             }`}
           >
             {customerFacing ? item.label : item.value}
-            <button onClick={() => handleRemove(item.id)}>&times;</button>
+            <button onClick={() => handleRemove(item.label)}>&times;</button>
           </span>
         ))}
         <input

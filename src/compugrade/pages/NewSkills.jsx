@@ -10,6 +10,9 @@ import SkillsTable from "../../compugrade/components/skillstable";
 
 const NewSkills = () => {
   const navigate = useNavigate();
+  const { blockId, sequenceId, courseId } = useParams();
+  const encodedBlockId = encodeURIComponent(blockId);
+
   const [database, setDataBase] = useState(false);
   const [value, setValue] = useState("CS");
   const [selectedSkills, setSelectedSkills] = useState([]);
@@ -22,7 +25,11 @@ const NewSkills = () => {
   const [loading, setLoading] = useState(false);
  
   useEffect(() => {
+
+      const skills_used = sessionStorage.getItem("skills_used");
+      
       const fetchSkills = async () => {
+
         try {
           const response = await fetch(
             `${base_url}/api/skills/get_skills`,
@@ -44,6 +51,18 @@ const NewSkills = () => {
           console.error(err);
         }
       };
+
+      const parsedSkills = JSON.parse(skills_used);
+      if (parsedSkills) {
+        const preselected = parsedSkills?.map((item,index) => ({
+          id: index+1,
+          label: item,
+          value: item,
+          color: "orange",
+        }));
+        setSelectedSkills(preselected);
+      }
+
 
       fetchSkills();   
   }, [database]);
@@ -82,6 +101,29 @@ const NewSkills = () => {
       console.error("Error generating content:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const UpdateRubric = async () => {
+    const skillValues = selectedSkills?.map((skill) => skill.label);
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${base_url}/api/openedx/update_rubric`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          openedx_based_id: blockId,
+          skills_used: skillValues,
+        }),
+      });
+      setLoading(false)
+      const data = await response.json();
+    } catch (error) {
+      setLoading(false)
+      console.error("Error updating:", error);
     }
   };
 
@@ -126,7 +168,7 @@ const NewSkills = () => {
                 setCFSkill(false);
               }
               }
-              className="primary-button px-3 py-2 mt-3"
+              className="secondary-button px-3 py-2 mt-3"
               style={{ float: "right", marginRight: "20%" }}
             >
               WORD Skills Database
@@ -140,7 +182,8 @@ const NewSkills = () => {
               Add More Skills
             </button>
           )}
-             {!database && CFSkill && <section className="py-1 px-4" style={{ width: "60%" }}>
+             {!database && CFSkill && 
+             <section className="py-1 px-4" style={{ width: "60%" }}>
                <h3
                   className="mt-3 mb-2"
                   style={{
@@ -160,7 +203,20 @@ const NewSkills = () => {
                   setSearch={setSearchSkills}
                   selected={selectedSkills}
                   setSelected={setSelectedSkills}
-                />}
+                />
+                
+                }
+            <button
+              onClick={UpdateRubric}
+              disabled={selectedSkills.length == 0}
+              className="primary-button px-3 py-2 mt-3"
+              style={{ float: "left", marginRight: "3%" }}
+            >
+              {loading && (
+                    <span className="spinner-border spinner-border-sm mr-2"></span>
+                  )}
+                  {loading ? "Saving..." : "Save Skills"}
+            </button>
           </section>}
           {!database && !CFSkill ? (
             <section className="py-4 px-4" style={{ width: "60%" }}>

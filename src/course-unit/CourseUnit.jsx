@@ -83,6 +83,10 @@ const CourseUnit = ({ courseId }) => {
      if(type=="text"){
       sessionStorage.setItem("unitData", JSON.stringify(unitData));
      }
+     if(type =="skills")
+     {
+      sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
+     }
      navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type}`);
   };
 
@@ -235,7 +239,7 @@ const CourseUnit = ({ courseId }) => {
                     )}
                    {unitData?.description	 && <InstructionXBlock title={"Overview"} data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.skills && <InstructionXBlock title={"Skills"} data={unitData.skills} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.skills_used.length > 0 && <InstructionXBlock title={"Skills"} data={unitData?.skills_used} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.text && <InstructionXBlock title={"Document Text"} data={unitData.text} type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {/* <InstructionXBlock title={"CompuGrade Write Engine"} data={"CompuGrade Write Engine"} type={"engine"} handleEdit={handleCreateCompugradeXBlock}/> */}
 
