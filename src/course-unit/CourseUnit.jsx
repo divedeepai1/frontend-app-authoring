@@ -92,6 +92,7 @@ const CourseUnit = ({ courseId }) => {
 
   useEffect(() => {
     sessionStorage.removeItem("unitData");
+    sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
     const fetchData = async () => {
       try {
         const encodedBlockId = encodeURIComponent(blockId); // Encode the block ID
