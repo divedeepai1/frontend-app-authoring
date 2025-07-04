@@ -1,4 +1,6 @@
 import { logError } from '@edx/frontend-platform/logging';
+import { getConfig } from "@edx/frontend-platform";
+import { fetchCsrfToken } from "../../cms-csrftoken";
 
 import { CLIPBOARD_STATUS, NOTIFICATION_MESSAGES } from '../../constants';
 import {
@@ -62,7 +64,7 @@ export function updateCreateOrRerunCourseQuery(courseData, courseType) {
       dispatch(updatePostErrors('errMsg' in response ? response : {}));
       dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
 
-      // Validate course_key existence
+      const token = await fetchCsrfToken();
       if (!response.courseKey) {
         throw new Error('course_key is missing in the response.');
       }
@@ -85,6 +87,29 @@ export function updateCreateOrRerunCourseQuery(courseData, courseType) {
 
       const result = await apiResponse.json();
       console.log('Response from API call:', result);
+
+       try {
+              const myplugin = await fetch(
+                `${getConfig().STUDIO_BASE_URL}${ `/myplugin/courses/${response.courseKey}/update-type/${courseType?.toLowerCase().replace(/\s+/g, '_')}/`}`,
+                {
+                  method: "PUT",
+                  credentials: "include",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": token,
+                  },
+                }
+              );
+      
+              if (!myplugin.ok) {
+                const errorText = await myplugin.text();
+                throw new Error(`Failed to add: ${response.status} ${errorText}`);
+              }
+              const result = await myplugin.json();
+             
+            } catch (error) {
+              console.error("Error in adding:", error.message);
+            }
 
       return true;
     } catch (error) {
