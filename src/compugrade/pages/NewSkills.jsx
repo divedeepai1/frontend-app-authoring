@@ -7,67 +7,64 @@ import { Container } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router";
 import { base_url } from "../../compugrade-constants";
 import SkillsTable from "../../compugrade/components/skillstable";
+import DeleteModal from "../../cms-edx-frontend/components/common/delete-modal"
+
 
 const NewSkills = () => {
   const navigate = useNavigate();
   const { blockId, sequenceId, courseId } = useParams();
   const encodedBlockId = encodeURIComponent(blockId);
+  const [isOpen, setIsOpen] = useState(false);
+
 
   const [database, setDataBase] = useState(false);
+  const [fetched,setFetched]=useState(false);
   const [value, setValue] = useState("CS");
+  const [selectedRow,setSelectedRow]=useState("")
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
   const [searchSkills, setSearchSkills] = useState("");
-  const [CFSkill,setCFSkill]=useState(true);
-  const [skills,setSkills]=useState([])
+  const [CFSkill, setCFSkill] = useState(true);
+  const [skills, setSkills] = useState([]);
   const [customerSkill, setCustomerSkill] = useState("");
   const [loading, setLoading] = useState(false);
- 
+
   useEffect(() => {
+    const skills_used = sessionStorage.getItem("skills_used");
 
-      const skills_used = sessionStorage.getItem("skills_used");
-      
-      const fetchSkills = async () => {
+    const fetchSkills = async () => {
+      try {
+        const response = await fetch(`${base_url}/api/skills/get_skills`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-        try {
-          const response = await fetch(
-            `${base_url}/api/skills/get_skills`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-              },
-             
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          const data = await response.json();
-          setSkills(data?.skills);
-        } catch (err) {
-          console.error(err);
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
         }
-      };
-
-      const parsedSkills = JSON.parse(skills_used);
-      if (parsedSkills) {
-        const preselected = parsedSkills?.map((item,index) => ({
-          id: index+1,
-          label: item,
-          value: item,
-          color: "orange",
-        }));
-        setSelectedSkills(preselected);
+        const data = await response.json();
+        setSkills(data?.skills);
+      } catch (err) {
+        console.error(err);
       }
+    };
 
+    const parsedSkills = JSON.parse(skills_used);
+    if (parsedSkills) {
+      const preselected = parsedSkills?.map((item, index) => ({
+        id: index + 1,
+        label: item,
+        value: item,
+        color: "orange",
+      }));
+      setSelectedSkills(preselected);
+    }
 
-      fetchSkills();   
-  }, [database]);
-
-
+    fetchSkills();
+  }, [database,fetched]);
 
   const AddMoreSkills = async (e) => {
     e.preventDefault();
@@ -75,26 +72,23 @@ const NewSkills = () => {
     const skills = selected.map((item) => item.value);
 
     if (!customerSkill.trim()) return;
-    setLoading(true);
+    setLoading(true); 
     try {
-      const response = await fetch(
-        `${
-          base_url
-        }/api/skills/add_skill`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            customer_facing_name: customerSkill,
-            skill_json: skills,
-            skill_type: value,
-          }),
-        }
-      );
+      const payload = {
+        customer_facing_name: customerSkill,
+        skill_json: skills,
+        skill_type: value,
+        ...(selectedRow && { skill_id: selectedRow })
+      };
+      const response = await fetch(`${base_url}/api/skills/${selectedRow ? "update_skill":"add_skill"}`, {
+        method: selectedRow ? "PUT": "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload)
+      });
       const result = await response.json();
-      console.log(result)
+      console.log(result);
       setLoading(false);
       setDataBase(true);
     } catch (error) {
@@ -102,6 +96,27 @@ const NewSkills = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = async (skill) => {
+    
+
+    console.log(skill)
+    if (skill.skill_json) {
+      const preselected = skill?.skill_json?.map((item, index) => ({
+        id: index + 1,
+        label: item,
+        value: item,
+        color: "orange",
+      }));
+      setCustomerSkill(skill?.customer_facing_name)
+      setValue(skill?.skill_type)
+      setSelected(preselected);
+      setDataBase(false)
+      setSelectedRow(skill?.id)
+    }
+
+  
   };
 
   const UpdateRubric = async () => {
@@ -119,15 +134,35 @@ const NewSkills = () => {
           skills_used: skillValues,
         }),
       });
-      setLoading(false)
+      setLoading(false);
       const data = await response.json();
     } catch (error) {
-      setLoading(false)
+      setLoading(false);
       console.error("Error updating:", error);
     }
   };
 
- 
+  const DeleteSkill = async () => {
+   
+
+    try {
+      const response = await fetch(`${base_url}/api/skills/delete_skill?skill_id=${selectedRow}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+       
+      });
+     
+      const data = await response.json();
+      setIsOpen(false)
+      setFetched(!fetched);
+      setSelectedRow("")
+    } catch (error) {
+      console.error("Error deleting:", error);
+    }
+  };
+
   return (
     <div className="bg-white min-vh-100">
       <div
@@ -164,10 +199,9 @@ const NewSkills = () => {
         <div syyle={{ width: "100%" }}>
           {!database ? (
             <button
-              onClick={() => {setDataBase(true),
-                setCFSkill(false);
-              }
-              }
+              onClick={() => {
+                setDataBase(true), setCFSkill(false);
+              }}
               className="secondary-button px-3 py-2 mt-3"
               style={{ float: "right", marginRight: "20%" }}
             >
@@ -175,26 +209,34 @@ const NewSkills = () => {
             </button>
           ) : (
             <button
-              onClick={() => setDataBase(false)}
+              onClick={() => {setDataBase(false)
+                setCustomerSkill("")
+                setValue("CS")
+                setSelected([]);
+                setDataBase(false)
+                setSelectedRow("")
+
+              }}
               className="primary-button px-3 py-2 mt-3"
               style={{ float: "right", marginRight: "3%" }}
             >
               Add More Skills
             </button>
           )}
-             {!database && CFSkill && 
-             <section className="py-1 px-4" style={{ width: "60%" }}>
-               <h3
-                  className="mt-3 mb-2"
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: "600",
-                    color: "black",
-                  }}
-                >
-                  Add Skills Covered
-                </h3>
-                {skills.length > 0 &&<MultiSelectInput
+          {!database && CFSkill && (
+            <section className="py-1 px-4" style={{ width: "60%" }}>
+              <h3
+                className="mt-3 mb-2"
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "black",
+                }}
+              >
+                Add Skills Covered
+              </h3>
+              {skills.length > 0 && (
+                <MultiSelectInput
                   search={searchSkills}
                   skills={skills}
                   customerFacing={true}
@@ -204,20 +246,20 @@ const NewSkills = () => {
                   selected={selectedSkills}
                   setSelected={setSelectedSkills}
                 />
-                
-                }
-            <button
-              onClick={UpdateRubric}
-              disabled={selectedSkills.length == 0}
-              className="primary-button px-3 py-2 mt-3"
-              style={{ float: "left", marginRight: "3%" }}
-            >
-              {loading && (
-                    <span className="spinner-border spinner-border-sm mr-2"></span>
-                  )}
-                  {loading ? "Saving..." : "Save Skills"}
-            </button>
-          </section>}
+              )}
+              <button
+                onClick={UpdateRubric}
+                disabled={selectedSkills.length == 0}
+                className="primary-button px-3 py-2 mt-3"
+                style={{ float: "left", marginRight: "3%" }}
+              >
+                {loading && (
+                  <span className="spinner-border spinner-border-sm mr-2"></span>
+                )}
+                {loading ? "Saving..." : "Save Skills"}
+              </button>
+            </section>
+          )}
           {!database && !CFSkill ? (
             <section className="py-4 px-4" style={{ width: "60%" }}>
               <h3
@@ -311,17 +353,29 @@ const NewSkills = () => {
                   {loading && (
                     <span className="spinner-border spinner-border-sm mr-2"></span>
                   )}
-                  {loading ? "Adding..." : "Add Skills"}
+                  {loading && selectedRow ? "Updating..." : loading ? "Adding...":selectedRow ?"Update Skills":"Add Skills"}
                 </button>
               </form>
             </section>
           ) : (
-
-            !CFSkill &&<section className="py-4 px-4" style={{ width: "100%" }}>
-              <SkillsTable  skills={skills}/>
-            </section>
+            !CFSkill && (
+              <section className="py-4 px-4" style={{ width: "100%" }}>
+                <SkillsTable
+                  skills={skills}
+                  onEdit={(skill) => {
+                    handleEdit(skill)
+                  }}
+                  onDelete={(skill) => {
+                    setIsOpen(true)
+                    setSelectedRow(skill?.id)
+                  }}
+                />
+              </section>
+            )
           )}
         </div>
+            <DeleteModal category="component" title="Are you sure you want to delete" isOpen={isOpen} close={()=>setIsOpen(!isOpen)}  description={"Skill will be deleted from skill database"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={DeleteSkill}/>
+        
       </Container>
     </div>
   );
