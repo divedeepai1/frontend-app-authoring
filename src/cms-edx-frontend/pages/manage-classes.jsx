@@ -2,8 +2,88 @@ import HeaderTop from "../../header";
 import { Header } from "../components/header";
 import ClassManagementForm from "../components/classes/manage-classes";
 import { Container } from "react-bootstrap";
+import { useLocation, useNavigate } from "react-router";
+import { fetchCsrfToken } from "../../cms-csrftoken";
+import { getConfig } from "@edx/frontend-platform";
+import AddTeacher from "../components/classes/add-teacher";
+import { useEffect, useState } from "react";
 
 const ManageClasses = () => {
+  const location = useLocation(); 
+  const navigate =useNavigate();
+  const isNewTeacher = location.pathname.endsWith("/add-teacher");
+  const [selectedTeachers, setSelectedTeachers] = useState([]);
+
+  const [teachers, setTeachers] = useState([]);
+    const fetchTeachers = async () => {
+      const token = await fetchCsrfToken();
+      try {
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+  
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to get: ${response.status} ${errorText}`);
+        }
+        const result = await response.json();
+        setTeachers(result?.teachers);
+      } catch (error) {
+        console.error("Error:", error.message);
+      }
+    };
+  
+    useEffect(() => {
+      if(isNewTeacher){
+        fetchTeachers();
+      }
+    }, []);
+
+
+
+  const handleNextStep = async (e) => {
+    e.preventDefault();
+
+    const token = await fetchCsrfToken();
+    const classId=sessionStorage.getItem("classId")
+    const teachers = selectedTeachers.map(teacher => teacher.email);
+
+    try {
+    
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/teachers/`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+          body: JSON.stringify({ email: teachers })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to add: ${response.status} ${errorText}`);
+      }
+      const result = await response.json();
+       navigate(-1)
+    } catch (error) {
+      console.error("Error:", error.message);
+    }
+    
+   
+  };
+ 
   return (
     <div>
       <HeaderTop isHiddenMainMenu />
@@ -25,11 +105,16 @@ const ManageClasses = () => {
                           ?.name
                       : "Class Name"}
                   </h3>
-                  <button className="outline-black-button fw-bold px-3">
-                    + Add New Teacher
-                  </button>
+                 {!isNewTeacher && <button className="outline-black-button fw-bold px-3">
+                    + Add More Teachers
+                  </button>}
                 </div>
-                <ClassManagementForm />
+                {!isNewTeacher ? <ClassManagementForm /> :<AddTeacher
+                  teachers={teachers}
+                  selectedTeachers={selectedTeachers}
+                  setSelectedTeachers={setSelectedTeachers}
+                  nextStep={handleNextStep}
+                 />}
               </div>
               <div style={{ width: "30%" }}></div>
             </div>

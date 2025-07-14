@@ -48,6 +48,7 @@ import "./global.css";
 
 import Main from "./cms-edx-frontend/pages/main";
 import Classes from "./cms-edx-frontend/pages/classes";
+import Teachers from "./cms-edx-frontend/pages/teachers";
 import Courses from "./cms-edx-frontend/pages/courses";
 import ManageClasses from "./cms-edx-frontend/pages/manage-classes";
 import Reports from "./cms-edx-frontend/pages/reports";
@@ -114,6 +115,8 @@ const App = () => {
       <>
         <Route path="/home" element={<Main />} />
         <Route path="/classes" element={<Classes />} />
+        <Route path="/classes/:classId" element={<Teachers />} />
+
         <Route path="/reports" element={<Reports />} />
         <Route path="/curriculum" element={<Courses />} />
         <Route path="/manage-classes/:step" element={<ManageClasses />} />

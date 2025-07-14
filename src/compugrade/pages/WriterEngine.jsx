@@ -61,6 +61,19 @@ const WriterEngine = () => {
 
   useEffect(() => {
     const savedData = sessionStorage.getItem("unitData");
+    const skills_used = sessionStorage.getItem("skills_used");
+   
+    if (skills_used && !savedData) {
+      const parsedSkills = JSON?.parse(skills_used);
+      const preselected = parsedSkills?.map((item,index) => ({
+        id: index+1,
+        label: item,
+        value: item,
+        color: "orange",
+      }));
+      setSelected(preselected);
+    }
+
     if (savedData) {
       const fetchRubricItems = async () => {
         try {
@@ -100,6 +113,7 @@ const WriterEngine = () => {
 
       fetchRubricItems();
       const parsedData = JSON.parse(savedData);
+     
 
       setTheme(parsedData?.theme);
       setGrade(parsedData?.grade_level);
@@ -230,6 +244,7 @@ const WriterEngine = () => {
                 />
               </svg>
             </span>
+            
             Compugrade Writer Engine{" "}
           </span>
 
@@ -240,9 +255,34 @@ const WriterEngine = () => {
       </div>
 
       <Container>
-        <div className="d-flex" syyle={{ width: "100%" }}>
-          <section className="py-4 px-4" style={{ width: "60%" }}>
-            <div className="d-flex justify-content-between align-items-end">
+      <span  className="px-4"
+        style={{ fontSize: "18px", fontWeight: "600", color: "black" }}> {sessionStorage?.getItem("unitTitle")} </span>
+        <div className="d-flex" style={{ width: "100%" }}>
+       
+          <section className="py-2 px-4" style={{ width: "60%" }}>
+          <h3
+                className="mt-1"
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "black",
+                }}
+              >
+                Add Skills Covered
+              </h3>
+          {
+             skills?.length > 0 && (<MultiSelectInput
+          
+                search={search}
+                setSearch={setSearch}
+                skills={skills}
+                customerFacing={true}
+                seSkills={setSkills}
+                selected={selected}
+                setSelected={setSelected}
+              />
+            )}
+            <div className="d-flex justify-content-between align-items-center mt-3">
               <h3
                 className="mt-4"
                 style={{ fontSize: "18px", fontWeight: "600", color: "black" }}
@@ -261,7 +301,7 @@ const WriterEngine = () => {
                 <option value="9-12">Grade 9 to 12</option>
               </select>
             </div>
-            <form onSubmit={(e) => generateContent(e)} className="mt-3">
+            <form onSubmit={(e) => generateContent(e)} className="mt-2">
               <input
                 type="text"
                 required
@@ -340,7 +380,7 @@ const WriterEngine = () => {
                     cursor: "pointer",
                   }}
                 >
-                  + Add Skills Covered
+                  
                 </p>
                 <div>
                   <select
@@ -378,18 +418,7 @@ const WriterEngine = () => {
                 </div>
               </div>
             )}
-            {content && (
-             skills?.length > 0 && (<MultiSelectInput
-          
-                search={search}
-                setSearch={setSearch}
-                skills={skills}
-                customerFacing={true}
-                seSkills={setSkills}
-                selected={selected}
-                setSelected={setSelected}
-              />)
-            )}
+           
 
             {content && (
               <div className="d-flex justify-content-between">

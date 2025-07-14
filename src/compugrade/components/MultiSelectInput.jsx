@@ -30,19 +30,13 @@ export default function MultiSelectInput({
         });
         const data = await response.json();
         const fetchedOptions =
-          data?.skills?.map((item, index) => {
-            const rubricString = item.rubric_titles?.join(", ") || "";
-            const label = rubricString
-              ? `${item.skill} - Already used in lesson: ${rubricString}`
-              : item.skill;
-
-            return {
-              id: index + 1,
-              label: label,
-              value: item.skill,
-              color: item.color || "orange",
-            };
-          }) || [];
+        data?.skills?.map((item, index) => ({
+          id: index + 1,
+          label: item.skill,
+          rubricTitles: item.rubric_titles || [],
+          value: item.skill,
+          color: item.color || "orange",
+        })) || [];
         setOptions(fetchedOptions);
       } catch (error) {
         console.error("Error fetching options:", error);
@@ -79,7 +73,7 @@ export default function MultiSelectInput({
   const filteredOptions = options?.filter(
     (opt) =>
       opt.label.toLowerCase().includes(search.toLowerCase()) &&
-      !selected.find((sel) => sel.label == opt.label)
+      !selected.find((sel) => sel?.label === opt.label)
   );
 
   const handleSelect = (option) => {
@@ -137,9 +131,20 @@ export default function MultiSelectInput({
       {isDropdownOpen && filteredOptions.length > 0 && (
         <ul className="dropdown-list">
           {filteredOptions.map((opt) => (
-            <li key={opt.id} onClick={() => handleSelect(opt)}>
-              {opt.label}
-            </li>
+           <li key={opt.id} onClick={() => handleSelect(opt)} className="d-flex align-items-center flex-wrap">
+           <span className="me-2 fw-bold">{opt.label}</span>
+           {opt?.rubricTitles?.length > 0 && <span className="me-1">-</span>}
+           {opt?.rubricTitles?.map((title, i) => (
+             <span
+               key={i}
+               className="badge px-3 py-1"
+              
+               style={{ borderRadius:"25px" , background:"#B9D9EB",height:"25px" , marginLeft:"5px" , }} 
+             >
+               {title}
+             </span>
+           ))}
+         </li>
           ))}
         </ul>
       )}

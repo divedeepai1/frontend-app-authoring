@@ -54,7 +54,7 @@ const Classes = () => {
            <Container>
           <div className="py-3">
             <button className="outline-black-button py-2 px-3" onClick={(e)=> navigate(`/manage-classes/${1}`)}>+ Add a New Class</button>
-            <button className="outline-black-button py-2 px-3 ml-3">+ Add New Teacher</button>
+            {/* <button className="outline-black-button py-2 px-3 ml-3">+ Add New Teacher</button> */}
             <button className="outline-black-button py-2 px-3 ml-3">Print Completion certificate</button>
             <button className="outline-black-button py-2 px-3 ml-3">Print Parent Letter </button>
           </div>

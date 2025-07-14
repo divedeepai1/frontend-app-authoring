@@ -415,6 +415,7 @@ const CourseOutline = ({ courseId }) => {
                                                 isSelfPaced={statusBarData.isSelfPaced}
                                                 isCustomRelativeDatesActive={isCustomRelativeDatesActive}
                                                 index={unitIndex}
+                                                subsectionIndex={subsectionIndex}
                                                 getPossibleMoves={possibleUnitMoves(
                                                   [...sections],
                                                   sectionIndex,

@@ -75,7 +75,7 @@ const NewSkills = () => {
     setLoading(true); 
     try {
       const payload = {
-        customer_facing_name: customerSkill,
+        customer_facing_name: customerSkill.trim(),
         skill_json: skills,
         skill_type: value,
         ...(selectedRow && { skill_id: selectedRow })
@@ -99,9 +99,7 @@ const NewSkills = () => {
   };
 
   const handleEdit = async (skill) => {
-    
-
-    console.log(skill)
+  
     if (skill.skill_json) {
       const preselected = skill?.skill_json?.map((item, index) => ({
         id: index + 1,
@@ -186,6 +184,7 @@ const NewSkills = () => {
                 />
               </svg>
             </span>
+
             Skills
           </span>
 
@@ -196,7 +195,11 @@ const NewSkills = () => {
       </div>
 
       <Container>
-        <div syyle={{ width: "100%" }}>
+        <div style={{ width: "100%" }}>
+
+        <span  className="px-4"
+        style={{ fontSize: "1.2rem", fontWeight: "600", color: "black" }}> {sessionStorage?.getItem("unitTitle")} </span>
+
           {!database ? (
             <button
               onClick={() => {
@@ -209,7 +212,8 @@ const NewSkills = () => {
             </button>
           ) : (
             <button
-              onClick={() => {setDataBase(false)
+              onClick={() => {
+                setDataBase(false)
                 setCustomerSkill("")
                 setValue("CS")
                 setSelected([]);
@@ -218,7 +222,7 @@ const NewSkills = () => {
 
               }}
               className="primary-button px-3 py-2 mt-3"
-              style={{ float: "right", marginRight: "3%" }}
+              style={{ float: "right", marginRight: "2%" }}
             >
               Add More Skills
             </button>
@@ -226,7 +230,7 @@ const NewSkills = () => {
           {!database && CFSkill && (
             <section className="py-1 px-4" style={{ width: "60%" }}>
               <h3
-                className="mt-3 mb-2"
+                className="mt-2 "
                 style={{
                   fontSize: "18px",
                   fontWeight: "600",
@@ -261,7 +265,7 @@ const NewSkills = () => {
             </section>
           )}
           {!database && !CFSkill ? (
-            <section className="py-4 px-4" style={{ width: "60%" }}>
+            <section className="py-1 px-4" style={{ width: "60%" }}>
               <h3
                 className="mt-1"
                 style={{ fontSize: "18px", fontWeight: "600", color: "black" }}
@@ -359,7 +363,7 @@ const NewSkills = () => {
             </section>
           ) : (
             !CFSkill && (
-              <section className="py-4 px-4" style={{ width: "100%" }}>
+              <section className="py-4" style={{ width: "100%" }}>
                 <SkillsTable
                   skills={skills}
                   onEdit={(skill) => {

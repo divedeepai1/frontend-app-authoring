@@ -3,7 +3,7 @@ import { Edit, Trash } from "lucide-react";
 
 const SkillsTable = ({ skills, onEdit, onDelete }) => {
   return (
-    <Container fluid className="p-4 mt-4">
+    <div fluid className="p-4 mt-2">
       <div
         style={{
           border: "1px solid #ccc",
@@ -138,7 +138,7 @@ const SkillsTable = ({ skills, onEdit, onDelete }) => {
           </tbody>
         </Table>
       </div>
-    </Container>
+    </div>
   );
 };
 

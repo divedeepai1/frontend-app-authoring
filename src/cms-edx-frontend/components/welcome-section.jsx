@@ -18,6 +18,7 @@ export function WelcomeSection() {
       try {
         const fixed = raw.replace(/\\054/g, ",");
         const parsed = JSON.parse(fixed);
+        sessionStorage.setItem("email",parsed?.email)
         setData(JSON.parse(parsed));
       } catch (error) {
         console.error("Failed to parse edx-user-info cookie:", error);

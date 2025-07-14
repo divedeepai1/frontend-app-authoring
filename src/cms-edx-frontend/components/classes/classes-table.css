@@ -43,7 +43,7 @@
     vertical-align: middle;
     
   }
-  .activity-table td {
+  .activity-table td  {
     border: none !important;
     border-bottom: 1px solid #E0E0E0 !important;
   }

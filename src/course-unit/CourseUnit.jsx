@@ -77,17 +77,27 @@ const CourseUnit = ({ courseId }) => {
   const [unitXBlocks, setUnitXBlocks] = useState(initialXBlocksData);
 
   const [unitData, setUnitData] = useState(null);
+  
 
   const handleCreateCompugradeXBlock = (type) => {
+
+    if(unitData){
     
      if(type=="text"){
       sessionStorage.setItem("unitData", JSON.stringify(unitData));
+      sessionStorage.setItem("unitTitle", unitTitle);
      }
      if(type =="skills")
      {
+      sessionStorage.setItem("unitTitle", unitTitle);
+      sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
+     }
+     if(type == "engine"){
+      sessionStorage.setItem("unitTitle", unitTitle);
       sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
      }
      navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type}`);
+    }
   };
 
   useEffect(() => {
@@ -167,7 +177,7 @@ const CourseUnit = ({ courseId }) => {
                 handleConfigureSubmit={handleConfigureSubmit}
               />
             }
-            breadcrumbs={<Breadcrumbs />}
+            breadcrumbs={<Breadcrumbs  />}
             headerActions={
               <HeaderNavigations
                 headerNavigationsActions={headerNavigationsActions}
@@ -238,10 +248,10 @@ const CourseUnit = ({ courseId }) => {
                         />
                       )
                     )}
-                   {unitData?.description	 && <InstructionXBlock title={"Overview"} data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.description	 && <InstructionXBlock title={"Overview"}  data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.skills_used.length > 0 && <InstructionXBlock title={"Skills"} data={unitData?.skills_used} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.text && <InstructionXBlock title={"Document Text"} data={unitData.text} type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.skills_used.length > 0 && <InstructionXBlock title={"Skills"}  data={unitData?.skills_used} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.text && <InstructionXBlock title={"Document Text"} data={unitData.text}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {/* <InstructionXBlock title={"CompuGrade Write Engine"} data={"CompuGrade Write Engine"} type={"engine"} handleEdit={handleCreateCompugradeXBlock}/> */}
 
                   </SortableContext>

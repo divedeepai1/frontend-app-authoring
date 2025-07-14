@@ -164,10 +164,9 @@ const ActivityFeed = ({ classes ,setClasses}) => {
                   }}
                 >
                   <img src={editIcon} onClick={(e) =>handleEdit(e,cls)} alt="edit" />
-                  <img src={viewIcon}  alt="view" />
+                  <img src={viewIcon} onClick={()=>navigate("/classes/"+cls.id)} alt="view" />
                   <img src={deleteIcon} onClick={()=> {setIsOpen(true)
                                              setSelectedClass(cls.id)
-
                    }} alt="delete" />
                   <img src={messageIcon} alt="edit" />
                 </div>

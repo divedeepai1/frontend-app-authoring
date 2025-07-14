@@ -1,9 +1,9 @@
 // @ts-check
-import React, { useEffect, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
-import { getConfig } from '@edx/frontend-platform';
-import { useIntl } from '@edx/frontend-platform/i18n';
-import { useSearchParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from "react";
+import PropTypes from "prop-types";
+import { getConfig } from "@edx/frontend-platform";
+import { useIntl } from "@edx/frontend-platform/i18n";
+import { useSearchParams } from "react-router-dom";
 import {
   Dropdown,
   Form,
@@ -11,25 +11,27 @@ import {
   Icon,
   IconButton,
   useToggle,
-} from '@openedx/paragon';
+} from "@openedx/paragon";
 import {
   MoreVert as MoveVertIcon,
   EditOutline as EditIcon,
-} from '@openedx/paragon/icons';
+} from "@openedx/paragon/icons";
 
-import { useContentTagsCount } from '../../generic/data/apiHooks';
-import { ContentTagsDrawerSheet } from '../../content-tags-drawer';
-import TagCount from '../../generic/tag-count';
-import { useEscapeClick } from '../../hooks';
-import { ITEM_BADGE_STATUS } from '../constants';
-import { scrollToElement } from '../utils';
-import CardStatus from './CardStatus';
-import messages from './messages';
+import { useContentTagsCount } from "../../generic/data/apiHooks";
+import { ContentTagsDrawerSheet } from "../../content-tags-drawer";
+import TagCount from "../../generic/tag-count";
+import { useEscapeClick } from "../../hooks";
+import { ITEM_BADGE_STATUS } from "../constants";
+import { scrollToElement } from "../utils";
+import CardStatus from "./CardStatus";
+import messages from "./messages";
 
 const CardHeader = ({
   title,
   status,
   cardId,
+  index,
+  subsectionIndex,
   hasChanges,
   onClickPublish,
   onClickConfigure,
@@ -59,20 +61,23 @@ const CardHeader = ({
   const [searchParams] = useSearchParams();
   const [titleValue, setTitleValue] = useState(title);
   const cardHeaderRef = useRef(null);
-  const [isManageTagsDrawerOpen, openManageTagsDrawer, closeManageTagsDrawer] = useToggle(false);
+  const [isManageTagsDrawerOpen, openManageTagsDrawer, closeManageTagsDrawer] =
+    useToggle(false);
 
   // Use studio url as base if proctoringExamConfigurationLink is a relative link
-  const fullProctoringExamConfigurationLink = () => (
-    proctoringExamConfigurationLink && new URL(proctoringExamConfigurationLink, getConfig().STUDIO_BASE_URL).href
-  );
+  const fullProctoringExamConfigurationLink = () =>
+    proctoringExamConfigurationLink &&
+    new URL(proctoringExamConfigurationLink, getConfig().STUDIO_BASE_URL).href;
 
-  const isDisabledPublish = (status === ITEM_BADGE_STATUS.live
-    || status === ITEM_BADGE_STATUS.publishedNotLive) && !hasChanges;
+  const isDisabledPublish =
+    (status === ITEM_BADGE_STATUS.live ||
+      status === ITEM_BADGE_STATUS.publishedNotLive) &&
+    !hasChanges;
 
   const { data: contentTagCount } = useContentTagsCount(cardId);
 
   useEffect(() => {
-    const locatorId = searchParams.get('show');
+    const locatorId = searchParams.get("show");
     if (!locatorId) {
       return;
     }
@@ -82,16 +87,13 @@ const CardHeader = ({
     }
   }, []);
 
-  const showDiscussionsEnabledBadge = (
-    isVertical
-      && !parentInfo?.isTimeLimited
-      && discussionEnabled
-      && discussionsSettings?.providerType === 'openedx'
-      && (
-        discussionsSettings?.enableGradedUnits
-          || (!discussionsSettings?.enableGradedUnits && !parentInfo.graded)
-      )
-  );
+  const showDiscussionsEnabledBadge =
+    isVertical &&
+    !parentInfo?.isTimeLimited &&
+    discussionEnabled &&
+    discussionsSettings?.providerType === "openedx" &&
+    (discussionsSettings?.enableGradedUnits ||
+      (!discussionsSettings?.enableGradedUnits && !parentInfo.graded));
 
   useEscapeClick({
     onEscape: () => {
@@ -118,26 +120,40 @@ const CardHeader = ({
               onChange={(e) => setTitleValue(e.target.value)}
               aria-label="edit field"
               onBlur={() => {
-                if (!titleValue.trim()) return; 
+                if (!titleValue.trim()) return;
                 onEditSubmit(titleValue);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (!titleValue.trim()) return; 
+                if (e.key === "Enter") {
+                  if (!titleValue.trim()) return;
                   onEditSubmit(titleValue);
                 }
               }}
               disabled={isDisabledEditField}
             />
             {!titleValue.trim() && (
-    <Form.Control.Feedback type="invalid">
-      This field is required.
-    </Form.Control.Feedback>
-  )}
+              <Form.Control.Feedback type="invalid">
+                This field is required.
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
         ) : (
           <>
+            <span
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: "700",
+                lineHeight: "1.25",
+                color: " #000000",
+                marginRight: "0.2rem",
+              }}
+            >
+              {subsectionIndex != null &&
+                index != null &&
+                `${subsectionIndex + 1}.${index + 1} `}
+            </span>
             {titleComponent}
+
             <IconButton
               className="item-card-edit-icon"
               data-testid={`${namePrefix}-edit-button`}
@@ -145,19 +161,26 @@ const CardHeader = ({
               iconAs={EditIcon}
               onClick={onClickEdit}
             />
-            
-            
           </>
-          
         )}
         <div className="ml-auto d-flex">
           {(isVertical || isSequential) && (
-            <CardStatus status={status} showDiscussionsEnabledBadge={showDiscussionsEnabledBadge} />
+            <CardStatus
+              status={status}
+              showDiscussionsEnabledBadge={showDiscussionsEnabledBadge}
+            />
           )}
-          { getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === 'true' && !!contentTagCount && (
-            <TagCount count={contentTagCount} onClick={openManageTagsDrawer} />
-          )}
-          <Dropdown data-testid={`${namePrefix}-card-header__menu`} onClick={onClickMenuButton}>
+          {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === "true" &&
+            !!contentTagCount && (
+              <TagCount
+                count={contentTagCount}
+                onClick={openManageTagsDrawer}
+              />
+            )}
+          <Dropdown
+            data-testid={`${namePrefix}-card-header__menu`}
+            onClick={onClickMenuButton}
+          >
             <Dropdown.Toggle
               className="item-card-header__menu"
               id={`${namePrefix}-card-header__menu`}
@@ -174,7 +197,9 @@ const CardHeader = ({
                   target="_blank"
                   destination={fullProctoringExamConfigurationLink()}
                   href={fullProctoringExamConfigurationLink()}
-                  externalLinkTitle={intl.formatMessage(messages.proctoringLinkTooltip)}
+                  externalLinkTitle={intl.formatMessage(
+                    messages.proctoringLinkTooltip
+                  )}
                 >
                   {intl.formatMessage(messages.menuProctoringLinkText)}
                 </Dropdown.Item>
@@ -192,7 +217,7 @@ const CardHeader = ({
               >
                 {intl.formatMessage(messages.menuConfigure)}
               </Dropdown.Item>
-              {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === 'true' && (
+              {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === "true" && (
                 <Dropdown.Item
                   data-testid={`${namePrefix}-card-header__menu-manage-tags-button`}
                   onClick={openManageTagsDrawer}
@@ -263,7 +288,8 @@ CardHeader.defaultProps = {
   discussionEnabled: false,
   discussionsSettings: {},
   parentInfo: {},
-  cardId: '',
+  cardId: "",
+  index: null,
 };
 
 CardHeader.propTypes = {

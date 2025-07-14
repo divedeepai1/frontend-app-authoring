@@ -409,7 +409,7 @@ export function configureCourseUnitQuery(
 }
 
 export function editCourseItemQuery(itemId, sectionId, displayName,namePrefix) {
-  console.log(namePrefix)
+  
   
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
@@ -817,6 +817,7 @@ export function setUnitOrderListQuery(
   unitListIds,
   restoreCallback
 ) {
+  console.log("hello")
   return async (dispatch) => {
     dispatch(
       setBlockOrderListQuery(

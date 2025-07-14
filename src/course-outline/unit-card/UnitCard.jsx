@@ -27,6 +27,7 @@ const UnitCard = ({
   isSelfPaced,
   isCustomRelativeDatesActive,
   index,
+  subsectionIndex,
   getPossibleMoves,
   onOpenPublishModal,
   onOpenConfigureModal,
@@ -118,10 +119,7 @@ const UnitCard = ({
   );
 
   useEffect(() => {
-    // if this items has been newly added, scroll to it.
-    // we need to check section.shouldScroll as whole section is fetched when a
-    // unit is duplicated under it.
-    
+
     const filteredSkills = skills.filter((skill) => skill.unit_id == unit.id);
     setunitSkills(filteredSkills[0]?.skills_used);
   }, []);
@@ -189,6 +187,8 @@ const UnitCard = ({
       >
         <CardHeader
           title={displayName}
+          index={index}
+          subsectionIndex={subsectionIndex}
           status={unitStatus}
           hasChanges={hasChanges}
           cardId={id}

@@ -3,7 +3,7 @@ import { Table, Container } from "react-bootstrap"
 import { Edit, Trash2 } from "lucide-react"
 
 
-export default function StudentTable({students,setAddStudents, nextStep, prevStep}) {
+export default function StudentTable({students,setAddStudents, nextStep, prevStep , fromTeachers}) {
   
  
 
@@ -16,9 +16,9 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
   }
 
   return (
-    <Container className="mt-4">
-      <button className="primary-button float-right px-3 py-2 mb-2" onClick={(e)=>setAddStudents(true)}> Add More Students</button>
-      <Table bordered hover responsive>
+      <>
+      {!fromTeachers && <button className="primary-button float-right px-3 py-2 mb-2 mt-4" onClick={(e)=>setAddStudents(true)}> Add More Students</button>}
+      <Table bordered hover className="activity-table" style={{ borderRadius:"12px"}}>
         <thead className="table-light">
           <tr>
             <th>User Name</th>
@@ -65,7 +65,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
           ))}
         </tbody>
       </Table>
-      <div className="d-flex mt-4 justify-content-between">
+      {!fromTeachers &&<div className="d-flex mt-4 justify-content-between">
           <div className="d-flex">
             <button className="primary-button px-4 py-2" onClick={nextStep}>
               Next
@@ -82,7 +82,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
               Save Information for Later
             </a>
           </div>
-        </div>
-    </Container>
+        </div>}
+    </>
   )
 }

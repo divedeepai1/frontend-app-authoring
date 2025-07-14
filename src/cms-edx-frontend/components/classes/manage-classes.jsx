@@ -229,7 +229,7 @@ const ClassManagementForm = () => {
     const token = await fetchCsrfToken();
     try {
       const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/`,
+        `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/${sessionStorage.getItem("email")}/courses/`,
         {
           method: "GET",
           credentials: "include",
