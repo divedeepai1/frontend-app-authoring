@@ -11,6 +11,7 @@ const AssignCourses = ({
   const navigate= useNavigate();
   return (
   <div className="p-4 class-div-style">
+    {courses.length > 0 ?<>
     <h3 className="primary-text mb-3">Assign Courses</h3>
     <p className="mb-4">
       These are your purchased courses and you can assign multiple courses to
@@ -73,6 +74,11 @@ const AssignCourses = ({
      >
       View Course Library
     </button>
+    </>:
+    <>
+    <h4 className="primary-text text-center py-4">No courses found for this teacher</h4>
+
+    </>}
 
     <div className="d-flex  justify-content-between">
       <div className="d-flex">

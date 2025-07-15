@@ -2,9 +2,11 @@ import React, { useState } from "react";
 
 import { fetchCsrfToken } from '../../../../cms-csrftoken';
 import { getConfig } from '@edx/frontend-platform';
+import { useNavigate } from "react-router";
 
 
-const SingleStudentForm = ({ setSelectedOption ,setAddStudents}) => {
+const SingleStudentForm = ({ setSelectedOption ,setAddStudents, isNewStudent}) => {
+  const navigate= useNavigate();
   const [studentData, setStudentData] = useState({
     username: "",
     firstName: "",
@@ -53,7 +55,12 @@ const SingleStudentForm = ({ setSelectedOption ,setAddStudents}) => {
                   throw new Error(`Failed to add: ${response.status} ${errorText}`);
                 }
                 const result = await response.json();
+                if(isNewStudent){
+                  navigate(-1)
+                }
+                else{
                 setAddStudents(false);
+                }
               } catch (error) {
                 console.error('Error in adding:', error.message);
                 

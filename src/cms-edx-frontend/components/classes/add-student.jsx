@@ -7,7 +7,7 @@ import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../../cms-csrftoken";
 import StudentTable from "./students-table";
 
-const StudentDetails = ({ nextStep, prevStep }) => {
+const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
   const [addStudents,setAddStudents] = useState(false)
   const [selectedOption, setSelectedOption] = useState(null);
   const [students, setStudents] = useState([]);
@@ -46,13 +46,13 @@ const StudentDetails = ({ nextStep, prevStep }) => {
   const renderForm = () => {
     switch (selectedOption) {
       case "single":
-        return <SingleStudentForm setSelectedOption={setSelectedOption} setAddStudents={setAddStudents} />;
+        return <SingleStudentForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
       case "bulk":
-        return <BulkStudentForm setSelectedOption={setSelectedOption} setAddStudents={setAddStudents} />;
+        return <BulkStudentForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
       case "csv":
-        return <CsvImportForm setSelectedOption={setSelectedOption} setAddStudents={setAddStudents} />;
+        return <CsvImportForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
       case "link":
-        return <SelfJoinLinkForm setSelectedOption={setSelectedOption} setAddStudents={setAddStudents} />;
+        return <SelfJoinLinkForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
       default:
         return null;
     }
@@ -60,7 +60,7 @@ const StudentDetails = ({ nextStep, prevStep }) => {
 
   return (
     <>
-      {students.length > 0 && !addStudents? <StudentTable students={students} setAddStudents={setAddStudents} nextStep={nextStep} prevStep={prevStep} />:
+      {students.length > 0 && (!addStudents && !isNewStudent )? <StudentTable students={students} setAddStudents={setAddStudents} nextStep={nextStep} prevStep={prevStep} />:
       <div className="p-4 class-div-style">
         <h3 className="primary-text mb-3">Add Students</h3>
         <p className="mb-3">
@@ -107,7 +107,7 @@ const StudentDetails = ({ nextStep, prevStep }) => {
 
         <div className="mt-5">{renderForm()}</div>
 
-        <div className="d-flex mt-4 justify-content-between">
+       {!isNewStudent && <div className="d-flex mt-4 justify-content-between">
           <div className="d-flex">
             <button className="primary-button px-4 py-2" onClick={nextStep}>
               Next
@@ -124,7 +124,7 @@ const StudentDetails = ({ nextStep, prevStep }) => {
               Save Information for Later
             </a>
           </div>
-        </div>
+        </div>}
       </div>}
     </>
   );

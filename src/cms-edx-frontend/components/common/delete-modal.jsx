@@ -38,7 +38,7 @@ const DeleteModal = ({
           </button>
            <button className="ml-3 primary-button px-3 py-2 " onClick={onDeleteSubmit}>
                        
-            Delete
+            {btnDefaultLabel}
              </button>
         </ActionRow>
       )}

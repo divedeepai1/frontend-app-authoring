@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { fetchCsrfToken } from '../../../../cms-csrftoken';
 import { getConfig } from '@edx/frontend-platform';
+import { useNavigate } from 'react-router';
 
 
-const CsvImportForm = ({setSelectedOption,setAddStudents}) => {
+const CsvImportForm = ({setSelectedOption,setAddStudents,isNewStudent}) => {
   const [csvFile, setCsvFile] = useState(null);
+  const navigate = useNavigate();
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -37,13 +39,19 @@ const CsvImportForm = ({setSelectedOption,setAddStudents}) => {
       if (response.ok) {
         setCsvFile(null);
         document.getElementById("csv-file-input").value = null;
+        if(isNewStudent){
+          navigate(-1)
+        }
+        else{
         setAddStudents(false);
         setSelectedOption(null);
+        }
+      
       } else {
       }
     } catch (error) {
       setCsvFile(null);
-      alert("An error occurred while uploading the file. Please try again.");
+      Alert("An error occurred while uploading the file. Please try again.");
       document.getElementById("csv-file-input").value = null;
       console.error("Upload error:", error);
       

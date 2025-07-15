@@ -8,9 +8,9 @@ import Messages from "./send-messages";
 import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../../cms-csrftoken";
 import { useNavigate, useParams } from "react-router";
-import { Announcement } from "@openedx/paragon/icons";
 
-const ClassManagementForm = () => {
+
+const ClassManagementForm = ({isNewStudent}) => {
   const { step } = useParams();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
@@ -35,6 +35,10 @@ const ClassManagementForm = () => {
 
   useEffect(() => {
     const data = sessionStorage.getItem("classData");
+
+    if(isNewStudent){
+      setActiveStep(2);
+    }
   
     if (data) {
       const parsedData = JSON.parse(data);
@@ -229,7 +233,7 @@ const ClassManagementForm = () => {
     const token = await fetchCsrfToken();
     try {
       const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/${sessionStorage.getItem("email")}/courses/`,
+        `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/courses/`,
         {
           method: "GET",
           credentials: "include",
@@ -245,7 +249,7 @@ const ClassManagementForm = () => {
         throw new Error(`Failed to get: ${response.status} ${errorText}`);
       }
       const result = await response.json();
-      setCourses(result);
+      setCourses(result?.courses);
     } catch (error) {
       console.error("Error:", error.message);
     }
@@ -271,6 +275,7 @@ const ClassManagementForm = () => {
         return (
           <AddStudent
             formData={formData}
+            isNewStudent={isNewStudent}
             handleInputChange={handleInputChange}
             nextStep={nextStep}
             prevStep={prevStep}
@@ -312,10 +317,10 @@ const ClassManagementForm = () => {
 
   return (
     <div className="container mb-5 border rounded shadow-sm p-5">
-      <ProgressIndicator
+      {!isNewStudent &&<ProgressIndicator
         activeStep={activeStep}
         activeStepList={activeStepList}
-      />
+      />}
       {renderForm()}
     </div>
   );

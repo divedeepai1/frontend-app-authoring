@@ -53,6 +53,7 @@ import Courses from "./cms-edx-frontend/pages/courses";
 import ManageClasses from "./cms-edx-frontend/pages/manage-classes";
 import Reports from "./cms-edx-frontend/pages/reports";
 import { fetchCsrfToken } from "./cms-csrftoken";
+import StudentDashboard from "./cms-edx-frontend/components/student-detail/student-dashboard";
 
 const queryClient = new QueryClient();
 
@@ -116,7 +117,7 @@ const App = () => {
         <Route path="/home" element={<Main />} />
         <Route path="/classes" element={<Classes />} />
         <Route path="/classes/:classId" element={<Teachers />} />
-
+        <Route path="/classes/:classId/:studentId" element={<StudentDashboard />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/curriculum" element={<Courses />} />
         <Route path="/manage-classes/:step" element={<ManageClasses />} />

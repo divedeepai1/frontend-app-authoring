@@ -164,9 +164,13 @@ const ActivityFeed = ({ classes ,setClasses}) => {
                   }}
                 >
                   <img src={editIcon} onClick={(e) =>handleEdit(e,cls)} alt="edit" />
-                  <img src={viewIcon} onClick={()=>navigate("/classes/"+cls.id)} alt="view" />
+                  <img src={viewIcon} onClick={()=>{navigate("/classes/"+cls.id)
+                              sessionStorage.setItem("classData", JSON.stringify(cls));
+                  }
+                  } alt="view" />
                   <img src={deleteIcon} onClick={()=> {setIsOpen(true)
                                              setSelectedClass(cls.id)
+
                    }} alt="delete" />
                   <img src={messageIcon} alt="edit" />
                 </div>
@@ -184,7 +188,7 @@ const ActivityFeed = ({ classes ,setClasses}) => {
         </tbody>
       </Table>
     </div>
-    <DeleteModal category="component" title="Are you sure you want to delete" isOpen={isOpen} close={()=>setIsOpen(!isOpen)}  description={"class will be deleted from class list"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={deleteClass}/>
+    <DeleteModal category="component" title="Are you sure you want to delete?" isOpen={isOpen} close={()=>setIsOpen(!isOpen)}  description={"class will be deleted from class list"} btnDefaultLabel={"Delete"} btnPendingLabel={"Deleting"} onDeleteSubmit={deleteClass}/>
     
     </>
   );

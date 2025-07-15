@@ -12,6 +12,8 @@ const ManageClasses = () => {
   const location = useLocation(); 
   const navigate =useNavigate();
   const isNewTeacher = location.pathname.endsWith("/add-teacher");
+  const isNewStudent = location.pathname.endsWith("/add-student");
+
   const [selectedTeachers, setSelectedTeachers] = useState([]);
 
   const [teachers, setTeachers] = useState([]);
@@ -105,11 +107,11 @@ const ManageClasses = () => {
                           ?.name
                       : "Class Name"}
                   </h3>
-                 {!isNewTeacher && <button className="outline-black-button fw-bold px-3">
+                 {!isNewTeacher && !isNewStudent &&<button className="outline-black-button fw-bold px-3">
                     + Add More Teachers
                   </button>}
                 </div>
-                {!isNewTeacher ? <ClassManagementForm /> :<AddTeacher
+                {!isNewTeacher ? <ClassManagementForm  isNewStudent={isNewStudent}/> :<AddTeacher
                   teachers={teachers}
                   selectedTeachers={selectedTeachers}
                   setSelectedTeachers={setSelectedTeachers}
