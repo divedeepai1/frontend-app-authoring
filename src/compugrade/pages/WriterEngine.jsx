@@ -15,8 +15,10 @@ const WriterEngine = () => {
   const navigate = useNavigate();
   const [showSelect, setShowSelect] = useState(false);
   const [difficulty, setDifficultiy] = useState("Beginner");
+  const [search, setSearch] = useState("");
   const [contentText, setContentText] = useState("");
-  const [grade, setGrade] = useState("1-5");
+  const [grade, setGrade] = useState("9-12");
+  const [words, setWords] = useState("200-400");
   const [instructionCount, setInstructionCount] = useState(5);
   const [skills,setSkills]=useState([])
   const [themeDescription, setThemeDescription] = useState("");
@@ -140,7 +142,6 @@ const WriterEngine = () => {
     }
   }, []);
 
-  const [search, setSearch] = useState("");
 
   const generateContent = async (e) => {
     e.preventDefault();
@@ -164,6 +165,7 @@ const WriterEngine = () => {
             theme: theme,
             theme_description: themeDescription,
             grade_level: grade,
+            word_range:words,
           }),
         }
       );
@@ -256,7 +258,7 @@ const WriterEngine = () => {
 
       <Container>
       <span  className="px-4"
-        style={{ fontSize: "18px", fontWeight: "600", color: "black" }}> {sessionStorage?.getItem("unitTitle")} </span>
+        style={{ fontSize: "28px", fontWeight: "600", color: "black" }}> {sessionStorage?.getItem("unitTitle")} </span>
         <div className="d-flex" style={{ width: "100%" }}>
        
           <section className="py-2 px-4" style={{ width: "60%" }}>
@@ -289,17 +291,30 @@ const WriterEngine = () => {
               >
                 Theme Topic
               </h3>
+              <div style={{display: "flex", gap: "12px" }}>
               <select
-                id="difficulty"
+                id="count"
+                className="custom-select-black p-2"
+                value={words}
+                style={{ width: "200px" }}
+                onChange={(e) => setWords(e.target.value)}
+              >
+                <option value="100-200">Words (100 - 200) </option>
+                <option value="200-400">Words (200 - 400) </option>
+                <option value="400-600">Grade (400 - 600)</option>
+              </select>
+              <select
+                id="grade"
                 className="custom-select-black p-2"
                 value={grade}
-                style={{ width: "300px" }}
+                style={{ width: "200px" }}
                 onChange={(e) => setGrade(e.target.value)}
               >
                 <option value="1-5">Grade 1 to 5 </option>
                 <option value="6-8">Grade 6 to 8 </option>
                 <option value="9-12">Grade 9 to 12</option>
               </select>
+              </div>
             </div>
             <form onSubmit={(e) => generateContent(e)} className="mt-2">
               <input

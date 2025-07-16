@@ -198,7 +198,7 @@ const NewSkills = () => {
         <div style={{ width: "100%" }}>
 
         <span  className="px-4"
-        style={{ fontSize: "1.2rem", fontWeight: "600", color: "black" }}> {sessionStorage?.getItem("unitTitle")} </span>
+        style={{ fontSize: "28px", fontWeight: "600", color: "black" }}> {sessionStorage?.getItem("unitTitle")} </span>
 
           {!database ? (
             <button

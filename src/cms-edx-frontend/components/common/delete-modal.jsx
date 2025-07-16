@@ -20,7 +20,7 @@ const DeleteModal = ({
 }) => {
   return (
     <AlertModal
-      title={"Are you sure you want to delete"}
+      title={title}
       isOpen={isOpen}
       onClose={close}
       variant={variant}

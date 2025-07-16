@@ -140,7 +140,7 @@ const StudentDashboard = () => {
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              fontSize: "20px",
+              fontSize: "14px",
               fontWeight: "bold",
               color: "#333",
             }}
@@ -168,7 +168,7 @@ const StudentDashboard = () => {
     )
   }
 
-  // Dynamic Small SVG Progress Circle for table rows
+  
   const SmallProgressCircle = ({ itemKey, targetPercentage, size = 24, showPercentage = false }) => {
     const currentPercentage = loadingProgress.tableItems[itemKey] || 0
     const radius = 8
@@ -598,7 +598,7 @@ const StudentDashboard = () => {
                           borderBottom: "1px solid #dee2e6",
                         }}
                       >
-                        <SmallProgressCircle itemKey={section.progressKey} targetPercentage={section.targetProgress} />
+                        <AnimatedCircularProgress color={"#dc3545"} percentage={70} size={48} />
                       </td>
                       <td
                         style={{
@@ -665,7 +665,8 @@ const StudentDashboard = () => {
                               borderBottom: "1px solid #dee2e6",
                             }}
                           >
-                            <SmallProgressCircle itemKey={item.progressKey} targetPercentage={item.targetProgress} />
+                           <AnimatedCircularProgress color={"#dc3545"} percentage={70} size={48} />
+                            
                           </td>
                           <td
                             style={{
@@ -730,7 +731,8 @@ const StudentDashboard = () => {
                     Course Average
                   </td>
                   <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                    <SmallProgressCircle itemKey="course-average" targetPercentage={70} />
+                  <AnimatedCircularProgress color={"#dc3545"} percentage={70} size={48} />
+
                   </td>
                   <td style={{ padding: "14px 16px", textAlign: "center" }}></td>
                   <td

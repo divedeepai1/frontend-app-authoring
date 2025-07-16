@@ -290,7 +290,7 @@ const Teachers = () => {
 
       <DeleteModal
         category="component"
-        title="Are you sure you want to delete?"
+        title="Are you sure you want to remove?"
         isOpen={teacherState.showDeleteModal}
         close={() =>
           setTeacherState(prev => ({
@@ -306,7 +306,7 @@ const Teachers = () => {
 
       <DeleteModal
         category="component"
-        title="Are you sure you want to delete?"
+        title="Are you sure you want to remove?"
         isOpen={studentState.showDeleteModal}
         close={() =>
           setStudentState(prev => ({
