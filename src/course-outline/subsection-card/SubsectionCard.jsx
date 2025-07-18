@@ -116,8 +116,8 @@ const SubsectionCard = ({
   };
 
   const handleNewButtonClick = () => {
-    const newIndex = index + 1;
-    const newChildrenLength = subsection.childInfo.children.length + 1;
+    const newIndex =index + 1;
+    const newChildrenLength = subsection?.childInfo?.children?.length + 1;
 
     const valueToStore = `${newIndex}.${newChildrenLength}`;
     

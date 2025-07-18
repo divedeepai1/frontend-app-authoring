@@ -71,6 +71,8 @@ Sequence.propTypes = {
 Sequence.defaultProps = {
   sequenceId: null,
   unitId: null,
+  numberPart:'',
+
 };
 
 export default Sequence;

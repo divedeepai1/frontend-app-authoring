@@ -117,8 +117,8 @@ const UnitCard = ({
       /^(\d+(?:\.\d+)?)\s*(Unit|Chapter|Lesson)?\s*(.*)/i
     );
 
-    const numberPart = match ? match[1] : null;
-    const typePart = match ? match[2] : null;
+    const numberPart = match ? match[1] : "";
+    const typePart = match ? match[2] : "";
     const stringPart = match ? match[3] : titleValue;
 
     return { numberPart, typePart, stringPart };

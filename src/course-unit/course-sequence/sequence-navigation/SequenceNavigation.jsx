@@ -120,6 +120,7 @@ SequenceNavigation.propTypes = {
 SequenceNavigation.defaultProps = {
   sequenceId: null,
   unitId: null,
+  numberPart:'',
   className: undefined,
 };
 

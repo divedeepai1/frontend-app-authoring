@@ -29,9 +29,13 @@ const SequenceNavigationTabs = ({
   ] = useIndexOfLastVisibleChild();
   const shouldDisplayDropdown = indexOfLastVisibleChild === -1;
 
+  let result = "";
+console.log(numberPart)
+if (numberPart) {
   const [whole, decimal = "0"] = numberPart?.split(".");
-const incrementedDecimal = String(parseInt(decimal) + 1).padStart(decimal.length, "0");
-const result = `${whole}.${incrementedDecimal}`;
+  const incremented = String(parseInt(decimal, 10) + 1).padStart(decimal.length, "0");
+  result = `${whole}.${incremented}`;
+}
 
   const handleAddNewSequenceUnit = () => {
 
