@@ -9,6 +9,7 @@ import { useNavigate, useParams } from "react-router";
 const InstructionsPreviewEngine = ({
   data,
   text,
+  preview,
   selectedSkills,
   theme,
   description,
@@ -170,7 +171,7 @@ const InstructionsPreviewEngine = ({
 
   return (
     <div style={{ maxHeight: "90%" }}>
-      <div className="overflow-auto" style={{ position: "relative" }}>
+      <div className="overflow-auto mb-3" style={{ position: "relative" }}>
         <div>
           {tasks.length > 0 ? (
             tasks.map((task, index) => (
@@ -229,7 +230,7 @@ const InstructionsPreviewEngine = ({
                       </option>
                     </select>
                   )}
-                  <div>
+                  {!preview &&<div>
                     <button
                       style={{
                         backgroundColor: "white",
@@ -257,7 +258,7 @@ const InstructionsPreviewEngine = ({
                         height={20}
                       />
                     </button>
-                  </div>
+                  </div>}
                 </div>
 
                 <div
@@ -350,7 +351,7 @@ const InstructionsPreviewEngine = ({
           )}
         </div>
       </div>
-      <div className="d-flex">
+      {!preview &&<div className="d-flex">
         <button
           onClick={handleSaving}
           className="primary-button my-3 py-2 px-4"
@@ -360,7 +361,7 @@ const InstructionsPreviewEngine = ({
           )}
           {loading ? "Saving..." : "Save"}
         </button>
-      </div>
+      </div>}
     </div>
   );
 };

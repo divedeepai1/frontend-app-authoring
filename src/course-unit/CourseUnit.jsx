@@ -87,6 +87,10 @@ const CourseUnit = ({ courseId }) => {
       sessionStorage.setItem("unitData", JSON.stringify(unitData));
       sessionStorage.setItem("unitTitle", unitTitle);
      }
+     if(type=="preview"){
+      sessionStorage.setItem("unitData", JSON.stringify(unitData));
+      sessionStorage.setItem("unitTitle", unitTitle);
+     }
      if(type =="skills")
      {
       sessionStorage.setItem("unitTitle", unitTitle);
@@ -105,22 +109,22 @@ const CourseUnit = ({ courseId }) => {
     sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
     const fetchData = async () => {
       try {
-        const encodedBlockId = encodeURIComponent(blockId); // Encode the block ID
+        const encodedBlockId = encodeURIComponent(blockId); 
         const response = await fetch(
           `${base_url}/api/openedx/get_rubric?openedx_based_id=${encodedBlockId}`,
           {
-            method: "POST", // Set method to POST
+            method: "POST", 
             headers: {
-              "Content-Type": "application/json", // Set content type
+              "Content-Type": "application/json", 
             },
-            body: JSON.stringify({ name: "Hello" }), // Add body
+            body: JSON.stringify({ name: "Hello" }), 
           }
         );
 
         const result = await response.json();
-        setUnitData(result); // Save the API response to state
+        setUnitData(result); 
       } catch (err) {
-        // setError(err.message); // Capture any errors
+        
         console.log(err);
       }
     };
@@ -162,6 +166,10 @@ const CourseUnit = ({ courseId }) => {
     );
   };
 
+  const match = unitTitle.match(/^(\d+(\.\d+)?)[\s-]*(.*)/);
+  const numberPart = match ? match[1] : null; 
+  
+
   return (
     <>
       <Container size="xl" className="course-unit px-4">
@@ -188,6 +196,7 @@ const CourseUnit = ({ courseId }) => {
             courseId={courseId}
             sequenceId={sequenceId}
             unitId={blockId}
+            numberPart={numberPart}
             handleCreateNewCourseXBlock={handleCreateNewCourseXBlock}
             showPasteUnit={showPasteUnit}
           />
@@ -251,8 +260,8 @@ const CourseUnit = ({ courseId }) => {
                    {unitData?.description	 && <InstructionXBlock title={"Overview"}  data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.skills_used.length > 0 && <InstructionXBlock title={"Skills"}  data={unitData?.skills_used} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.text && <InstructionXBlock title={"Document Text"} data={unitData.text}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {/* <InstructionXBlock title={"CompuGrade Write Engine"} data={"CompuGrade Write Engine"} type={"engine"} handleEdit={handleCreateCompugradeXBlock}/> */}
+                   {unitData?.text && <InstructionXBlock title={"CWE Preview"} data={unitData.text}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.items && <InstructionXBlock title={"Addin Preview"} data={"cwe"} preview={true} type={"preview"} handleEdit={handleCreateCompugradeXBlock}/> }
 
                   </SortableContext>
                 </DraggableList>

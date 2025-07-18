@@ -23,6 +23,7 @@ const SequenceNavigation = ({
   courseId,
   unitId,
   sequenceId,
+  numberPart,
   className,
   handleCreateNewCourseXBlock,
   showPasteUnit,
@@ -45,6 +46,7 @@ const SequenceNavigation = ({
       <SequenceNavigationTabs
         unitIds={sequence.unitIds || []}
         unitId={unitId}
+        numberPart={numberPart}
         handleCreateNewCourseXBlock={handleCreateNewCourseXBlock}
         showPasteUnit={showPasteUnit}
       />

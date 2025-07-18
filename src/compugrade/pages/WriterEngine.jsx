@@ -10,8 +10,9 @@ import { Container } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router";
 import { base_url } from "../../compugrade-constants";
 import magic from "../../compugrade-assets/magic.svg";
+import { Prev } from "react-bootstrap/esm/PageItem";
 
-const WriterEngine = () => {
+const WriterEngine = ({ preview }) => {
   const navigate = useNavigate();
   const [showSelect, setShowSelect] = useState(false);
   const [difficulty, setDifficultiy] = useState("Beginner");
@@ -20,8 +21,9 @@ const WriterEngine = () => {
   const [grade, setGrade] = useState("9-12");
   const [words, setWords] = useState("200-400");
   const [instructionCount, setInstructionCount] = useState(5);
-  const [skills,setSkills]=useState([])
+  const [skills, setSkills] = useState([]);
   const [themeDescription, setThemeDescription] = useState("");
+  const [activeTab, setActiveTab] = useState("Content");
 
   const editorRef = useRef(null);
   const [content, setContent] = useState("");
@@ -34,41 +36,37 @@ const WriterEngine = () => {
   const { blockId } = useParams();
   const encodedBlockId = encodeURIComponent(blockId);
 
-   useEffect(() => {
-      const fetchSkills = async () => {
-          try {
-            const response = await fetch(
-              `${base_url}/api/skills/get_skills`,
-              {
-                method: "GET",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-               
-              }
-            );
-  
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            const data = await response.json();
-            setSkills(data?.skills);
-          } catch (err) {
-            console.error(err);
-          }
-        };
-  
-        fetchSkills();   
-    }, []);
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const response = await fetch(`${base_url}/api/skills/get_skills`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const data = await response.json();
+        setSkills(data?.skills);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchSkills();
+  }, []);
 
   useEffect(() => {
     const savedData = sessionStorage.getItem("unitData");
     const skills_used = sessionStorage.getItem("skills_used");
-   
+
     if (skills_used && !savedData) {
       const parsedSkills = JSON?.parse(skills_used);
-      const preselected = parsedSkills?.map((item,index) => ({
-        id: index+1,
+      const preselected = parsedSkills?.map((item, index) => ({
+        id: index + 1,
         label: item,
         value: item,
         color: "orange",
@@ -95,7 +93,6 @@ const WriterEngine = () => {
           }
 
           const data = await response.json();
-          console.log(data);
 
           const transformedList = data?.items.map((item) => ({
             instruction:
@@ -115,15 +112,14 @@ const WriterEngine = () => {
 
       fetchRubricItems();
       const parsedData = JSON.parse(savedData);
-     
 
       setTheme(parsedData?.theme);
       setGrade(parsedData?.grade_level);
       setInstructionCount(parsedData?.instruction_count_preference || 5);
 
       if (parsedData?.skills_used) {
-        const preselected = parsedData.skills_used.map((item,index) => ({
-          id: index+1,
+        const preselected = parsedData.skills_used.map((item, index) => ({
+          id: index + 1,
           label: item,
           value: item,
           color: "orange",
@@ -141,7 +137,6 @@ const WriterEngine = () => {
       setContentText(plainText);
     }
   }, []);
-
 
   const generateContent = async (e) => {
     e.preventDefault();
@@ -165,7 +160,7 @@ const WriterEngine = () => {
             theme: theme,
             theme_description: themeDescription,
             grade_level: grade,
-            word_range:words,
+            word_range: words,
           }),
         }
       );
@@ -192,7 +187,7 @@ const WriterEngine = () => {
 
       setLoadingInstructions(true);
       try {
-        const skills = [...new Set(selected.flatMap(item => item.value))];
+        const skills = [...new Set(selected.flatMap((item) => item.value))];
         // const gradeInt = parseInt(grade, 10);
         const response = await fetch(
           `${
@@ -246,23 +241,30 @@ const WriterEngine = () => {
                 />
               </svg>
             </span>
-            
-            Compugrade Writer Engine{" "}
+
+            {preview ? "Addin Preview" : "Compugrade Writer Engine"}
           </span>
 
-          <span>
-            <img src={editIcon} alt="edit" />
-          </span>
+          {!preview && (
+            <span>
+              <img src={editIcon} alt="edit" />
+            </span>
+          )}
         </Container>
       </div>
 
       <Container>
-      <span  className="px-4"
-        style={{ fontSize: "28px", fontWeight: "600", color: "black" }}> {sessionStorage?.getItem("unitTitle")} </span>
+        <span
+          className="px-4"
+          style={{ fontSize: "28px", fontWeight: "600", color: "black" }}
+        >
+          {" "}
+          {sessionStorage?.getItem("unitTitle")}{" "}
+        </span>
         <div className="d-flex" style={{ width: "100%" }}>
-       
           <section className="py-2 px-4" style={{ width: "60%" }}>
-          <h3
+            {!preview && (
+              <h3
                 className="mt-1"
                 style={{
                   fontSize: "18px",
@@ -272,9 +274,9 @@ const WriterEngine = () => {
               >
                 Add Skills Covered
               </h3>
-          {
-             skills?.length > 0 && (<MultiSelectInput
-          
+            )}
+            {!preview && skills?.length > 0 && (
+              <MultiSelectInput
                 search={search}
                 setSearch={setSearch}
                 skills={skills}
@@ -284,105 +286,158 @@ const WriterEngine = () => {
                 setSelected={setSelected}
               />
             )}
-            <div className="d-flex justify-content-between align-items-center mt-3">
-              <h3
-                className="mt-4"
-                style={{ fontSize: "18px", fontWeight: "600", color: "black" }}
-              >
-                Theme Topic
-              </h3>
-              <div style={{display: "flex", gap: "12px" }}>
-              <select
-                id="count"
-                className="custom-select-black p-2"
-                value={words}
-                style={{ width: "200px" }}
-                onChange={(e) => setWords(e.target.value)}
-              >
-                <option value="100-200">Words (100 - 200) </option>
-                <option value="200-400">Words (200 - 400) </option>
-                <option value="400-600">Grade (400 - 600)</option>
-              </select>
-              <select
-                id="grade"
-                className="custom-select-black p-2"
-                value={grade}
-                style={{ width: "200px" }}
-                onChange={(e) => setGrade(e.target.value)}
-              >
-                <option value="1-5">Grade 1 to 5 </option>
-                <option value="6-8">Grade 6 to 8 </option>
-                <option value="9-12">Grade 9 to 12</option>
-              </select>
+            {!preview && (
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <h3
+                  className="mt-4"
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "black",
+                  }}
+                >
+                  Theme Topic
+                </h3>
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <select
+                    id="count"
+                    className="custom-select-black p-2"
+                    value={words}
+                    style={{ width: "200px" }}
+                    onChange={(e) => setWords(e.target.value)}
+                  >
+                    <option value="100-200">Words (100 - 200) </option>
+                    <option value="200-400">Words (200 - 400) </option>
+                    <option value="400-600">Grade (400 - 600)</option>
+                  </select>
+                  <select
+                    id="grade"
+                    className="custom-select-black p-2"
+                    value={grade}
+                    style={{ width: "200px" }}
+                    onChange={(e) => setGrade(e.target.value)}
+                  >
+                    <option value="1-5">Grade 1 to 5 </option>
+                    <option value="6-8">Grade 6 to 8 </option>
+                    <option value="9-12">Grade 9 to 12</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            <form onSubmit={(e) => generateContent(e)} className="mt-2">
-              <input
-                type="text"
-                required
-                onChange={(e) => {
-                  setTheme(e.target.value);
-                }}
-                value={theme}
-                className="form-control border-none my-2 py-4"
-                style={{ background: "#EFF6F7" }}
-                placeholder=""
-              />
-              <h3
-                className="mt-4"
-                style={{ fontSize: "18px", fontWeight: "600", color: "black" }}
-              >
-                Theme Description (Optional)
-              </h3>
-              <textarea
-                type="text"
-                onChange={(e) => {
-                  setThemeDescription(e.target.value);
-                }}
-                value={themeDescription}
-                className="form-control border-none my-2 mt-3 py-4"
-                style={{ background: "#EFF6F7" }}
-                placeholder=""
-              />
-              <button
-                type="submit"
-                disabled={theme?.trim() == "" || loading}
-                className="primary-button my-3 py-2 px-4"
-              >
-                {loading && (
-                  <span className="spinner-border spinner-border-sm mr-2"></span>
-                )}
-                {loading ? "Generating..." : "Generate Content"}
-              </button>
-            </form>
+            )}
+            {!preview && (
+              <form onSubmit={(e) => generateContent(e)} className="mt-2">
+                <input
+                  type="text"
+                  required
+                  onChange={(e) => {
+                    setTheme(e.target.value);
+                  }}
+                  value={theme}
+                  className="form-control border-none my-2 py-4"
+                  style={{ background: "#EFF6F7" }}
+                  placeholder=""
+                />
+                <h3
+                  className="mt-4"
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "black",
+                  }}
+                >
+                  Theme Description (Optional)
+                </h3>
+                <textarea
+                  type="text"
+                  onChange={(e) => {
+                    setThemeDescription(e.target.value);
+                  }}
+                  value={themeDescription}
+                  className="form-control border-none my-2 mt-3 py-4"
+                  style={{ background: "#EFF6F7" }}
+                  placeholder=""
+                />
+                <button
+                  type="submit"
+                  disabled={theme?.trim() == "" || loading}
+                  className="primary-button my-3 py-2 px-4"
+                >
+                  {loading && (
+                    <span className="spinner-border spinner-border-sm mr-2"></span>
+                  )}
+                  {loading ? "Generating..." : "Generate Content"}
+                </button>
+              </form>
+            )}
             {content && (
-              <h3
-                className="mt-1"
-                style={{ fontSize: "18px", fontWeight: "600", color: "black" }}
-              >
-                Generated Content
-              </h3>
+             preview && 
+              <div>
+                
+                
+                {preview ?<div className="d-flex mb-2">
+                  <div
+                    onClick={() => setActiveTab("Content")}
+                    className={`me-4 pb-2 cursor-pointer ${
+                      activeTab === "Content" ? "border-bottom border-primary text-primary" : "text-secondary"
+                    }`}
+                    style={{ fontWeight: 600 }}
+                  >
+                    Content
+                  </div>
+                  <div
+                    onClick={() => setActiveTab("Answer Key")}
+                    className={`me-4 pb-2 cursor-pointer ml-3 ${
+                      activeTab === "Answer Key" ? "border-bottom border-primary text-primary" : "text-secondary"
+                    }`}
+                    style={{ fontWeight: 600 }}
+                  >
+                    Answer Key
+                  </div>
+                </div>:
+                <h3
+                  className="mt-1"
+                  style={{ fontSize: "18px", fontWeight: "600", color: "black" }}
+                >
+                  Generated Content
+                </h3>}
+
+              </div>
+            
+            
+              
             )}
 
             {content && (
               <div className="mt-3">
-                <Editor
-                  onInit={(evt, editor) => (editorRef.current = editor)}
-                  initialValue={content}
-                  id="question"
-                  editorType="question"
-                  init={{
-                    height: 500,
-                    width: "100%",
-                    menubar: false,
-                    toolbar:
-                      "undo redo | formatselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help",
-                  }}
-                />
+                {preview && activeTab =="Content" ? (
+                  <div
+                    className="p-4"
+                    style={{
+                      maxHeight: "500px",
+                      overflowY: "auto",
+                      border: "1px solid gray",
+                    }}
+                    dangerouslySetInnerHTML={{ __html: content }}
+                  />
+                ) : (
+                  <Editor
+                    onInit={(evt, editor) => (editorRef.current = editor)}
+                    initialValue={content}
+                    id="question"
+                    editorType="question"
+                    init={{
+                      height: 500,
+                      width: "100%",
+                      menubar: false,
+                      toolbar:
+                        "undo redo | formatselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help",
+                    }}
+                  />
+                )}
               </div>
             )}
 
-            {content && (
+            {content && !preview && (
               <div className="d-flex justify-content-between mt-4 align-items-end">
                 <p
                   className="d-flex"
@@ -394,9 +449,7 @@ const WriterEngine = () => {
                     fontWeight: "600",
                     cursor: "pointer",
                   }}
-                >
-                  
-                </p>
+                ></p>
                 <div>
                   <select
                     id="instruction-count"
@@ -433,9 +486,8 @@ const WriterEngine = () => {
                 </div>
               </div>
             )}
-           
 
-            {content && (
+            {content && !preview && (
               <div className="d-flex justify-content-between">
                 <button
                   onClick={(e) => generateInstuctions()}
@@ -461,6 +513,7 @@ const WriterEngine = () => {
             {instructions && (
               <InstructionsPreviewEngine
                 data={instructions}
+                preview={preview}
                 text={content}
                 selectedSkills={selected}
                 theme={theme}

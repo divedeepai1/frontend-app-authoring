@@ -1,5 +1,6 @@
 import {
   ActionRow,
+  Button,
   Card,
   Dropdown,
   Icon,
@@ -12,23 +13,31 @@ import {
 } from "@openedx/paragon/icons";
 import DeleteModal from "../../generic/delete-modal/DeleteModal.jsx";
 import "./components.css"
-const InstructionXBlock = ({ title, data, handleEdit, type }) => {
+import { over } from "lodash";
+const InstructionXBlock = ({ title, data, handleEdit, type,preview }) => {
   return (
-    <div className={"course-unit__xblock instruction-xblock"}>
+    <div className={"course-unit__xblock instruction-xblock"} >
       <Card
         category="xblock"
         componentStyle={{ marginBottom: 0 }}
-        style={{ padding: "16px 24px", paddingTop: 0 }}
+
+        style={{ padding: "16px 24px", paddingTop: 0}}
       >
         <Card.Header
           title={title}
+          style={{overflow: "hidden !important"}}
           actions={
-            <ActionRow className="mr-2" style={{padding: "0px !important"}}>
+            <ActionRow className="mr-2 " style={{padding: "0px !important", }}>
+              {preview ?
+              <Button  onClick={()=>handleEdit(type)}>
+               Preview
+              
+              </Button>:
               <IconButton
                 // alt={intl.formatMessage(messages.blockAltButtonEdit)}
                 iconAs={EditIcon}
                 onClick={()=>handleEdit(type)}
-              />
+              />}
               <Dropdown>
                 <Dropdown.Toggle
                   // id={id}

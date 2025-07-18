@@ -103,6 +103,19 @@ const CardHeader = ({
     dependency: title,
   });
 
+ 
+  function extractParts(titleValue) {
+    const match = titleValue.match(
+      /^(\d+(?:\.\d+)?)\s*(Unit|Chapter|Lesson)?\s*(.*)/i
+    );
+
+    const numberPart = match ? match[1] : null;
+    const typePart = match ? match[2] : null;
+    const stringPart = match ? match[3] : titleValue;
+
+    return { numberPart, typePart, stringPart };
+  }
+
   return (
     <>
       <div
@@ -111,32 +124,37 @@ const CardHeader = ({
         ref={cardHeaderRef}
       >
         {isFormOpen ? (
-          <Form.Group className="m-0 w-75" isInvalid={!titleValue.trim()}>
-            <Form.Control
-              data-testid={`${namePrefix}-edit-field`}
-              ref={(e) => e && e.focus()}
-              value={titleValue}
-              name="displayName"
-              onChange={(e) => setTitleValue(e.target.value)}
-              aria-label="edit field"
-              onBlur={() => {
-                if (!titleValue.trim()) return;
+          <Form.Group className="m-0 w-75" isInvalid={!extractParts(titleValue).stringPart.trim()}>
+          <Form.Control
+            ref={(e) => e && e.focus()}
+            value={extractParts(titleValue).stringPart}
+            name="name"
+            onChange={(e) => {
+              const { numberPart, typePart } = extractParts(titleValue);
+              setTitleValue(
+                [numberPart, typePart, e.target.value]
+                  .filter(Boolean)
+                  .join(" ")
+              );
+            }}
+            aria-label={"edit field"}
+            onBlur={() => {
+              if (!extractParts(titleValue).stringPart.trim()) return;
+              onEditSubmit(titleValue);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (!extractParts(titleValue).stringPart.trim()) return;
                 onEditSubmit(titleValue);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  if (!titleValue.trim()) return;
-                  onEditSubmit(titleValue);
-                }
-              }}
-              disabled={isDisabledEditField}
-            />
-            {!titleValue.trim() && (
-              <Form.Control.Feedback type="invalid">
-                This field is required.
-              </Form.Control.Feedback>
-            )}
-          </Form.Group>
+              }
+            }}
+          />
+          {!extractParts(titleValue).stringPart.trim() && (
+            <Form.Control.Feedback type="invalid">
+              This field is required.
+            </Form.Control.Feedback>
+          )}
+        </Form.Group>
         ) : (
           <>
             <span

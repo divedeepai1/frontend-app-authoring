@@ -14,7 +14,7 @@ import UnitButton from './UnitButton';
 import { base_url } from '../../../compugrade-constants';
 
 const SequenceNavigationTabs = ({
-  unitIds, unitId, handleCreateNewCourseXBlock, showPasteUnit,
+  unitIds, unitId, handleCreateNewCourseXBlock, showPasteUnit,numberPart
 }) => {
   const intl = useIntl();
   const dispatch = useDispatch();
@@ -29,11 +29,15 @@ const SequenceNavigationTabs = ({
   ] = useIndexOfLastVisibleChild();
   const shouldDisplayDropdown = indexOfLastVisibleChild === -1;
 
+  const [whole, decimal = "0"] = numberPart?.split(".");
+const incrementedDecimal = String(parseInt(decimal) + 1).padStart(decimal.length, "0");
+const result = `${whole}.${incrementedDecimal}`;
+
   const handleAddNewSequenceUnit = () => {
 
    
     dispatch(updateQueryPendingStatus(true));
-    handleCreateNewCourseXBlock({ parentLocator: sequenceId, category: 'vertical', displayName: 'Unit' }, ({ courseKey, locator }) => {
+    handleCreateNewCourseXBlock({ parentLocator: sequenceId, category: 'vertical', displayName: result + ' Unit'+' Unit' }, ({ courseKey, locator }) => {
       const response = fetch(
         base_url + '/api/openedx/create_rubric',
         {

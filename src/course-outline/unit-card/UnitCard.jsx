@@ -108,11 +108,31 @@ const UnitCard = ({
 
   const handleCopyClick = () => {
     onCopyToClipboardClick(unit.id);
+
+
   };
+
+  function extractParts(titleValue) {
+    const match = titleValue.match(
+      /^(\d+(?:\.\d+)?)\s*(Unit|Chapter|Lesson)?\s*(.*)/i
+    );
+
+    const numberPart = match ? match[1] : null;
+    const typePart = match ? match[2] : null;
+    const stringPart = match ? match[3] : titleValue;
+
+    return { numberPart, typePart, stringPart };
+  }
+
+  
+
+
+
+  const { typePart, stringPart } = extractParts(displayName);
 
   const titleComponent = (
     <TitleLink
-      title={displayName}
+      title={[typePart, stringPart].filter(Boolean).join(" ")}
       titleLink={getTitleLink(id)}
       namePrefix={namePrefix}
     />
@@ -186,6 +206,7 @@ const UnitCard = ({
         ref={currentRef}
       >
         <CardHeader
+         
           title={displayName}
           index={index}
           subsectionIndex={subsectionIndex}
@@ -217,7 +238,7 @@ const UnitCard = ({
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           
          
-          {unitSkills.length > 0 &&
+          {unitSkills?.length > 0 &&
           
             unitSkills?.map((skill, index) => (
               <span key={index} className="skill-tag">

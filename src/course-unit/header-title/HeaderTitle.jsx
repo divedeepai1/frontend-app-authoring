@@ -1,17 +1,22 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import PropTypes from 'prop-types';
-import { useIntl } from '@edx/frontend-platform/i18n';
-import { Form, IconButton, useToggle } from '@openedx/paragon';
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import PropTypes from "prop-types";
+import { useIntl } from "@edx/frontend-platform/i18n";
+import { Form, IconButton, useToggle } from "@openedx/paragon";
 import {
   EditOutline as EditIcon,
   Settings as SettingsIcon,
-} from '@openedx/paragon/icons';
+} from "@openedx/paragon/icons";
+import { Dropdown, Icon } from "@openedx/paragon";
+import {
+  ArrowDropDown as ArrowDropDownIcon,
+  ChevronRight as ChevronRightIcon,
+} from "@openedx/paragon/icons";
 
-import ConfigureModal from '../../generic/configure-modal/ConfigureModal';
-import { getCourseUnitData } from '../data/selectors';
-import { updateQueryPendingStatus } from '../data/slice';
-import messages from './messages';
+import ConfigureModal from "../../generic/configure-modal/ConfigureModal";
+import { getCourseUnitData } from "../data/selectors";
+import { updateQueryPendingStatus } from "../data/slice";
+import messages from "./messages";
 
 const HeaderTitle = ({
   unitTitle,
@@ -24,8 +29,10 @@ const HeaderTitle = ({
   const dispatch = useDispatch();
   const [titleValue, setTitleValue] = useState(unitTitle);
   const currentItemData = useSelector(getCourseUnitData);
-  const [isConfigureModalOpen, openConfigureModal, closeConfigureModal] = useToggle(false);
-  const { selectedPartitionIndex, selectedGroupsLabel } = currentItemData.userPartitionInfo;
+  const [isConfigureModalOpen, openConfigureModal, closeConfigureModal] =
+    useToggle(false);
+  const { selectedPartitionIndex, selectedGroupsLabel } =
+    currentItemData.userPartitionInfo;
 
   const onConfigureSubmit = (...arg) => {
     handleConfigureSubmit(currentItemData.id, ...arg, closeConfigureModal);
@@ -34,13 +41,21 @@ const HeaderTitle = ({
   const getVisibilityMessage = () => {
     let message;
 
-    if (selectedPartitionIndex !== -1 && !Number.isNaN(selectedPartitionIndex) && selectedGroupsLabel) {
-      message = intl.formatMessage(messages.definedVisibilityMessage, { selectedGroupsLabel });
+    if (
+      selectedPartitionIndex !== -1 &&
+      !Number.isNaN(selectedPartitionIndex) &&
+      selectedGroupsLabel
+    ) {
+      message = intl.formatMessage(messages.definedVisibilityMessage, {
+        selectedGroupsLabel,
+      });
     } else if (currentItemData.hasPartitionGroupComponents) {
       message = intl.formatMessage(messages.commonVisibilityMessage);
     }
 
-    return message ? (<p className="header-title__visibility-message mb-0">{message}</p>) : null;
+    return message ? (
+      <p className="header-title__visibility-message mb-0">{message}</p>
+    ) : null;
   };
 
   useEffect(() => {
@@ -48,36 +63,72 @@ const HeaderTitle = ({
     dispatch(updateQueryPendingStatus(true));
   }, [unitTitle]);
 
+  function extractParts(titleValue) {
+    const match = titleValue.match(
+      /^(\d+(?:\.\d+)?)\s*(Unit|Chapter|Lesson)?\s*(.*)/i
+    );
+
+    const numberPart = match ? match[1] : null;
+    const typePart = match ? match[2] : null;
+    const stringPart = match ? match[3] : titleValue;
+
+    return { numberPart, typePart, stringPart };
+  }
+
+  const [selectedItem, setSelectedItem] = useState(extractParts(unitTitle).typePart || "Unit");
+
+  const options = ["Unit", "Chapter", "Lesson"];
+
+  const handleTypeChange = (item) => {
+    const { numberPart, stringPart } = extractParts(titleValue);
+    const formattedTitle = [numberPart, item, stringPart]
+      .filter(Boolean)
+      .join(" ");
+    handleTitleEditSubmit(formattedTitle);
+    setSelectedItem(item);
+  };
+
   return (
     <>
-      <div className="d-flex align-items-center lead" data-testid="unit-header-title">
+      <div
+        className="d-flex align-items-center lead"
+        data-testid="unit-header-title"
+      >
         {isTitleEditFormOpen ? (
-          <Form.Group className="m-0" isInvalid={!titleValue.trim()}>
+          <Form.Group className="m-0" isInvalid={!extractParts(titleValue).stringPart.trim()}>
             <Form.Control
               ref={(e) => e && e.focus()}
-              value={titleValue}
+              value={extractParts(titleValue).stringPart}
               name="displayName"
-              onChange={(e) => setTitleValue(e.target.value)}
+              onChange={(e) => {
+                const { numberPart, typePart } = extractParts(titleValue);
+                setTitleValue(
+                  [numberPart, typePart, e.target.value]
+                    .filter(Boolean)
+                    .join(" ")
+                );
+              }}
               aria-label={intl.formatMessage(messages.ariaLabelButtonEdit)}
               onBlur={() => {
-                if (!titleValue.trim()) return; 
+                if (!extractParts(titleValue).stringPart.trim()) return;
                 handleTitleEditSubmit(titleValue);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (!titleValue.trim()) return; 
+                if (e.key === "Enter") {
+                  if (!extractParts(titleValue).stringPart.trim()) return;
                   handleTitleEditSubmit(titleValue);
                 }
               }}
-             
             />
-             {!titleValue.trim() && (
-                <Form.Control.Feedback type="invalid">
-                  This field is required.
-                </Form.Control.Feedback>
-              )}
+            {!extractParts(titleValue).stringPart.trim() && (
+              <Form.Control.Feedback type="invalid">
+                This field is required.
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
-        ) : unitTitle}
+        ) : (
+          unitTitle
+        )}
         <IconButton
           alt={intl.formatMessage(messages.altButtonEdit)}
           className="ml-1 flex-shrink-0"
@@ -90,6 +141,29 @@ const HeaderTitle = ({
           iconAs={SettingsIcon}
           onClick={openConfigureModal}
         />
+
+        <li className="d-flex">
+          <Dropdown>
+            <Dropdown.Toggle
+              id="breadcrumbs-dropdown-section"
+              className="py-2 bg-transparent text-primary"
+            >
+              <span className="small text-gray-700 px-1">{selectedItem}</span>
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+              {options.map((item, index) => (
+                <Dropdown.Item
+                  key={index}
+                  onClick={() => handleTypeChange(item)}
+                  data-testid="breadcrumbs-section-dropdown-item"
+                >
+                  {item}
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+        </li>
+
         <ConfigureModal
           isOpen={isConfigureModalOpen}
           onClose={closeConfigureModal}

@@ -44,6 +44,10 @@ div.xblock-highlight {
   animation-timing-function: cubic-bezier(1, 0, .72, .04);
 }
 
+.hidden-overflow{
+  overflow: hidden !important;
+}
+
 @keyframes glow {
   0% {
     box-shadow: 0 0 5px 5px $primary-500;

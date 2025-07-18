@@ -1,4 +1,6 @@
 import { arrayMove } from '@dnd-kit/sortable';
+import { base_url } from "../../compugrade-constants";
+
 
 export const dragHelpers = {
   copyBlockChildren: (block) => {
@@ -206,6 +208,11 @@ export const possibleSubsectionMoves = (sections, sectionIndex, section, subsect
   return {};
 };
 
+function extractStringPart(titleValue) {
+  const match = titleValue.match(/^(\d+(?:\.\d+)?)[\s-]*(.*)/);
+  return match ? match[2] : titleValue;
+}
+
 export const possibleUnitMoves = (
   sections,
   sectionIndex,
@@ -213,7 +220,38 @@ export const possibleUnitMoves = (
   section,
   subsection,
   units,
+  id,
+  unit
 ) => (index, step) => {
+
+  if (unit.category === "vertical") {
+    const itemId = unit.id;
+    const displayName = `${subsectionIndex + 1}.${id + 1} ${extractStringPart(unit.displayName)}`;
+  
+    fetch(`${base_url}/api/openedx/update_rubric`, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        openedx_based_id: itemId,
+        title: displayName,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.text().then((text) => {
+            console.error("API call failed:", text);
+          });
+        }
+        // console.log("Rubric updated successfully.");
+      })
+      .catch((error) => {
+        // console.error("Network or server error:", error);
+      });
+  }
+  
   if (!units[index].actions.draggable) {
     return {};
   }

@@ -94,7 +94,8 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
   return (
     <>
     {blockType =="engine"
-      ?<WriterEngine />: blockType =="skills"
+      ?<WriterEngine /> :blockType =="preview"
+      ?<WriterEngine preview={true}/>: blockType =="skills"
       ?<NewSkills />:
     
     <div

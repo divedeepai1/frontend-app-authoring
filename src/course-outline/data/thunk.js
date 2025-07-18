@@ -709,14 +709,14 @@ export function addNewSubsectionQuery(parentLocator, courseId) {
   };
 }
 
-export function addNewUnitQuery(parentLocator, courseId, callback) {
+export function addNewUnitQuery(parentLocator, courseId, id,prefix,callback) {
   
   return async (dispatch) => {
     dispatch(
       addNewCourseItemQuery(
         parentLocator,
         COURSE_BLOCK_NAMES.vertical.id,
-        COURSE_BLOCK_NAMES.vertical.name,
+        id+prefix+" "+COURSE_BLOCK_NAMES.vertical.name,
         async (result) => {
           const response = await fetch(
             base_url + '/api/openedx/create_rubric',

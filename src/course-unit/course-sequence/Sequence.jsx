@@ -14,6 +14,7 @@ const Sequence = ({
   sequenceId,
   unitId,
   handleCreateNewCourseXBlock,
+  numberPart,
   showPasteUnit,
 }) => {
   const intl = useIntl();
@@ -28,6 +29,7 @@ const Sequence = ({
           sequenceId={sequenceId}
           unitId={unitId}
           courseId={courseId}
+          numberPart={numberPart}
           handleCreateNewCourseXBlock={handleCreateNewCourseXBlock}
           showPasteUnit={showPasteUnit}
         />

@@ -56,6 +56,7 @@ import { useCourseOutline } from './hooks';
 import messages from './messages';
 import { getTagsExportFile } from './data/api';
 import { base_url } from '../compugrade-constants';
+import { ChevronsLeftRightEllipsis } from 'lucide-react';
 
 const CourseOutline = ({ courseId }) => {
   const intl = useIntl();
@@ -211,6 +212,7 @@ const CourseOutline = ({ courseId }) => {
    * @returns {void}
    */
   const updateSubsectionOrderByIndex = (section, moveDetails) => {
+    
     const { fn, args, sectionId } = moveDetails;
     if (!args) {
       return;
@@ -234,6 +236,7 @@ const CourseOutline = ({ courseId }) => {
    * @returns {void}
    */
   const updateUnitOrderByIndex = (section, moveDetails) => {
+    console.log("hello",section)
     const {
       fn, args, sectionId, subsectionId,
     } = moveDetails;
@@ -242,6 +245,7 @@ const CourseOutline = ({ courseId }) => {
     }
     const [sectionsCopy, newUnits] = fn(...args);
     if (newUnits && sectionId && subsectionId) {
+      console.log(newUnits)
       setSections(sectionsCopy);
       handleUnitDragAndDrop(
         sectionId,
@@ -415,6 +419,7 @@ const CourseOutline = ({ courseId }) => {
                                                 isSelfPaced={statusBarData.isSelfPaced}
                                                 isCustomRelativeDatesActive={isCustomRelativeDatesActive}
                                                 index={unitIndex}
+                                                
                                                 subsectionIndex={subsectionIndex}
                                                 getPossibleMoves={possibleUnitMoves(
                                                   [...sections],
@@ -423,6 +428,8 @@ const CourseOutline = ({ courseId }) => {
                                                   section,
                                                   subsection,
                                                   subsection.childInfo.children,
+                                                  unitIndex,
+                                                  unit,
                                                 )}
                                                 savingStatus={savingStatus}
                                                 onOpenPublishModal={openPublishModal}

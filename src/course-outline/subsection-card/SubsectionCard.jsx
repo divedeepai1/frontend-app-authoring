@@ -115,7 +115,15 @@ const SubsectionCard = ({
     onOrderChange(section, moveDownDetails);
   };
 
-  const handleNewButtonClick = () => onNewUnitSubmit(id);
+  const handleNewButtonClick = () => {
+    const newIndex = index + 1;
+    const newChildrenLength = subsection.childInfo.children.length + 1;
+
+    const valueToStore = `${newIndex}.${newChildrenLength}`;
+    
+
+    onNewUnitSubmit(id,valueToStore, ' Unit')
+  };
   const handlePasteButtonClick = () => onPasteClick(id, section.id);
 
   const titleComponent = (
