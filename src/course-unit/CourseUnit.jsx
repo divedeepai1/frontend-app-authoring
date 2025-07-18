@@ -261,7 +261,7 @@ const CourseUnit = ({ courseId }) => {
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.skills_used.length > 0 && <InstructionXBlock title={"Skills"}  data={unitData?.skills_used} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.text && <InstructionXBlock title={"CWE Preview"} data={unitData.text}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.items && <InstructionXBlock title={"Addin Preview"} data={"cwe"} preview={true} type={"preview"} handleEdit={handleCreateCompugradeXBlock}/> }
+                   {unitData?.items && <InstructionXBlock title={"Addin Preview"} data={""} preview={true} type={"preview"} handleEdit={handleCreateCompugradeXBlock}/> }
 
                   </SortableContext>
                 </DraggableList>
