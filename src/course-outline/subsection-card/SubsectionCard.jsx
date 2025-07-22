@@ -120,9 +120,7 @@ const SubsectionCard = ({
     const newChildrenLength = subsection?.childInfo?.children?.length + 1;
 
     const valueToStore = `${newIndex}.${newChildrenLength}`;
-    
-
-    onNewUnitSubmit(id,valueToStore, ' Unit')
+    onNewUnitSubmit(id,'Unit ',valueToStore)
   };
   const handlePasteButtonClick = () => onPasteClick(id, section.id);
 

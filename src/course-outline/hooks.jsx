@@ -155,8 +155,8 @@ const useCourseOutline = ({ courseId }) => {
     }
   };
 
-  const handleNewUnitSubmit = (subsectionId,id,prefix) => {
-    dispatch(addNewUnitQuery(subsectionId, courseId, id, prefix,openUnitPage));
+  const handleNewUnitSubmit = (subsectionId,prefix,id) => {
+    dispatch(addNewUnitQuery(subsectionId, courseId, prefix ,id,openUnitPage));
     
   };
 

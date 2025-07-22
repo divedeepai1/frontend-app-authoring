@@ -114,13 +114,13 @@ const UnitCard = ({
 
   function extractParts(titleValue) {
     const match = titleValue.match(
-      /^(\d+(?:\.\d+)?)\s*(Unit|Chapter|Lesson)?\s*(.*)/i
+      /^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
     );
-
-    const numberPart = match ? match[1] : "";
-    const typePart = match ? match[2] : "";
+  
+    const typePart = match ? match[1] : "";
+    const numberPart = match ? match[2] : "";
     const stringPart = match ? match[3] : titleValue;
-
+  
     return { numberPart, typePart, stringPart };
   }
 
@@ -128,11 +128,16 @@ const UnitCard = ({
 
 
 
-  const { typePart, stringPart } = extractParts(displayName);
+  const { typePart, numberPart, stringPart } = extractParts(displayName);
+  const numberPrefix =
+  subsectionIndex != null && index != null
+    ? `${subsectionIndex + 1}.${index + 1}`
+    : "";
+  console.log(numberPrefix)
 
   const titleComponent = (
     <TitleLink
-      title={[typePart, stringPart].filter(Boolean).join(" ")}
+      title={[typePart, numberPrefix,stringPart].filter(Boolean).join(" ")}
       titleLink={getTitleLink(id)}
       namePrefix={namePrefix}
     />
@@ -242,7 +247,7 @@ const UnitCard = ({
           
             unitSkills?.map((skill, index) => (
               <span key={index} className="skill-tag">
-                {skill}
+                {skill?.customer_facing_name}
               </span>
             ))}
         </div>

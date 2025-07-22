@@ -106,14 +106,14 @@ const CardHeader = ({
  
   function extractParts(titleValue) {
     const match = titleValue.match(
-      /^(\d+(?:\.\d+)?)\s*(Unit|Chapter|Lesson)?\s*(.*)/i
+      /^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
     );
-
-    const numberPart = match ? match[1] : null;
-    const typePart = match ? match[2] : null;
+  
+    const typePart = match ? match[1] : "";
+    const numberPart = match ? match[2] : "";
     const stringPart = match ? match[3] : titleValue;
-
-    return { numberPart, typePart, stringPart };
+  
+    return {  typePart,numberPart, stringPart };
   }
 
   return (
@@ -130,9 +130,10 @@ const CardHeader = ({
             value={extractParts(titleValue).stringPart}
             name="name"
             onChange={(e) => {
-              const { numberPart, typePart } = extractParts(titleValue);
+              const { typePart,numberPart } = extractParts(titleValue);
+      
               setTitleValue(
-                [numberPart, typePart, e.target.value]
+                [typePart, numberPart, e.target.value]
                   .filter(Boolean)
                   .join(" ")
               );
@@ -157,7 +158,7 @@ const CardHeader = ({
         </Form.Group>
         ) : (
           <>
-            <span
+            {/* <span
               style={{
                 fontSize: "0.875rem",
                 fontWeight: "700",
@@ -169,7 +170,7 @@ const CardHeader = ({
               {subsectionIndex != null &&
                 index != null &&
                 `${subsectionIndex + 1}.${index + 1} `}
-            </span>
+            </span> */}
             {titleComponent}
 
             <IconButton

@@ -30,7 +30,7 @@ const SequenceNavigationTabs = ({
   const shouldDisplayDropdown = indexOfLastVisibleChild === -1;
 
   let result = "";
-console.log(numberPart)
+
 if (numberPart) {
   const [whole, decimal = "0"] = numberPart?.split(".");
   const incremented = String(parseInt(decimal, 10) + 1).padStart(decimal.length, "0");
@@ -41,7 +41,7 @@ if (numberPart) {
 
    
     dispatch(updateQueryPendingStatus(true));
-    handleCreateNewCourseXBlock({ parentLocator: sequenceId, category: 'vertical', displayName: result + ' Unit'+' Unit' }, ({ courseKey, locator }) => {
+    handleCreateNewCourseXBlock({ parentLocator: sequenceId, category: 'vertical', displayName: 'Unit '+ result +' Unit' }, ({ courseKey, locator }) => {
       const response = fetch(
         base_url + '/api/openedx/create_rubric',
         {

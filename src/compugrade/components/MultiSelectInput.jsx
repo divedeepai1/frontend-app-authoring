@@ -9,12 +9,15 @@ export default function MultiSelectInput({
   selected,
   setSelected,
   setSkills,
+  dropdown,
   fromSkills,
   skills,
+  fromChild,
   customerFacing,
 }) {
+
   const wrapperRef = useRef(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(dropdown || false);
   const [options, setOptions] = useState([]);
   const { blockId, sequenceId, courseId } = useParams();
   const encodedBlockId = encodeURIComponent(blockId);
@@ -29,6 +32,30 @@ export default function MultiSelectInput({
           },
         });
         const data = await response.json();
+      
+        if(fromChild){
+          const fetchedOptions = data?.skills?.map((item, index) => {
+            const trimmed = item.skill?.trim() || "";
+          
+            let color = "orange";
+            if (trimmed.endsWith("(OB)")) {
+              color = "blue";
+            } else if (trimmed.endsWith("(AB)")) {
+              color = "green";
+            }
+          
+            return {
+              id: index + 1,
+              label: item.skill,
+              rubricTitles: item.rubric_titles || [],
+              value: item.skill,
+              color
+            };
+          }) || [];
+          
+          setOptions(fetchedOptions);
+        }
+        else{
         const fetchedOptions =
         data?.skills?.map((item, index) => ({
           id: index + 1,
@@ -38,13 +65,14 @@ export default function MultiSelectInput({
           color: item.color || "orange",
         })) || [];
         setOptions(fetchedOptions);
+      }
       } catch (error) {
         console.error("Error fetching options:", error);
       }
     };
 
     if (customerFacing) {
-      console.log(skills)
+      
       const newOptions = skills.map((item) => ({
         id: item.id,
         label: item.customer_facing_name,
@@ -96,7 +124,7 @@ export default function MultiSelectInput({
           <span
             key={item.id}
             className={`badge mt-2 ${
-              item.color === "red" ? "badge-red" : "badge-orange"
+              item.color === "blue" ? "badge-blue" : item.color === "green"? "badge-green": "badge-orange"
             }`}
           >
             {customerFacing ? item.label : item.value}
@@ -128,7 +156,7 @@ export default function MultiSelectInput({
           }}
         />
       </div>
-      {isDropdownOpen && filteredOptions.length > 0 && (
+      {isDropdownOpen &&  filteredOptions.length > 0 && (
         <ul className="dropdown-list">
           {filteredOptions.map((opt) => (
            <li key={opt.id} onClick={() => handleSelect(opt)} className="d-flex align-items-center flex-wrap">

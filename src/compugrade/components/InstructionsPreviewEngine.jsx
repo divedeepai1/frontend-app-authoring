@@ -29,7 +29,7 @@ const InstructionsPreviewEngine = ({
 
   useEffect(() => {
     setTasks(data || []);
-    console.log(data);
+    
   }, [data]);
 
   const handleDragStart = (index) => {
@@ -125,8 +125,14 @@ const InstructionsPreviewEngine = ({
 
       const result = await response.json();
 
-      const skillValues = selectedSkills.map((skill) => skill.label);
+      console.log(selectedSkills)
 
+      const skillsUsed = selectedSkills?.map(item => ({
+        customer_facing_name: item.label,
+        skill_json: item.value
+      }));
+      
+      
       const response2 = await fetch(base_url + "/api/openedx/update_rubric", {
         method: "PATCH",
         headers: {
@@ -135,7 +141,7 @@ const InstructionsPreviewEngine = ({
         body: JSON.stringify({
           openedx_based_id: blockId,
           text_to_display: text,
-          skills_used: skillValues,
+          skills_used: skillsUsed,
           theme: theme,
           theme_description: description,
           grade_level: grade,
@@ -149,7 +155,6 @@ const InstructionsPreviewEngine = ({
           `Failed to update rubric: ${response2.status} ${response2.statusText}`
         );
       }
-      sessionStorage.removeItem("unitData");
       navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
     } catch (error) {
       console.error("Error during saving:", error);

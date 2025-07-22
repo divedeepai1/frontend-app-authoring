@@ -10,13 +10,16 @@ import { Container } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router";
 import { base_url } from "../../compugrade-constants";
 import magic from "../../compugrade-assets/magic.svg";
-import { Prev } from "react-bootstrap/esm/PageItem";
+
 
 const WriterEngine = ({ preview }) => {
   const navigate = useNavigate();
   const [showSelect, setShowSelect] = useState(false);
   const [difficulty, setDifficultiy] = useState("Beginner");
   const [search, setSearch] = useState("");
+  const [searchChild, setSearchChild] = useState("");
+
+  const [answerKey, setAnswerKey] = useState("");
   const [contentText, setContentText] = useState("");
   const [grade, setGrade] = useState("9-12");
   const [words, setWords] = useState("200-400");
@@ -29,6 +32,7 @@ const WriterEngine = ({ preview }) => {
   const [content, setContent] = useState("");
   const [selected, setSelected] = useState([]);
   const [instructions, setinstructions] = useState("");
+  const [childSkills, setChildSkills] = useState([]);
   const [theme, setTheme] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingInstruction, setLoadingInstructions] = useState(false);
@@ -43,6 +47,7 @@ const WriterEngine = ({ preview }) => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "69420",
           },
         });
 
@@ -60,15 +65,48 @@ const WriterEngine = ({ preview }) => {
   }, []);
 
   useEffect(() => {
+    
+    if (selected.length > 0) {
+      const combined = selected.flatMap((skill, skillIndex) => {
+        const values = Array.isArray(skill.value)
+          ? skill.value
+          : [skill.value]; 
+  
+        return values.map((item, index) => {
+          const trimmed = item.trim();
+          const color = trimmed.endsWith("(OB)")
+            ? "blue"
+            : trimmed.endsWith("(AB)")
+            ? "green"
+            : "orange";
+  
+          return {
+            id: `${skillIndex}-${index}`,
+            label: trimmed,
+            value: trimmed,
+            color: color,
+          };
+        });
+      });
+  
+      setChildSkills(combined);
+    } else {
+      setChildSkills([]);
+    }
+  }, [selected]);
+
+
+
+  useEffect(() => {
     const savedData = sessionStorage.getItem("unitData");
     const skills_used = sessionStorage.getItem("skills_used");
 
-    if (skills_used && !savedData) {
-      const parsedSkills = JSON?.parse(skills_used);
+    if (skills_used && !savedData && skills_used !== "undefined") {
+      const parsedSkills = JSON?.parse(skills_used || {});
       const preselected = parsedSkills?.map((item, index) => ({
         id: index + 1,
-        label: item,
-        value: item,
+        label: item?.customer_facing_name,
+        value: item?.skill_json,
         color: "orange",
       }));
       setSelected(preselected);
@@ -114,14 +152,15 @@ const WriterEngine = ({ preview }) => {
       const parsedData = JSON.parse(savedData);
 
       setTheme(parsedData?.theme);
+      setAnswerKey(parsedData?.preview_path_s3);
       setGrade(parsedData?.grade_level);
       setInstructionCount(parsedData?.instruction_count_preference || 5);
 
       if (parsedData?.skills_used) {
         const preselected = parsedData.skills_used.map((item, index) => ({
           id: index + 1,
-          label: item,
-          value: item,
+          label: item?.customer_facing_name,
+          value: item?.skill_json,
           color: "orange",
         }));
         setSelected(preselected);
@@ -187,8 +226,7 @@ const WriterEngine = ({ preview }) => {
 
       setLoadingInstructions(true);
       try {
-        const skills = [...new Set(selected.flatMap((item) => item.value))];
-        // const gradeInt = parseInt(grade, 10);
+        const skills = childSkills.length > 0 &&childSkills.map((item) => item.label);
         const response = await fetch(
           `${
             getConfig().STUDIO_BASE_URL
@@ -275,16 +313,30 @@ const WriterEngine = ({ preview }) => {
                 Add Skills Covered
               </h3>
             )}
-            {!preview && skills?.length > 0 && (
-              <MultiSelectInput
-                search={search}
-                setSearch={setSearch}
-                skills={skills}
-                customerFacing={true}
-                seSkills={setSkills}
-                selected={selected}
-                setSelected={setSelected}
-              />
+            {!preview && (
+              <div>
+                <MultiSelectInput
+                  search={search}
+                  setSearch={setSearch}
+                  skills={skills}
+                  customerFacing={true}
+                  dropdown={false}
+                  seSkills={setSkills}
+                  selected={selected}
+                  setSelected={setSelected}
+                />
+
+                
+                   {childSkills?.length > 0 && <MultiSelectInput
+                    search={searchChild}
+                    setSearch={setSearchChild}
+                    dropdwon={true}
+                    fromChild={true}
+                    selected={childSkills}
+                    setSelected={setChildSkills}
+                  />}
+                
+              </div>
             )}
             {!preview && (
               <div className="d-flex justify-content-between align-items-center mt-3">
@@ -369,47 +421,51 @@ const WriterEngine = ({ preview }) => {
                 </button>
               </form>
             )}
-            {content && (
-             preview && 
+            {content && preview && (
               <div>
-                
-                
-                {preview ?<div className="d-flex mb-2">
-                  <div
-                    onClick={() => setActiveTab("Content")}
-                    className={`me-4 pb-2 cursor-pointer ${
-                      activeTab === "Content" ? "border-bottom border-primary text-primary" : "text-secondary"
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    Content
+                {preview ? (
+                  <div className="d-flex mb-2">
+                    <div
+                      onClick={() => setActiveTab("Content")}
+                      className={`me-4 pb-2 cursor-pointer ${
+                        activeTab === "Content"
+                          ? "border-bottom border-primary text-primary"
+                          : "text-secondary"
+                      }`}
+                      style={{ fontWeight: 600 }}
+                    >
+                      Content
+                    </div>
+                    <div
+                      onClick={() => setActiveTab("Answer Key")}
+                      className={`me-4 pb-2 cursor-pointer ml-3 ${
+                        activeTab === "Answer Key"
+                          ? "border-bottom border-primary text-primary"
+                          : "text-secondary"
+                      }`}
+                      style={{ fontWeight: 600 }}
+                    >
+                      Answer Key
+                    </div>
                   </div>
-                  <div
-                    onClick={() => setActiveTab("Answer Key")}
-                    className={`me-4 pb-2 cursor-pointer ml-3 ${
-                      activeTab === "Answer Key" ? "border-bottom border-primary text-primary" : "text-secondary"
-                    }`}
-                    style={{ fontWeight: 600 }}
+                ) : (
+                  <h3
+                    className="mt-1"
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "600",
+                      color: "black",
+                    }}
                   >
-                    Answer Key
-                  </div>
-                </div>:
-                <h3
-                  className="mt-1"
-                  style={{ fontSize: "18px", fontWeight: "600", color: "black" }}
-                >
-                  Generated Content
-                </h3>}
-
+                    Generated Content
+                  </h3>
+                )}
               </div>
-            
-            
-              
             )}
 
             {content && (
               <div className="mt-3">
-                {preview && activeTab =="Content" ? (
+                {preview && activeTab == "Content" ? (
                   <div
                     className="p-4"
                     style={{
@@ -419,7 +475,19 @@ const WriterEngine = ({ preview }) => {
                     }}
                     dangerouslySetInnerHTML={{ __html: content }}
                   />
-                ) : (
+                ): preview && activeTab == "Answer Key" ? (
+                 
+                  answerKey ? <img
+                  src={answerKey} 
+                  alt="Answer Key Preview"
+                  style={{ maxWidth: "100%", height: "auto" }}
+                />: (
+                  <span className="text-secondary">
+                    No answer key available 
+                  </span>
+                )
+                )
+                 : (
                   <Editor
                     onInit={(evt, editor) => (editorRef.current = editor)}
                     initialValue={content}

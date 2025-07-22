@@ -2,6 +2,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { base_url } from "../../compugrade-constants";
 
 
+
 export const dragHelpers = {
   copyBlockChildren: (block) => {
     // eslint-disable-next-line no-param-reassign
@@ -208,9 +209,16 @@ export const possibleSubsectionMoves = (sections, sectionIndex, section, subsect
   return {};
 };
 
-function extractStringPart(titleValue) {
-  const match = titleValue.match(/^(\d+(?:\.\d+)?)[\s-]*(.*)/);
-  return match ? match[2] : titleValue;
+function extractParts(titleValue) {
+  const match = titleValue.match(
+    /^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
+  );
+
+  const typePart = match ? match[1] : "";
+  const numberPart = match ? match[2] : "";
+  const stringPart = match ? match[3] : titleValue;
+
+  return { numberPart, typePart, stringPart };
 }
 
 export const possibleUnitMoves = (
@@ -224,9 +232,11 @@ export const possibleUnitMoves = (
   unit
 ) => (index, step) => {
 
+  console.log(unit,units)
+
   if (unit.category === "vertical") {
     const itemId = unit.id;
-    const displayName = `${subsectionIndex + 1}.${id + 1} ${extractStringPart(unit.displayName)}`;
+    const displayName = `${extractParts(unit.displayName).typePart} ${subsectionIndex + 1}.${id + 1} ${extractParts(unit.displayName).stringPart}`;
   
     fetch(`${base_url}/api/openedx/update_rubric`, {
       method: "PATCH",
@@ -251,7 +261,7 @@ export const possibleUnitMoves = (
         // console.error("Network or server error:", error);
       });
   }
-  
+
   if (!units[index].actions.draggable) {
     return {};
   }

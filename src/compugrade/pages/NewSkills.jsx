@@ -39,6 +39,7 @@ const NewSkills = () => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "69420",
           },
         });
 
@@ -56,8 +57,8 @@ const NewSkills = () => {
     if (parsedSkills) {
       const preselected = parsedSkills?.map((item, index) => ({
         id: index + 1,
-        label: item,
-        value: item,
+        label: item?.customer_facing_name,
+        value: item?.skill_json,
         color: "orange",
       }));
       setSelectedSkills(preselected);
@@ -118,7 +119,10 @@ const NewSkills = () => {
   };
 
   const UpdateRubric = async () => {
-    const skillValues = selectedSkills?.map((skill) => skill.label);
+    const skillsUsed = selectedSkills?.map(item => ({
+      customer_facing_name: item.label,
+      skill_json: item.value
+    }));
     setLoading(true);
 
     try {
@@ -129,7 +133,7 @@ const NewSkills = () => {
         },
         body: JSON.stringify({
           openedx_based_id: blockId,
-          skills_used: skillValues,
+          skills_used: skillsUsed,
         }),
       });
       setLoading(false);

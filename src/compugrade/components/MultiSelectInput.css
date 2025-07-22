@@ -46,6 +46,17 @@
   color: #a8551c;
 }
 
+.badge-blue {
+  border: 1px solid #52b2fc;
+  background: #fff7ef;
+  color: #1c56a8;
+}
+.badge-green {
+  border: 1px solid #52fc88;
+  background: #fff7ef;
+  color: #1ca864;
+}
+
 .badge-red {
   border: 1px solid #f87171;
   background: #fee2e2;

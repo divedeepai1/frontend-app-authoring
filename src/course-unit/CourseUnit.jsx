@@ -166,10 +166,15 @@ const CourseUnit = ({ courseId }) => {
     );
   };
 
-  const match = unitTitle.match(/^(\d+(\.\d+)?)[\s-]*(.*)/);
-  const numberPart = match ? match[1] : ""; 
 
-  console.log(numberPart)
+
+  const match = unitTitle.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i), 
+  numberPart = match ? match[2] : "", 
+  typePart = match ? match[1] : "", 
+  stringPart = match ? match[3] : unitTitle;
+
+
+  
 
   
   
@@ -263,9 +268,9 @@ const CourseUnit = ({ courseId }) => {
                     )}
                    {unitData?.description	 && <InstructionXBlock title={"Overview"}  data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.skills_used?.length > 0 && <InstructionXBlock title={"Skills"}  data={unitData?.skills_used} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.skills_used?.length > 0 && <InstructionXBlock title={"Skills"}  data={unitData?.skills_used?.map(item => item.customer_facing_name).join(", ")} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.text && <InstructionXBlock title={"CWE Preview"} data={unitData.text}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.items && <InstructionXBlock title={"Addin Preview"} data={""} preview={true} type={"preview"} handleEdit={handleCreateCompugradeXBlock}/> }
+                   {unitData?.items?.length > 0 && <InstructionXBlock title={"Addin Preview"} data={""} preview={true} type={"preview"} handleEdit={handleCreateCompugradeXBlock}/> }
 
                   </SortableContext>
                 </DraggableList>

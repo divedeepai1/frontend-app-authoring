@@ -65,15 +65,16 @@ const HeaderTitle = ({
 
   function extractParts(titleValue) {
     const match = titleValue.match(
-      /^(\d+(?:\.\d+)?)\s*(Unit|Chapter|Lesson)?\s*(.*)/i
+      /^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
     );
-
-    const numberPart = match ? match[1] : null;
-    const typePart = match ? match[2] : null;
+  
+    const typePart = match ? match[1] : "";
+    const numberPart = match ? match[2] : "";
     const stringPart = match ? match[3] : titleValue;
-
+  
     return { numberPart, typePart, stringPart };
   }
+  
 
   const [selectedItem, setSelectedItem] = useState(extractParts(unitTitle).typePart || "Unit");
 
@@ -81,7 +82,7 @@ const HeaderTitle = ({
 
   const handleTypeChange = (item) => {
     const { numberPart, stringPart } = extractParts(titleValue);
-    const formattedTitle = [numberPart, item, stringPart]
+    const formattedTitle = [item, numberPart, stringPart]
       .filter(Boolean)
       .join(" ");
     handleTitleEditSubmit(formattedTitle);
@@ -94,6 +95,27 @@ const HeaderTitle = ({
         className="d-flex align-items-center lead"
         data-testid="unit-header-title"
       >
+        <li className="d-flex mr-3">
+          <Dropdown>
+            <Dropdown.Toggle
+              id="breadcrumbs-dropdown-section"
+              className="py-2 bg-transparent text-primary"
+            >
+              <span className="small text-gray-700 px-1">{selectedItem}</span>
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+              {options.map((item, index) => (
+                <Dropdown.Item
+                  key={index}
+                  onClick={() => handleTypeChange(item)}
+                  data-testid="breadcrumbs-section-dropdown-item"
+                >
+                  {item}
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+        </li>
         {isTitleEditFormOpen ? (
           <Form.Group className="m-0" isInvalid={!extractParts(titleValue).stringPart.trim()}>
             <Form.Control
@@ -103,7 +125,7 @@ const HeaderTitle = ({
               onChange={(e) => {
                 const { numberPart, typePart } = extractParts(titleValue);
                 setTitleValue(
-                  [numberPart, typePart, e.target.value]
+                  [typePart,numberPart, e.target.value]
                     .filter(Boolean)
                     .join(" ")
                 );
@@ -142,27 +164,7 @@ const HeaderTitle = ({
           onClick={openConfigureModal}
         />
 
-        <li className="d-flex">
-          <Dropdown>
-            <Dropdown.Toggle
-              id="breadcrumbs-dropdown-section"
-              className="py-2 bg-transparent text-primary"
-            >
-              <span className="small text-gray-700 px-1">{selectedItem}</span>
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              {options.map((item, index) => (
-                <Dropdown.Item
-                  key={index}
-                  onClick={() => handleTypeChange(item)}
-                  data-testid="breadcrumbs-section-dropdown-item"
-                >
-                  {item}
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </Dropdown>
-        </li>
+        
 
         <ConfigureModal
           isOpen={isConfigureModalOpen}
