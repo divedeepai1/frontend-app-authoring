@@ -19,7 +19,9 @@ const WriterEngine = ({ preview }) => {
   const [search, setSearch] = useState("");
   const [searchChild, setSearchChild] = useState("");
 
-  const [answerKey, setAnswerKey] = useState("");
+  const [answerImage, setAnswerImage] = useState("");
+  const [contentImage, setContentImage] = useState("");
+
   const [contentText, setContentText] = useState("");
   const [grade, setGrade] = useState("9-12");
   const [words, setWords] = useState("200-400");
@@ -152,7 +154,8 @@ const WriterEngine = ({ preview }) => {
       const parsedData = JSON.parse(savedData);
 
       setTheme(parsedData?.theme);
-      setAnswerKey(parsedData?.preview_path_s3);
+      setAnswerImage(parsedData?.answer_image);
+      setContentImage(parsedData?.content_image);
       setGrade(parsedData?.grade_level);
       setInstructionCount(parsedData?.instruction_count_preference || 5);
 
@@ -314,14 +317,13 @@ const WriterEngine = ({ preview }) => {
               </h3>
             )}
             {!preview && (
-              <div>
+             skills?.length > 0 && <div>
                 <MultiSelectInput
                   search={search}
                   setSearch={setSearch}
                   skills={skills}
                   customerFacing={true}
-                  dropdown={false}
-                  seSkills={setSkills}
+                  setSkills={setSkills}
                   selected={selected}
                   setSelected={setSelected}
                 />
@@ -330,7 +332,6 @@ const WriterEngine = ({ preview }) => {
                    {childSkills?.length > 0 && <MultiSelectInput
                     search={searchChild}
                     setSearch={setSearchChild}
-                    dropdwon={true}
                     fromChild={true}
                     selected={childSkills}
                     setSelected={setChildSkills}
@@ -360,7 +361,7 @@ const WriterEngine = ({ preview }) => {
                   >
                     <option value="100-200">Words (100 - 200) </option>
                     <option value="200-400">Words (200 - 400) </option>
-                    <option value="400-600">Grade (400 - 600)</option>
+                    <option value="400-600">Words (400 - 600)</option>
                   </select>
                   <select
                     id="grade"
@@ -434,7 +435,7 @@ const WriterEngine = ({ preview }) => {
                       }`}
                       style={{ fontWeight: 600 }}
                     >
-                      Content
+                     Initial Content
                     </div>
                     <div
                       onClick={() => setActiveTab("Answer Key")}
@@ -477,8 +478,8 @@ const WriterEngine = ({ preview }) => {
                   />
                 ): preview && activeTab == "Answer Key" ? (
                  
-                  answerKey ? <img
-                  src={answerKey} 
+                  answerImage ? <img
+                  src={answerImage} 
                   alt="Answer Key Preview"
                   style={{ maxWidth: "100%", height: "auto" }}
                 />: (

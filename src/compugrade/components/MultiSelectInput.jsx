@@ -9,7 +9,6 @@ export default function MultiSelectInput({
   selected,
   setSelected,
   setSkills,
-  dropdown,
   fromSkills,
   skills,
   fromChild,
@@ -17,10 +16,11 @@ export default function MultiSelectInput({
 }) {
 
   const wrapperRef = useRef(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(dropdown || false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [options, setOptions] = useState([]);
   const { blockId, sequenceId, courseId } = useParams();
   const encodedBlockId = encodeURIComponent(blockId);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,8 +73,8 @@ export default function MultiSelectInput({
 
     if (customerFacing) {
       
-      const newOptions = skills.map((item) => ({
-        id: item.id,
+      const newOptions = skills.map((item,index) => ({
+        id: index + 1,
         label: item.customer_facing_name,
         value: item.skill_json,
         color: item.color || "orange",

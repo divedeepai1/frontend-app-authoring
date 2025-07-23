@@ -224,7 +224,7 @@ const InstructionsPreviewEngine = ({
                           : "True/False Question"
                       }
                       onChange={(e) =>
-                        handleItemTypeChange(task.instruction, e.target.value)
+                        !preview && handleItemTypeChange(task.instruction, e.target.value)
                       }
                     >
                       <option value="Multiple Choice Question">
