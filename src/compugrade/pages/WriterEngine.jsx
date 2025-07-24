@@ -467,24 +467,35 @@ const WriterEngine = ({ preview }) => {
             {content && (
               <div className="mt-3">
                 {preview && activeTab == "Content" ? (
-                  <div
-                    className="p-4"
-                    style={{
-                      maxHeight: "500px",
-                      overflowY: "auto",
-                      border: "1px solid gray",
-                    }}
-                    dangerouslySetInnerHTML={{ __html: content }}
-                  />
+                  
+                  contentImage ? 
+                  <div style={{height: "500px", overflowY: "auto"}}> 
+                  <img
+                  src={contentImage} 
+                  alt="Initial Content Preview"
+                  style={{ maxWidth: "100%", height: "auto" }}
+                  /> 
+                  </div>
+
+                  :(
+                    <span className="text-secondary">
+                      No Initial content available for preview
+                    </span>
+                  )
+                  
                 ): preview && activeTab == "Answer Key" ? (
                  
-                  answerImage ? <img
+                  answerImage ? 
+                  <div style={{height: "500px", overflowY: "auto"}}>
+                  <img
                   src={answerImage} 
                   alt="Answer Key Preview"
                   style={{ maxWidth: "100%", height: "auto" }}
-                />: (
+                />
+                </div>
+                : (
                   <span className="text-secondary">
-                    No answer key available 
+                    No answer key available for preview
                   </span>
                 )
                 )
