@@ -156,7 +156,7 @@ const WriterEngine = ({ preview }) => {
       setTheme(parsedData?.theme);
       setAnswerImage(parsedData?.answer_image);
       setContentImage(parsedData?.content_image);
-      setGrade(parsedData?.grade_level);
+      setGrade(parsedData?.grade_level || "9-12");
       setInstructionCount(parsedData?.instruction_count_preference || 5);
 
       if (parsedData?.skills_used) {
@@ -171,7 +171,7 @@ const WriterEngine = ({ preview }) => {
 
       setThemeDescription(parsedData?.theme_description);
       setContent(parsedData?.text);
-      setDifficultiy(parsedData?.difficulty_level);
+      setDifficultiy(parsedData?.difficulty_level || "Beginner");
 
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = parsedData?.text || "";

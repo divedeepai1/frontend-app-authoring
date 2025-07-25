@@ -1,99 +1,110 @@
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Dropdown, Table } from "react-bootstrap";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useParams } from "react-router";
+import { base_url } from "../../../compugrade-constants";
 
-import React, { useState, useEffect } from "react"
-import { Container, Row, Col, Button, Dropdown, Table } from "react-bootstrap"
+const StudentDashboard = ({ classData, studentName }) => {
+  const { studentId } = useParams();
 
-
-const StudentDashboard = () => {
-  const [selectedCourse, setSelectedCourse] = useState("LBD Microsoft 365 Word-1")
-  const [expandedSections, setExpandedSections] = useState({
-    documentBasics: true,
-    formattingText: true,
-  })
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [selectedCourseName, setSelectedCourseName] = useState("");
+  const [lessonsFromAPI, setLessonsFromAPI] = useState([]);
+  const [expandedSections, setExpandedSections] = useState({});
   const [loadingProgress, setLoadingProgress] = useState({
     course: 0,
     average: 0,
-    tableItems: {},
-  })
+  });
 
-  // Animate progress circles on mount
+  const getProgressColor = (value) => {
+    if (value < 50) return "#dc3545";
+    if (value <= 70) return "#fd7e14";
+    return "#28a745";
+  };
+
   useEffect(() => {
-    const animateProgress = () => {
-      let courseProgress = 0
-      let averageProgress = 0
-      const tableItemsProgress = {}
+    if (!selectedCourseId || !studentId) return;
 
-      const interval = setInterval(() => {
-        if (courseProgress < 15) {
-          courseProgress += 1
-        }
-        if (averageProgress < 70) {
-          averageProgress += 2
-        }
-
-        // Animate table item progress
-        const itemTargets = {
-          "document-basics-section": 100,
-          "formatting-text-section": 67,
-          "lesson-1-editing": 100,
-          "lesson-2-printing": 100,
-          "lesson-3-toolbar": 100,
-          "lesson-1-formulas": 100,
-          "lesson-2-formatting": 100,
-          "lesson-3-proofreading": 25,
-          "course-average": 70,
-        }
-
-        Object.keys(itemTargets).forEach((key) => {
-          if (!tableItemsProgress[key]) tableItemsProgress[key] = 0
-          if (tableItemsProgress[key] < itemTargets[key]) {
-            tableItemsProgress[key] += Math.ceil(itemTargets[key] / 50)
-            if (tableItemsProgress[key] > itemTargets[key]) {
-              tableItemsProgress[key] = itemTargets[key]
-            }
+    const fetchCourseData = async () => {
+      const courseId = encodeURIComponent(selectedCourseId);
+      try {
+        const res = await fetch(
+          `${base_url}/api/grading/get_course_progress_for_user?course_id=${courseId}&user_id=${studentId}`,
+          {
+            method: "POST",
           }
-        })
+        );
+
+        const result = await res.json();
+        const { overall_progress, overall_score, subsections } = result.data;
 
         setLoadingProgress({
-          course: courseProgress,
-          average: averageProgress,
-          tableItems: { ...tableItemsProgress },
-        })
+          course: overall_progress,
+          average: overall_score,
+        });
 
-        const allComplete =
-          courseProgress >= 15 &&
-          averageProgress >= 70 &&
-          Object.keys(itemTargets).every((key) => tableItemsProgress[key] >= itemTargets[key])
+        const mappedLessons = subsections.length > 0  && subsections.map((sub) => ({
+          section: sub.subsection_title,
+          sectionKey: sub.subsection_id,
+          targetProgress: sub.average_progress,
+          items: sub.rubrics.map((rubric) => ({
+            name: rubric.rubric_title,
+            targetProgress: rubric.progress,
+            lastAttempt: "--",
+            grade: rubric.score > 0 ? `${rubric.score}%` : "--",
+            dueDate: rubric.due_date
+              ? new Date(rubric.due_date).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "",
+            letterGrade: rubric.score >= 50 ? "Pass" : "--",
+          })),
+        }));
 
-        if (allComplete) {
-          clearInterval(interval)
-        }
-      }, 80)
+        setLessonsFromAPI(mappedLessons);
 
-      return () => clearInterval(interval)
-    }
+        // initialize expanded state
+        const newExpanded = {};
+        mappedLessons.forEach((s) => {
+          newExpanded[s.sectionKey] = true;
+        });
+        setExpandedSections(newExpanded);
+      } catch (error) {
+        console.error("Failed to fetch course data", error);
+      }
+    };
 
-    const timer = setTimeout(animateProgress, 500)
-    return () => clearTimeout(timer)
-  }, [])
+    fetchCourseData();
+  }, [selectedCourseId, studentId]);
 
   const toggleSection = (section) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
+    }));
+  };
 
-  const AnimatedCircularProgress = ({ percentage, color, label, size = 100, strokeWidth = 8 }) => {
-    const radius = (size - strokeWidth) / 2
-    const circumference = 2 * Math.PI * radius
-    const strokeDasharray = circumference
-    const strokeDashoffset = circumference - (percentage / 100) * circumference
+  const AnimatedCircularProgress = ({
+    percentage,
+    color,
+    label,
+    size = 100,
+    strokeWidth = 8,
+  }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDasharray = circumference;
+    const strokeDashoffset =
+      circumference - (percentage / 100) * circumference;
 
     return (
       <div style={{ textAlign: "center", margin: "0 15px" }}>
         <div style={{ position: "relative", display: "inline-block" }}>
           <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-            {/* Background circle */}
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -102,7 +113,6 @@ const StudentDashboard = () => {
               strokeWidth={strokeWidth}
               fill="transparent"
             />
-            {/* Progress circle with animation */}
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -118,21 +128,6 @@ const StudentDashboard = () => {
                 filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
               }}
             />
-            {/* Loading shimmer effect */}
-            {percentage < (label === "Course Progress" ? 15 : 70) && (
-              <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth="2"
-                fill="transparent"
-                strokeDasharray="10 5"
-                style={{
-                  animation: "rotate 2s linear infinite",
-                }}
-              />
-            )}
           </svg>
           <div
             style={{
@@ -148,622 +143,177 @@ const StudentDashboard = () => {
             {Math.round(percentage)}%
           </div>
         </div>
-        <div
-          style={{
-            marginTop: "8px",
-            fontSize: "11px",
-            color: "#6c757d",
-            fontWeight: "500",
-          }}
-        >
-          {label}
-        </div>
-        <style jsx>{`
-          @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    )
-  }
-
-  
-  const SmallProgressCircle = ({ itemKey, targetPercentage, size = 24, showPercentage = false }) => {
-    const currentPercentage = loadingProgress.tableItems[itemKey] || 0
-    const radius = 8
-    const circumference = 2 * Math.PI * radius
-    const strokeDasharray = circumference
-    const strokeDashoffset = circumference - (currentPercentage / 100) * circumference
-
-    // Determine color based on percentage
-    let color = "#dc3545" // red for low progress
-    if (currentPercentage >= 80) {
-      color = "#28a745" // green for high progress
-    } else if (currentPercentage >= 50) {
-      color = "#ffc107" // orange for medium progress
-    }
-
-    // Special color for course average (white on blue background)
-    const isAverage = itemKey === "course-average"
-    if (isAverage) {
-      color = "white"
-    }
-
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", position: "relative" }}>
-        <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={isAverage ? "rgba(255,255,255,0.3)" : "#e9ecef"}
-            strokeWidth="3"
-            fill="transparent"
-          />
-          {/* Progress circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth="3"
-            fill="transparent"
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            style={{
-              transition: "stroke-dashoffset 0.5s ease-out",
-              filter: isAverage ? "none" : "drop-shadow(0 1px 2px rgba(0,0,0,0.1))",
-            }}
-          />
-          {/* Loading shimmer effect for incomplete items */}
-          {currentPercentage < targetPercentage && !isAverage && (
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              stroke="rgba(255,255,255,0.4)"
-              strokeWidth="1"
-              fill="transparent"
-              strokeDasharray="8 4"
-              style={{
-                animation: "rotate 3s linear infinite",
-              }}
-            />
-          )}
-          {/* Center indicator based on completion */}
-          {currentPercentage >= 95 && (
-            <g transform={`translate(${size / 2}, ${size / 2}) rotate(90)`}>
-              <circle r="2.5" fill={isAverage ? "white" : color} />
-            </g>
-          )}
-          {currentPercentage < 30 && currentPercentage > 0 && !isAverage && (
-            <g transform={`translate(${size / 2}, ${size / 2}) rotate(90)`}>
-              <line x1="-3" y1="-3" x2="3" y2="3" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-              <line x1="3" y1="-3" x2="-3" y2="3" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-            </g>
-          )}
-        </svg>
-        {/* Percentage text overlay for debugging/info */}
-        {showPercentage && (
+        {label && (
           <div
             style={{
-              position: "absolute",
-              fontSize: "8px",
-              fontWeight: "bold",
-              color: "#666",
-              top: "-15px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              whiteSpace: "nowrap",
+              marginTop: "8px",
+              fontSize: "11px",
+              color: "#6c757d",
+              fontWeight: "500",
             }}
           >
-            {Math.round(currentPercentage)}%
+            {label}
           </div>
         )}
-        <style jsx>{`
-          @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
-    )
-  }
+    );
+  };
 
-  const lessons = [
-    {
-      section: "Document Basics",
-      sectionKey: "documentBasics",
-      progressKey: "document-basics-section",
-      targetProgress: 100,
-      items: [
-        {
-          name: "Lesson 1 : Editing Basics",
-          progressKey: "lesson-1-editing",
-          targetProgress: 100,
-          lastAttempt: "Oct 8, 2024\n11:14 AM",
-          grade: "70%",
-          dueDate: "",
-          letterGrade: "Pass",
-        },
-        {
-          name: "Lesson 2 : Printing A Document",
-          progressKey: "lesson-2-printing",
-          targetProgress: 100,
-          lastAttempt: "Oct 4, 2024\n11:14 AM",
-          grade: "70%",
-          dueDate: "",
-          letterGrade: "Pass",
-        },
-        {
-          name: "Lesson 3 : Customising Quick Access Toolbar",
-          progressKey: "lesson-3-toolbar",
-          targetProgress: 100,
-          lastAttempt: "Oct 4, 2024\n11:14 AM",
-          grade: "70%",
-          dueDate: "",
-          letterGrade: "Pass",
-        },
-      ],
-    },
-    {
-      section: "Formatting Text",
-      sectionKey: "formattingText",
-      progressKey: "formatting-text-section",
-      targetProgress: 67,
-      items: [
-        {
-          name: "Lesson 1 : Top 10 Formulas",
-          progressKey: "lesson-1-formulas",
-          targetProgress: 100,
-          lastAttempt: "Oct 4, 2024\n11:14 AM",
-          grade: "70%",
-          dueDate: "",
-          letterGrade: "Pass",
-        },
-        {
-          name: "Lesson 2 : Formatting Text with Effects",
-          progressKey: "lesson-2-formatting",
-          targetProgress: 100,
-          lastAttempt: "Oct 4, 2024\n11:14 AM",
-          grade: "70%",
-          dueDate: "",
-          letterGrade: "Pass",
-        },
-        {
-          name: "Lesson 3 : Enhancing Proofreading Skills",
-          progressKey: "lesson-3-proofreading",
-          targetProgress: 25,
-          lastAttempt: "Oct 4, 2024\n11:14 AM",
-          grade: "--",
-          dueDate: "Oct 30, 2024\n12:00 AM",
-          letterGrade: "--",
-        },
-      ],
-    },
-  ]
+  const handleSelectCourse = (course) => {
+    setSelectedCourseId(course.id);
+    setSelectedCourseName(course.display_name);
+  };
 
   return (
-    <div
-      style={{
-        backgroundColor: "#f8f9fa",
-        minHeight: "100vh",
-        padding: "20px",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      }}
-    >
+    <div className="h-auto mb-4" style={{ borderRadius: "5px", border: "0.5px solid rgba(0, 0, 0, 0.30)", padding: "16px" }}>
       <Container fluid>
-        <div
-          style={{
-            backgroundColor: "white",
-            borderRadius: "8px",
-            padding: "24px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-            border: "1px solid #e9ecef",
-          }}
-        >
-          {/* Header */}
-          <Row className="mb-3">
-            <Col md={8}>
-              <div
-                style={{
-                  fontSize: "14px",
-                  color: "#495057",
-                  fontWeight: "500",
-                  marginBottom: "8px",
-                }}
-              >
-                Class Name {">"} Students Name{">"} Course Name
-              </div>
-            </Col>
-            <Col md={4} className="text-end">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-                <span
-                  style={{
-                    marginRight: "12px",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    color: "#495057",
-                  }}
-                >
-                  Select Course :
-                </span>
-                <Dropdown>
-                  <Dropdown.Toggle
-                    variant="outline-secondary"
-                    size="sm"
-                    style={{
-                      minWidth: "220px",
-                      textAlign: "left",
-                      fontSize: "13px",
-                      border: "1px solid #ced4da",
-                      backgroundColor: "white",
-                    }}
-                  >
-                    {selectedCourse}
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Dropdown.Item onClick={() => setSelectedCourse("LBD Microsoft 365 Word-1")}>
-                      LBD Microsoft 365 Word-1
+        <Row className="mb-3">
+          <Col md={8}>
+            <h4 className="primary-text">
+              {classData?.name} {">"} {studentName} {">"} {selectedCourseName}
+            </h4>
+          </Col>
+          <Col md={4} className="text-end">
+            <div className="d-flex align-items-center justify-content-end">
+              <span className="me-2" style={{ fontSize: "14px", fontWeight: "500", color: "#495057" }}>
+                Select Course :
+              </span>
+              <Dropdown>
+                <Dropdown.Toggle variant="outline-secondary" size="sm" style={{ minWidth: "100px", textAlign: "left", fontSize: "13px" }}>
+                  {selectedCourseName || "Select Course"}
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  {classData?.courses?.map((course) => (
+                    <Dropdown.Item key={course.id} onClick={() => handleSelectCourse(course)}>
+                      {course.display_name}
                     </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
-              </div>
-            </Col>
-          </Row>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+            </div>
+          </Col>
+        </Row>
 
-          {/* Course Progress Section */}
-          <Row className="mb-4">
-            <Col md={7}>
-              <h6
-                style={{
-                  fontWeight: "600",
-                  marginBottom: "12px",
-                  fontSize: "15px",
-                  color: "#212529",
-                }}
-              >
-                Course Progress
-              </h6>
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: "#495057",
-                  marginBottom: "16px",
-                  lineHeight: "1.4",
-                }}
-              >
-                Ashley Jackson has completed <span style={{ color: "#dc3545", fontWeight: "600" }}>15 %</span> of the
-                LBD Microsoft 365 Word-1 with average grade <span style={{ fontWeight: "600" }}>70%</span>
-              </p>
-              <Button
-                style={{
-                  backgroundColor: "#17a2b8",
-                  border: "none",
-                  borderRadius: "4px",
-                  fontSize: "13px",
-                  padding: "8px 20px",
-                  fontWeight: "500",
-                  boxShadow: "0 2px 4px rgba(23,162,184,0.2)",
-                }}
-              >
-                Send Message
-              </Button>
-            </Col>
-            <Col md={5}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  padding: "10px 0",
-                }}
-              >
-                <AnimatedCircularProgress
-                  percentage={loadingProgress.course}
-                  color="#dc3545"
-                  label="Course Progress"
-                  size={110}
-                  strokeWidth={10}
-                />
-                <AnimatedCircularProgress
-                  percentage={loadingProgress.average}
-                  color="#28a745"
-                  label="Average Grade"
-                  size={110}
-                  strokeWidth={10}
-                />
-              </div>
-            </Col>
-          </Row>
+        {selectedCourseName && (
+          <>
+            <Row className="mb-4 px-3 py-2" style={{ borderRadius: "2px", background: "#F1F1F1" }}>
+              <Col md={7} className="mt-2">
+                <h5 style={{ fontWeight: "600", marginBottom: "12px", fontSize: "15px", color: "#212529" }}>
+                  Course Progress
+                </h5>
+                <h6 style={{ fontSize: "13px", color: "#495057", marginBottom: "16px" }}>
+                  {studentName} has completed{" "}
+                  <span style={{ color: getProgressColor(loadingProgress.course), fontWeight: "600" }}>
+                    {loadingProgress.course}%{" "}
+                  </span>{" "}
+                  of the {selectedCourseName} with average grade{" "}
+                  <span style={{ fontWeight: "600" }}>{loadingProgress.average}%</span>
+                </h6>
+                <button className="primary-button px-3 py-2">Send Message</button>
+              </Col>
+              <Col md={5}>
+                <div className="d-flex justify-content-center align-items-center py-2">
+                  <AnimatedCircularProgress
+                    percentage={loadingProgress.course}
+                    color={getProgressColor(loadingProgress.course)}
+                    label="Course Progress"
+                    size={110}
+                    strokeWidth={10}
+                  />
+                  <AnimatedCircularProgress
+                    percentage={loadingProgress.average}
+                    color={getProgressColor(loadingProgress.average)}
+                    label="Average Grade"
+                    size={110}
+                    strokeWidth={10}
+                  />
+                </div>
+              </Col>
+            </Row>
 
-          {/* Table */}
-          <div
-            style={{
-              border: "1px solid #dee2e6",
-              borderRadius: "6px",
-              overflow: "hidden",
-            }}
-          >
-            <Table className="mb-0" style={{ fontSize: "13px" }}>
-              <thead>
-                <tr style={{ backgroundColor: "#f8f9fa" }}>
-                  <th
-                    style={{
-                      padding: "14px 16px",
-                      fontWeight: "600",
-                      borderBottom: "1px solid #dee2e6",
-                      color: "#495057",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Chapter Name
-                  </th>
-                  <th
-                    style={{
-                      padding: "14px 16px",
-                      fontWeight: "600",
-                      borderBottom: "1px solid #dee2e6",
-                      textAlign: "center",
-                      color: "#495057",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Progress
-                  </th>
-                  <th
-                    style={{
-                      padding: "14px 16px",
-                      fontWeight: "600",
-                      borderBottom: "1px solid #dee2e6",
-                      textAlign: "center",
-                      color: "#495057",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Last Attempt
-                  </th>
-                  <th
-                    style={{
-                      padding: "14px 16px",
-                      fontWeight: "600",
-                      borderBottom: "1px solid #dee2e6",
-                      textAlign: "center",
-                      color: "#495057",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Grade(%)
-                  </th>
-                  <th
-                    style={{
-                      padding: "14px 16px",
-                      fontWeight: "600",
-                      borderBottom: "1px solid #dee2e6",
-                      textAlign: "center",
-                      color: "#495057",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Due Date
-                  </th>
-                  <th
-                    style={{
-                      padding: "14px 16px",
-                      fontWeight: "600",
-                      borderBottom: "1px solid #dee2e6",
-                      textAlign: "center",
-                      color: "#495057",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Letter Grade
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {lessons.map((section, sectionIndex) => (
-                  <React.Fragment key={sectionIndex}>
-                    {/* Section Header */}
-                    <tr style={{ backgroundColor: "#ffffff" }}>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          fontWeight: "600",
-                          cursor: "pointer",
-                          borderBottom: "1px solid #dee2e6",
-                          color: "#212529",
-                          textDecoration: "underline",
-                        }}
-                        onClick={() => toggleSection(section.sectionKey)}
-                      >
-                        <span
-                          style={{
-                            marginRight: "8px",
-                            fontSize: "12px",
-                            color: "#6c757d",
-                          }}
-                        >
-                          {expandedSections[section.sectionKey] ? "▼" : "▶"}
-                        </span>
-                        {section.section}
-                      </td>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          textAlign: "center",
-                          borderBottom: "1px solid #dee2e6",
-                        }}
-                      >
-                        <AnimatedCircularProgress color={"#dc3545"} percentage={70} size={48} />
-                      </td>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          textAlign: "center",
-                          borderBottom: "1px solid #dee2e6",
-                          fontSize: "12px",
-                          color: "#6c757d",
-                        }}
-                      >
-                        Oct 8, 2024
-                        <br />
-                        11:14 AM
-                      </td>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          textAlign: "center",
-                          borderBottom: "1px solid #dee2e6",
-                          fontWeight: "500",
-                        }}
-                      >
-                        70%
-                      </td>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          textAlign: "center",
-                          borderBottom: "1px solid #dee2e6",
-                        }}
-                      ></td>
-                      <td
-                        style={{
-                          padding: "14px 16px",
-                          textAlign: "center",
-                          borderBottom: "1px solid #dee2e6",
-                          color: "#28a745",
-                          fontWeight: "500",
-                        }}
-                      >
-                        Pass
-                      </td>
-                    </tr>
+            <div style={{ border: "1px solid #dee2e6", borderRadius: "6px", overflow: "hidden" }}>
+              <Table className="mb-0" style={{ fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f8f9fa" }}>
+                    <th>Chapter Name</th>
+                    <th className="text-center">Progress</th>
+                    <th className="text-center">Last Attempt</th>
+                    <th className="text-center">Grade(%)</th>
+                    <th className="text-center">Due Date</th>
+                    <th className="text-center">Letter Grade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lessonsFromAPI?.map((section, sectionIndex) => (
+                    <React.Fragment key={sectionIndex}>
+                      <tr>
+                        <td onClick={() => toggleSection(section.sectionKey)} style={{ cursor: "pointer", fontWeight: "600", textDecoration: "underline" }}>
+                          {expandedSections[section.sectionKey] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}{" "}
+                          {section.section}
+                        </td>
+                        <td className="text-center">
+                          <AnimatedCircularProgress
+                            color={getProgressColor(section.targetProgress)}
+                            percentage={section.targetProgress}
+                            size={48}
+                          />
+                        </td>
+                        <td className="text-center">--</td>
+                        <td className="text-center">{section.targetProgress}%</td>
+                        <td className="text-center"></td>
+                        <td className="text-center">{section.targetProgress >= 50 ? "Pass" : "--"}</td>
+                      </tr>
 
-                    {/* Section Items */}
-                    {expandedSections[section.sectionKey] &&
-                      section.items.map((item, itemIndex) => (
-                        <tr key={itemIndex} style={{ backgroundColor: "#fafbfc" }}>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              paddingLeft: "48px",
-                              borderBottom: "1px solid #dee2e6",
-                              color: "#495057",
-                              fontSize: "13px",
-                            }}
-                          >
-                            {item.name}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              textAlign: "center",
-                              borderBottom: "1px solid #dee2e6",
-                            }}
-                          >
-                           <AnimatedCircularProgress color={"#dc3545"} percentage={70} size={48} />
-                            
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              textAlign: "center",
-                              borderBottom: "1px solid #dee2e6",
-                              whiteSpace: "pre-line",
-                              fontSize: "12px",
-                              color: "#6c757d",
-                            }}
-                          >
-                            {item.lastAttempt}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              textAlign: "center",
-                              borderBottom: "1px solid #dee2e6",
-                              fontWeight: "500",
-                            }}
-                          >
-                            {item.grade}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              textAlign: "center",
-                              borderBottom: "1px solid #dee2e6",
-                              whiteSpace: "pre-line",
-                              fontSize: "12px",
-                              color: item.dueDate.includes("Oct 30") ? "#dc3545" : "#6c757d",
-                              fontWeight: item.dueDate.includes("Oct 30") ? "500" : "normal",
-                            }}
-                          >
-                            {item.dueDate}
-                          </td>
-                          <td
-                            style={{
-                              padding: "12px 16px",
-                              textAlign: "center",
-                              borderBottom: "1px solid #dee2e6",
-                              color: item.letterGrade === "Pass" ? "#28a745" : "#6c757d",
-                              fontWeight: "500",
-                            }}
-                          >
-                            {item.letterGrade}
-                          </td>
-                        </tr>
-                      ))}
-                  </React.Fragment>
-                ))}
+                      {expandedSections[section.sectionKey] &&
+                        section.items.map((item, itemIndex) => (
+                          <tr key={itemIndex}>
+                            <td style={{ paddingLeft: "30px", textDecoration: "underline" }}>{item.name}</td>
+                            <td className="text-center">
+                              <AnimatedCircularProgress
+                                color={getProgressColor(item.targetProgress)}
+                                percentage={item.targetProgress}
+                                size={48}
+                              />
+                            </td>
+                            <td className="text-center">{item.lastAttempt}</td>
+                            <td className="text-center">{item.grade}</td>
+                            <td className="text-center" style={{ color: item.dueDate.includes("Oct 30") ? "#dc3545" : "#6c757d" }}>
+                              {item.dueDate}
+                            </td>
+                            <td className="text-center" style={{ color: item.letterGrade === "Pass" ? "#28a745" : "#6c757d" }}>
+                              {item.letterGrade}
+                            </td>
+                          </tr>
+                        ))}
+                    </React.Fragment>
+                  ))}
 
-                {/* Course Average Row */}
-                <tr style={{ backgroundColor: "#17a2b8", color: "white" }}>
-                  <td
-                    style={{
-                      padding: "14px 16px",
-                      fontWeight: "600",
-                      fontSize: "14px",
-                    }}
-                  >
-                    Course Average
-                  </td>
-                  <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                  <AnimatedCircularProgress color={"#dc3545"} percentage={70} size={48} />
-
-                  </td>
-                  <td style={{ padding: "14px 16px", textAlign: "center" }}></td>
-                  <td
-                    style={{
-                      padding: "14px 16px",
-                      textAlign: "center",
-                      fontWeight: "600",
-                      fontSize: "14px",
-                    }}
-                  >
-                    70%
-                  </td>
-                  <td style={{ padding: "14px 16px", textAlign: "center" }}></td>
-                  <td
-                    style={{
-                      padding: "14px 16px",
-                      textAlign: "center",
-                      fontWeight: "600",
-                      fontSize: "14px",
-                    }}
-                  >
-                    Pass
-                  </td>
-                </tr>
-              </tbody>
-            </Table>
-          </div>
-        </div>
+                  <tr style={{ backgroundColor: "#255A71", color: "white" }}>
+                    <td style={{ fontWeight: "600" }}>Course Average</td>
+                    <td className="text-center">
+                      <AnimatedCircularProgress
+                        color={getProgressColor(loadingProgress.average)}
+                        percentage={loadingProgress.average}
+                        size={48}
+                      />
+                    </td>
+                    <td></td>
+                    <td className="text-center" style={{ fontWeight: "600" }}>
+                      {loadingProgress.average}%
+                    </td>
+                    <td></td>
+                    <td className="text-center" style={{ fontWeight: "600" }}>
+                      {loadingProgress.average >= 50 ? "Pass" : "--"}
+                    </td>
+                  </tr>
+                </tbody>
+              </Table>
+            </div>
+          </>
+        )}
       </Container>
     </div>
-  )
-}
+  );
+};
 
-export default StudentDashboard
+export default StudentDashboard;
