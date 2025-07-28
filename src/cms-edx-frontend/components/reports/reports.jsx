@@ -33,7 +33,7 @@ const ReportsDashboard = () => {
 
   useEffect(() => {
     const now = new Date();
-    const formatted = now.toISOString().split("T")[0]; // YYYY-MM-DD
+    const formatted = now.toISOString().split("T")[0]; 
     setToday(formatted);
   }, []);
 
@@ -257,7 +257,7 @@ const ReportsDashboard = () => {
 
   return (
     <>
-      <div className="col-md-12 d-flex py-4">
+      <div className="col-md-12 d-flex py-4 bg-white">
         <div className="col-md-4">
           <div className="d-flex align-items-center">
             <label
@@ -333,12 +333,12 @@ const ReportsDashboard = () => {
           </div>
         </div>
       </div>
-      <div style={{ backgroundColor: "#f8f9fa" }}>
+      <div className="py-4" >
         <div
           className="mx-20"
           fluid
           style={{
-            backgroundColor: "transparent",
+            backgroundColor: "#f8f9fa",
             border: "1px solid #d0d0d0",
             padding: "30px 30px",
           }}

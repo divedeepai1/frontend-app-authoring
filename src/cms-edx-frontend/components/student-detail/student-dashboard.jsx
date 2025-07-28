@@ -26,6 +26,9 @@ const StudentDashboard = ({ classData, studentName }) => {
     if (!selectedCourseId || !studentId) return;
 
     const fetchCourseData = async () => {
+      setExpandedSections({})
+      setLessonsFromAPI([]);
+      setLoadingProgress({ course: 0, average: 0 });
       const courseId = encodeURIComponent(selectedCourseId);
       try {
         const res = await fetch(

@@ -36,6 +36,14 @@ const ClassManagementForm = ({isNewStudent}) => {
   useEffect(() => {
     const data = sessionStorage.getItem("classData");
 
+    if (step <= 5) {
+      const completedSteps = [];
+      for (let i = 1; i <= step; i++) {
+        completedSteps.push(i);
+      }
+      setActiveStepList(completedSteps);
+    }
+
     if(isNewStudent){
       setActiveStep(2);
     }

@@ -1,5 +1,4 @@
 
-import StudentDashboard from '../components/student-detail/student-dashboard';
 import HeaderTop from '../../header';
 import { Header } from '../components/header';
 import { ManagementSection } from "../components/management-section";
@@ -16,7 +15,7 @@ const Reports = () => {
         <ManagementSection />
         <section className="px-5">
         <Container>
-          {/* <StudentDashboard /> */}
+        
           <ReportsDashboard />
           </Container>
         </section>

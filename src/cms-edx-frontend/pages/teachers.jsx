@@ -224,7 +224,7 @@ const Teachers = () => {
         <ManagementSection />
         <section className="px-5">
           <Container>
-            <div style={{ width: "80%" }}>
+            <div className="py-4" style={{ width: "80%"  }}>
               <div className="p-4 class-div-style-2">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h3 className="primary-text">Assigned Teachers</h3>

@@ -27,7 +27,7 @@ const ClassDetails = ({ formData, handleInputChange, nextStep }) => {
           min="1"
           step="1"
           onKeyDown={(e) => {
-            if (e.key === '-' || e.key === 'e' ||  e.key == 0) e.preventDefault();
+            if (e.key === '-' || e.key === 'e' ||  (e.key === '0' && e.target.value.length === 0)) e.preventDefault();
           }}
           className="form-control bg-transparent"
           id="grade"
