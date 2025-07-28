@@ -47,7 +47,7 @@ const ManageClasses = () => {
       if(isNewTeacher){
         fetchTeachers();
       }
-    }, []);
+    }, [isNewTeacher]);
 
 
 
@@ -107,7 +107,7 @@ const ManageClasses = () => {
                           ?.name
                       : "Class Name"}
                   </h3>
-                 {!isNewTeacher && !isNewStudent &&<button className="outline-black-button fw-bold px-3">
+                 {!isNewTeacher && !isNewStudent &&<button   onClick={() => navigate(`/manage-classes/add-teacher`)} className="outline-black-button fw-bold px-3">
                     + Add More Teachers
                   </button>}
                 </div>
