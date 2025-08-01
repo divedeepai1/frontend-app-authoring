@@ -65,17 +65,24 @@ const QuestionRenderer = ({ question }) => {
           </div>
         )
 
-      case "fill_blank":
-        return (
-          <div className="mt-3">
-            <Form.Label className="fw-bold mb-3">Answer</Form.Label>
-            <Form.Control
-              type="text"
-              value={question?.correct_answers[0].answer_text ||""}
-              // onChange={(e) => handleAnswerChange(e.target.value)}
-            />
-          </div>
-        )
+        case "fill_blank":
+          return (
+            <div className="mt-3">
+              <Form.Label className="fw-bold mb-3">Answers</Form.Label>
+              {question?.correct_answers?.map((ans, index) => (
+                <div key={index} className="d-flex mb-2">
+                  <Form.Control
+                    type="text"
+                    value={ans.answer_text}
+                    // onChange={(e) => handleCorrectAnswerChange(index, e.target.value)}
+                  />
+                  
+                </div>
+              ))}
+             
+            </div>
+          );
+        
 
       case "short_answer":
         return (
