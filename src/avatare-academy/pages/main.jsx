@@ -1,268 +1,135 @@
-import Header from "./../components/header"
-import HeaderTop from '../../header';
-
-import { Container, Row, Col,  Card ,Badge} from "react-bootstrap"
+import Header from "./../components/header";
+import HeaderTop from "../../header";
+import { Container, Row, Col, Card, Badge } from "react-bootstrap";
 import { useEffect, useState } from "react";
-
+import { Edit, Trash2 } from "lucide-react";
 import { fetchCsrfToken } from "../../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
-
-
-
-
-
-
- const recentQuizzes = [
-    {
-      id: 1,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Published",
-    },
-    {
-      id: 2,
-      title: "Chapter 3 : Introduction to Algorithms",
-      type: "Multi-Component",
-      questions: 15,
-      lastEdited: "Today",
-      status: "Drafts",
-    },
-    {
-      id: 3,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Published",
-    },
-    {
-      id: 4,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Published",
-    },
-    {
-      id: 5,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Drafts",
-    },
-    {
-      id: 6,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Published",
-    },
-    {
-      id: 7,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Published",
-    },
-    {
-      id: 8,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Drafts",
-    },
-    {
-      id: 9,
-      title: "Chapter 3 : Introduction to Computer Science",
-      type: "Multiple Choice",
-      questions: 10,
-      lastEdited: "Today",
-      status: "Published",
-    },
-  ]
-
- 
-
-
+import { useNavigate } from "react-router";
 
 const Main = () => {
-    const [dashboardData, setDashboardData] = useState(null);
+  const navigate= useNavigate();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [refresh,setRefresh]=useState(false);
 
-    useEffect(() => {
-   
-        const PostCategory = async () => {
-        const token= await fetchCsrfToken();
-       
-          try {
-              const response = await fetch(`${getConfig().STUDIO_BASE_URL}/quizplugin/api/dashboard/`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-CSRFToken': token,
-                },
-              });
-            
-              if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Failed to add category: ${response.status} ${errorText}`);
-              }
-                const result = await response.json();
-                setDashboardData(result);
-              
-             
-            } catch (error) {
-              console.error('Error:', error.message);
-            }
-        };
-  
-        PostCategory();
-        
-  
-  
-      
-    }, []);
-    return (
-        <>
-         <HeaderTop isHiddenMainMenu/>
-     
- 
-      <Header  button={true}/>
-      <Container >
-        <Row className="mb-4" style={{ gap: "0" }}>
+  useEffect(() => {
+    const PostCategory = async () => {
+      const token = await fetchCsrfToken();
+
+      try {
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/quizplugin/api/dashboard/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch dashboard: ${response.status} ${errorText}`);
+        }
+
+        const result = await response.json();
+        setDashboardData(result);
+      } catch (error) {
+        console.error("Error:", error.message);
+      }
+    };
+
+    PostCategory();
+  }, [refresh]);
+
+  const handleDeleteQuiz = async (quizId) => {
+    const token = await fetchCsrfToken();
+    const confirmed = window.confirm("Are you sure you want to delete this quiz?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to delete quiz: ${response.status} ${errorText}`);
+      }
+
+      setDashboardData((prevData) => ({
+        ...prevData,
+        recent_quizzes: prevData.recent_quizzes.filter((quiz) => quiz.id !== quizId),
+      }));
+      setRefresh(!refresh)
+    } catch (error) {
+      console.error("Error deleting quiz:", error.message);
+    }
+  };
+
+  const handleEdit = (quiz) =>{
+    navigate("/create-multi-quiz", { state: { quizType : quiz?.quiz_type ,quizId:quiz?.id , status :quiz.status === "published" || false } });
+  }
+
+  return (
+    <>
+      <HeaderTop isHiddenMainMenu />
+      <Header button={true} />
+      <Container>
+        <Row className="mb-4">
           <Col lg={4} className="pe-2">
-            <Card
-              className="border-0 shadow-sm"
-              style={{
-                borderRadius: "8px",
-                backgroundColor: "white",
-              }}
-            >
+            <Card className="border-0 shadow-sm" style={{ borderRadius: "8px", backgroundColor: "white" }}>
               <Card.Body style={{ padding: "24px" }}>
-                <h6
-                  className="fw-semibold mb-1"
-                  style={{
-                    color: "#1a1a1a",
-                    fontSize: "16px",
-                    fontWeight: "600",
-                  }}
-                >
+                <h6 className="fw-semibold mb-1" style={{ fontSize: "16px", color: "#1a1a1a" }}>
                   Total Quizzes
                 </h6>
-                <p
-                  className="mb-3"
-                  style={{
-                    fontSize: "14px",
-                    color: "#6b7280",
-                    margin: "4px 0 16px 0",
-                  }}
-                >
+                <p className="mb-3" style={{ fontSize: "14px", color: "#6b7280" }}>
                   All created quizzes
                 </p>
-                <h1
-                  className="fw-bold mb-0"
-                  style={{
-                    fontSize: "48px",
-                    color: "#1a1a1a",
-                    fontWeight: "700",
-                    lineHeight: "1",
-                  }}
-                >
-                  {dashboardData && dashboardData.total_quizzes }
+                <h1 className="fw-bold mb-0" style={{ fontSize: "48px", color: "#1a1a1a" }}>
+                  {dashboardData?.total_quizzes}
                 </h1>
               </Card.Body>
             </Card>
           </Col>
 
           <Col lg={4} className="px-2">
-            <Card
-              className="border-0 shadow-sm"
-              style={{
-                borderRadius: "8px",
-                backgroundColor: "white",
-              }}
-            >
+            <Card className="border-0 shadow-sm" style={{ borderRadius: "8px", backgroundColor: "white" }}>
               <Card.Body style={{ padding: "24px" }}>
-                <h6
-                  className="fw-semibold mb-1"
-                  style={{
-                    color: "#1a1a1a",
-                    fontSize: "16px",
-                    fontWeight: "600",
-                  }}
-                >
+                <h6 className="fw-semibold mb-1" style={{ fontSize: "16px", color: "#1a1a1a" }}>
                   Published Quizzes
                 </h6>
-                <p
-                  className="mb-3"
-                  style={{
-                    fontSize: "14px",
-                    color: "#6b7280",
-                    margin: "4px 0 16px 0",
-                  }}
-                >
+                <p className="mb-3" style={{ fontSize: "14px", color: "#6b7280" }}>
                   Quizzes available to students
                 </p>
-                <h1
-                  className="fw-bold mb-0"
-                  style={{
-                    fontSize: "48px",
-                    color: "#1a1a1a",
-                    fontWeight: "700",
-                    lineHeight: "1",
-                  }}
-                >
-                  {dashboardData && dashboardData.published_quizzes}
+                <h1 className="fw-bold mb-0" style={{ fontSize: "48px", color: "#1a1a1a" }}>
+                  {dashboardData?.published_quizzes}
                 </h1>
               </Card.Body>
             </Card>
           </Col>
 
           <Col lg={4} className="ps-2">
-            <Card
-              className="border-0 shadow-sm"
-              style={{
-                borderRadius: "8px",
-                backgroundColor: "white",
-              }}
-            >
+            <Card className="border-0 shadow-sm" style={{ borderRadius: "8px", backgroundColor: "white" }}>
               <Card.Body style={{ padding: "24px" }}>
-                <h6
-                  className="fw-semibold mb-1"
-                  style={{
-                    color: "#1a1a1a",
-                    fontSize: "16px",
-                    fontWeight: "600",
-                  }}
-                >
+                <h6 className="fw-semibold mb-1" style={{ fontSize: "16px", color: "#1a1a1a" }}>
                   Draft Quizzes
                 </h6>
-                <p
-                  className="mb-3"
-                  style={{
-                    fontSize: "14px",
-                    color: "#6b7280",
-                    margin: "4px 0 16px 0",
-                  }}
-                >
+                <p className="mb-3" style={{ fontSize: "14px", color: "#6b7280" }}>
                   Quizzes in progress
                 </p>
-                <h1
-                  className="fw-bold mb-0"
-                  style={{
-                    fontSize: "48px",
-                    color: "#1a1a1a",
-                    fontWeight: "700",
-                    lineHeight: "1",
-                  }}
-                >
-                  {dashboardData && dashboardData.draft_quizzes}
+                <h1 className="fw-bold mb-0" style={{ fontSize: "48px", color: "#1a1a1a" }}>
+                  {dashboardData?.draft_quizzes}
                 </h1>
               </Card.Body>
             </Card>
@@ -270,64 +137,59 @@ const Main = () => {
         </Row>
 
         {/* Recent Quizzes Section */}
-        <div className="mb-4" style={{ marginTop: "40px" }}>
-          <h4
-            className="fw-bold"
-            style={{
-              color: "#1a1a1a",
-              fontSize: "20px",
-              fontWeight: "700",
-              marginBottom: "24px",
-            }}
-          >
+        {dashboardData?.recent_quizzes?.length > 0 && <div className="mb-4" style={{ marginTop: "40px" }}>
+          <h4 className="fw-bold" style={{ fontSize: "20px", color: "#1a1a1a" }}>
             Recent Quizzes
           </h4>
-        </div>
+        </div>}
 
-        {/* Quiz Cards Grid */}
-        <Row style={{ gap: "0" }}>
-          {dashboardData?.recent_quizzes?.map((quiz) => (
-            <Col lg={4} key={quiz.id} className="mb-4" style={{ paddingLeft: "8px", paddingRight: "8px" }}>
-              <Card
-                className="h-100 border-0 shadow-sm"
-                style={{
-                  borderRadius: "8px",
-                  backgroundColor: "white",
-                }}
-              >
-                <Card.Body style={{ padding: "20px" }}>
-                  <h6
-                    className="fw-semibold mb-3"
+        <Row>
+          {dashboardData?.recent_quizzes?.length > 0 ? dashboardData?.recent_quizzes?.map((quiz) => (
+            <Col lg={4} key={quiz.id} className="mb-4 px-2">
+              <Card className="h-100 border-0 shadow-sm" style={{ borderRadius: "8px", backgroundColor: "white" }}>
+
+                <Card.Body style={{ padding: "20px", position: "relative" }}>
+                <Edit
+                    size={18}
+                    
                     style={{
-                      color: "#1a1a1a",
-                      fontSize: "16px",
-                      lineHeight: "1.4",
-                      fontWeight: "600",
-                      marginBottom: "12px",
+                      position: "absolute",
+                      top: "16px",
+                      right: "42px",
+                      cursor: "pointer",
                     }}
-                  >
+                    onClick={() => handleEdit(quiz)}
+                  />
+                  <Trash2
+                    size={18}
+                    
+                    style={{
+                      position: "absolute",
+                      top: "16px",
+                      right: "16px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleDeleteQuiz(quiz.id)}
+                  />
+
+                  <h6 className="fw-semibold mb-3" style={{ fontSize: "16px", color: "#1a1a1a" }}>
                     {quiz.title}
                   </h6>
 
-                  <p
-                    className="mb-3"
-                    style={{
-                      fontSize: "14px",
-                      color: "#6b7280",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    Quiz Type : {quiz.quiz_type =="macthing" ? "Maching Quiz" : quiz.quiz_type =="multi_component"?"Multi Component Quiz":"Multi Choic Quiz"} • {quiz.total_questions} Questions
+                  <p className="mb-3" style={{ fontSize: "14px", color: "#6b7280" }}>
+                    Quiz Type :{" "}
+                    {quiz.quiz_type === "macthing"
+                      ? "Matching Quiz"
+                      : quiz.quiz_type === "multi_component"
+                      ? "Multi Component Quiz"
+                      : "Multiple Choice Quiz"}{" "}
+                    • {quiz.total_questions} Questions
                   </p>
 
                   <div className="d-flex justify-content-between align-items-center">
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        color: "#6b7280",
-                      }}
-                    >
-                      Last Edited : {quiz.updated_at.split("T")[0]} • {quiz.updated_at.split("T")[1].split(".")[0]}
+                    <span style={{ fontSize: "14px", color: "#6b7280" }}>
+                      Last Edited : {quiz.updated_at.split("T")[0]} •{" "}
+                      {quiz.updated_at.split("T")[1].split(".")[0]}
                     </span>
                     <Badge
                       style={{
@@ -337,7 +199,6 @@ const Main = () => {
                         borderRadius: "16px",
                         backgroundColor: quiz.status === "published" ? "#3b82f6" : "#f59e0b",
                         color: "white",
-                        border: "none",
                       }}
                     >
                       {quiz.status}
@@ -346,11 +207,14 @@ const Main = () => {
                 </Card.Body>
               </Card>
             </Col>
-          ))}
+          )):
+
+          <h4 className="d-flex justify-content-center mt-4" style={{width:"100%"}}>No Quizzes found!</h4>
+        }
         </Row>
       </Container>
-      </>
-    
-    )
-}
-export default Main
+    </>
+  );
+};
+
+export default Main;

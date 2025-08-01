@@ -8,8 +8,9 @@ import FillInBlankQuestion from "./question-types/fill-in-blank-question"
 import ShortAnswerQuestion from "./question-types/short-answer-question"
 import LongAnswerQuestion from "./question-types/long-answer-question"
 import MatchingQuestion from "./question-types/matching-question"
+import { X } from "lucide-react"
 
-export default function QuestionCard({ question, questionNumber, onUpdate ,hasValidationError }) {
+export default function QuestionCard({ question, questionNumber, onUpdate ,hasValidationError ,handleRemove,quizType }) {
   const renderQuestionContent = () => {
     switch (question.type) {
       case "true_false":
@@ -30,18 +31,24 @@ export default function QuestionCard({ question, questionNumber, onUpdate ,hasVa
   }
 
   return (
-    <Card className="mb-4" style={{ backgroundColor: "#f8f9fa",  border: hasValidationError ? "1px solid #dc3545" : "1px solid #dee2e6" }}>
-      <Card.Body className="p-4">
+    <Card className="mb-2" style={{ backgroundColor: "#f8f9fa",  border: hasValidationError ? "1px solid #dc3545" : "1px solid #dee2e6" }}>
+      <Card.Body className="px-4">
+        <div className="d-flex justify-content-between">
         <h5 className="mb-3" style={{ fontSize: "16px", fontWeight: "600" }}>
-          Question {questionNumber}
+          Question {questionNumber} 
         </h5>
+        <span onClick={() =>handleRemove(question.id)} style={{cursor:"pointer"}}>
+        <X size={20} />
+        </span>
+       
+        </div>
         {hasValidationError && (
             <span className="text-danger ms-2" style={{ fontSize: "14px" }}>
               (Has errors - check above)
             </span>
           )}
 
-        <QuestionTypeSelector selectedType={question.type} onTypeChange={(type) => onUpdate({ type })} />
+        <QuestionTypeSelector selectedType={question.type} onTypeChange={(type) => onUpdate({ type })} quizType={quizType} />
 
         {renderQuestionContent()}
       </Card.Body>

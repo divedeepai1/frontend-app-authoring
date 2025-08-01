@@ -16,11 +16,11 @@ function QuizForm() {
   const [quizInstructions, setQuizInstructions] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Always prevent default at the start
+    e.preventDefault(); 
     const form = e.currentTarget;
   
     if (!form.checkValidity()) {
-      e.stopPropagation(); // Optional: prevent further event bubbling
+      e.stopPropagation(); 
       return;
     }
   
@@ -55,14 +55,14 @@ function QuizForm() {
       }
       const responseData = await response.json();
       sessionStorage.setItem("quizId", responseData.id);
-      navigate("/create-multi-quiz");
+      navigate("/create-multi-quiz", { state: { quizType } });
     } catch (error) {
       console.error("Error:", error.message);
     }
   };
   
   const handleCancel = () => {
-    navigate("/home");
+    navigate("/quiz-dashboard");
   };
 
   return (
@@ -147,13 +147,13 @@ function QuizForm() {
                       className="h-80"
                       style={{
                         border:
-                          quizType === "multiple-choice"
+                          quizType === "multiple_choice"
                             ? "2px solid #9AA6B2"
                             : "1px solid #dee2e6",
                         borderRadius: "8px",
                         cursor: "pointer",
                       }}
-                      // onClick={() => setQuizType("multiple_choice")}
+                      onClick={() => setQuizType("multiple_choice")}
                     >
                       <Card.Body
                         className="px-2 d-flex align-items-start"
@@ -165,7 +165,7 @@ function QuizForm() {
                           id="multiple-choice"
                           className="me-2 custom-radio"
                           checked={quizType === "multiple_choice"}
-                          // onChange={() => setQuizType("multiple_choice")}
+                          onChange={() => setQuizType("multiple_choice")}
                           style={{ pointerEvents: "none" }}
                         />
                         <div>
@@ -195,7 +195,7 @@ function QuizForm() {
                       className="h-80"
                       style={{
                         border:
-                          quizType === "multi-component"
+                          quizType === "multi_component"
                             ? "2px solid #9AA6B2"
                             : "1px solid #dee2e6",
                         borderRadius: "8px",
@@ -249,7 +249,7 @@ function QuizForm() {
                         borderRadius: "8px",
                         cursor: "pointer",
                       }}
-                      // onClick={() => setQuizType("matching")}
+                      onClick={() => setQuizType("matching")}
                     >
                       <Card.Body
                         className="px-2 d-flex align-items-start"
@@ -261,7 +261,7 @@ function QuizForm() {
                           id="matching"
                           checked={quizType === "matching"}
                           className="me-2 custom-radio"
-                          // onChange={() => setQuizType("matching")}
+                          onChange={() => setQuizType("matching")}
                           style={{ pointerEvents: "none" }}
                         />
                         <div>

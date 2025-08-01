@@ -86,7 +86,7 @@ const QuestionRenderer = ({ question }) => {
               rows={3}
               disabled
               value={question?.correct_answers[0].answer_text ||""}
-              style={{ resize: "vertical" }}
+              style={{ resize: "vertical" , background :'white' }}
               // onChange={(e) => handleAnswerChange(e.target.value)}
             />
           </div>
@@ -101,7 +101,7 @@ const QuestionRenderer = ({ question }) => {
               rows={6}
               disabled
               value={question?.correct_answers[0].answer_text ||""}
-              style={{ resize: "vertical" }}
+              style={{ resize: "vertical" ,background :'white' }}
               // onChange={(e) => handleAnswerChange(e.target.value)}
             />
           </div>
@@ -129,7 +129,7 @@ const QuestionRenderer = ({ question }) => {
               </Badge>
             </div>
 
-            <input type="text" className="form-control mb-3 fs-6" style={{ background:"white"}}disabled value={question.text}/>
+            <input type="text" className="form-control mb-3 fs-6" style={{ background:"white"}} disabled value={question.text}/>
 
             {renderQuestionInput()}
           </Col>
@@ -139,7 +139,7 @@ const QuestionRenderer = ({ question }) => {
   )
 }
 
-export default function QuizPreview() {
+export default function QuizPreview({isPublish}) {
   const [quizData, setQuizData] = useState(null)
   const [answers, setAnswers] = useState({})
   const navigate=useNavigate()
@@ -225,8 +225,9 @@ export default function QuizPreview() {
               {/* <Button variant="outline-secondary" size="sm" className="me-2">
                 Edit Quiz
               </Button> */}
-              <Button variant="primary" style={{height:"40px"}} onClick={(e)=> handlePublish(e)}  className="primary-button px-2"  size="sm">
-                Publish
+      
+      <Button variant="primary" style={{height:"40px"}} onClick={(e)=> isPublish ? navigate("/quiz-dashboard") : handlePublish(e)}  className="primary-button px-2"  size="sm">
+                Publish & Proceed
               </Button>
             </Col>
           </Row>

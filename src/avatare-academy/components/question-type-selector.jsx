@@ -1,10 +1,8 @@
-
-
 import { useState } from "react"
 import { Form } from "react-bootstrap"
 import { ChevronDown, Plus } from "lucide-react"
 
-const questionTypes = [
+const allQuestionTypes = [
   { value: "true_false", label: "True/False" },
   { value: "multiple_choice", label: "Multiple Choice Question(s)" },
   { value: "fill_blank", label: "Fill in the Blank" },
@@ -13,10 +11,17 @@ const questionTypes = [
   // { value: "matching", label: "Matching Columns" },
 ]
 
-export default function QuestionTypeSelector({ selectedType, onTypeChange }) {
+export default function QuestionTypeSelector({ selectedType, onTypeChange, quizType }) {
+  console.log(quizType)
   const [isOpen, setIsOpen] = useState(false)
 
-  const selectedLabel = questionTypes.find((type) => type.value === selectedType)?.label || "Select Question Type"
+  const filteredQuestionTypes =
+    quizType == "multiple_choice"
+      ? allQuestionTypes.filter((q) => q.value === "multiple_choice")
+      : allQuestionTypes
+
+  const selectedLabel =
+    filteredQuestionTypes.find((type) => type.value === selectedType)?.label || "Select Question Type"
 
   const handleSelect = (value) => {
     onTypeChange(value)
@@ -63,7 +68,7 @@ export default function QuestionTypeSelector({ selectedType, onTypeChange }) {
               overflowY: "auto",
             }}
           >
-            {questionTypes.map((type) => (
+            {filteredQuestionTypes.map((type) => (
               <div
                 key={type.value}
                 className="px-3 py-2 d-flex align-items-center"

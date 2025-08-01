@@ -43,7 +43,7 @@ export default function LongAnswerQuestion({ question, onUpdate }) {
         <Form.Control
           as="textarea"
           rows={6}
-          placeholder="Write correct answer here"
+          placeholder="Write answer here"
           value={question.answer}
           onChange={(e) => onUpdate({ answer: e.target.value })}
           style={{ resize: "vertical" }}
