@@ -25,6 +25,8 @@ import { DECODED_ROUTES } from './constants';
 import CourseChecklist from './course-checklist';
 import GroupConfigurations from './group-configurations';
 import InstructionsHelpEditorPage from './compugrade/pages/InstructionsHelpEditorPage';
+import New from './compugrade/pages/NewLessonFlow/pages/New';
+import LessonBuilder from './compugrade/pages/MultiPartLessonBuilder/app/page';
 
 
 /**
@@ -135,6 +137,14 @@ const CourseAuthoringRoutes = () => {
         <Route
           path="block/:blockId/:sequenceId/:blockType"
           element={<PageWrap><InstructionsHelpEditorPage courseId={courseId} /></PageWrap>}
+        />
+         <Route
+          path="block/:blockId/:sequenceId/new"
+          element={<PageWrap><New courseId={courseId} /></PageWrap>}
+        />
+        <Route
+          path="block/:blockId/:sequenceId/new-lesson"
+          element={<PageWrap><LessonBuilder courseId={courseId} /></PageWrap>}
         />
       </Routes>
     </CourseAuthoringPage>

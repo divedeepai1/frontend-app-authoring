@@ -38,6 +38,7 @@ const HeaderNavigations = ({
           <Button
             iconBefore={IconAdd}
             onClick={handleNewSection}
+            className='primary-button'
             disabled={errors?.outlineIndexApi}
           >
             {intl.formatMessage(messages.newSectionButton)}

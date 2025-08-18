@@ -14,6 +14,7 @@ import overwiew from "../../cms-edx-frontend/assests/overview.svg";
 import skills from "../../cms-edx-frontend/assests/skills.svg";
 import text from "../../cms-edx-frontend/assests/text.svg";
 import tools from "../../cms-edx-frontend/assests/text.svg";
+import { Plus } from "lucide-react";
 
 const AddComponent = ({
   blockId,
@@ -92,6 +93,17 @@ const AddComponent = ({
         {intl.formatMessage(messages.title)}
       </h5>
       <ul className="new-component-type list-unstyled m-0 d-flex flex-wrap justify-content-center">
+      <li>
+        <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("new")}
+            displayName={"Create MultiPart Lesson"}
+            icon={""}
+            type={"new"}
+            border="1px solid #255A71"
+  background="rgba(130, 179, 223, 0.30)"
+box-shadow="0px 1px 2px 0px rgba(37, 90, 113, 0.05)"
+          />
+        </li>
         <li>
           <AddComponentButton
             onClick={() => handleCreateCompugradeXBlock("overview")}
@@ -103,6 +115,7 @@ const AddComponent = ({
             box-shadow=" 0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
           />
         </li>
+       
         <li>
           <AddComponentButton
             onClick={() => handleCreateCompugradeXBlock("skills")}
@@ -114,16 +127,7 @@ const AddComponent = ({
             type={"skills"}
           />
         </li>
-        <li>
-          <AddComponentButton
-            onClick={() => handleCreateCompugradeXBlock("tools")}
-            displayName={"Tools and Terms"}
-            type={"tools"}
-            border="1px solid #E2CA12"
-            background="#F8FFBA"
-            box-shadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
-          />
-        </li>
+       
         <li>
           <AddComponentButton
             onClick={() => handleCreateCompugradeXBlock("text")}
@@ -144,6 +148,16 @@ const AddComponent = ({
             icon={writer}
             displayName={"Compugrade Writer Engine"}
             type={"engine"}
+          />
+        </li>
+        <li>
+          <AddComponentButton
+            onClick={() => handleCreateCompugradeXBlock("tools")}
+            displayName={"Tools and Terms"}
+            type={"tools"}
+            border="1px solid #E2CA12"
+            background="#F8FFBA"
+            box-shadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
           />
         </li>
         {componentTemplates.map((component) => {

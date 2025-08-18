@@ -9,12 +9,14 @@ import {
   Row,
   TransitionReplace,
   Toast,
+  IconButtonToggle,
 } from '@openedx/paragon';
 import { Helmet } from 'react-helmet';
 import {
   Add as IconAdd,
   CheckCircle as CheckCircleIcon,
 } from '@openedx/paragon/icons';
+
 import { useSelector } from 'react-redux';
 import {
   arrayMove,
@@ -57,6 +59,9 @@ import messages from './messages';
 import { getTagsExportFile } from './data/api';
 import { base_url } from '../compugrade-constants';
 import { ChevronsLeftRightEllipsis } from 'lucide-react';
+import TableView from './TableView';
+
+
 
 const CourseOutline = ({ courseId }) => {
   const intl = useIntl();
@@ -126,6 +131,7 @@ const CourseOutline = ({ courseId }) => {
   // Use `setToastMessage` to show the toast.
   const [toastMessage, setToastMessage] = useState(/** @type{null|string} */ (null));
   const [skills,setSkills]=useState([])
+  const [viewMode, setViewMode] = useState("list")
 
   useEffect(() => {
     const encodedCourseId = encodeURIComponent(courseId);
@@ -308,7 +314,7 @@ const CourseOutline = ({ courseId }) => {
           </TransitionReplace>
           <SubHeader
             title={intl.formatMessage(messages.headingTitle)}
-            subtitle={intl.formatMessage(messages.headingSubtitle)}
+            // subtitle={intl.formatMessage(messages.headingSubtitle)}
             headerActions={(
               <HeaderNavigations
                 isReIndexShow={isReIndexShow}
@@ -322,11 +328,11 @@ const CourseOutline = ({ courseId }) => {
             )}
           />
           <Layout
-            lg={[{ span: 9 }, { span: 3 }]}
-            md={[{ span: 9 }, { span: 3 }]}
+            lg={[{ span: 12},{ span: 3 } ]}
+            md={[{ span: 12 }, { span: 3 }]}
             sm={[{ span: 12 }, { span: 12 }]}
             xs={[{ span: 12 }, { span: 12 }]}
-            xl={[{ span: 9 }, { span: 3 }]}
+            xl={[{ span: 12 }, { span: 3 }]}
           >
             <Layout.Element>
               <article>
@@ -341,8 +347,24 @@ const CourseOutline = ({ courseId }) => {
                     />
                     {!errors?.outlineIndexApi && (
                       <div className="pt-4">
+                         <div className="d-flex justify-content-end mb-3" style={{gap:"4px"}}>
+        <button
+          className={viewMode === "list" ? "primary-button px-3 py-2" : "secondary-button px-3 py-2"}
+          onClick={() => setViewMode("list")}
+        >
+          <IconButtonToggle className="me-2" />
+          List View
+        </button>
+        <button
+          className={viewMode === "table" ? "primary-button px-3 py-2" : "secondary-button px-3 py-2"}
+          onClick={() => setViewMode("table")}
+        >
+          <IconButtonToggle className="me-2" />
+          Table View
+        </button>
+      </div>
                         {sections.length ? (
-                          <>
+                        viewMode === "list" ?  <>
                             <DraggableList
                               items={sections}
                               setSections={setSections}
@@ -463,7 +485,13 @@ const CourseOutline = ({ courseId }) => {
                                 {intl.formatMessage(messages.newSectionButton)}
                               </Button>
                             )}
-                          </>
+                          </> :
+                           <TableView
+                           courseId={courseId}
+                           skills={skills}
+                           sections={sections}
+                         
+                         />
                         ) : (
                           <EmptyPlaceholder
                             onCreateNewSection={handleNewSectionSubmit}
@@ -476,9 +504,9 @@ const CourseOutline = ({ courseId }) => {
                 </div>
               </article>
             </Layout.Element>
-            <Layout.Element>
+            {/* <Layout.Element>
               <OutlineSideBar courseId={courseId} />
-            </Layout.Element>
+            </Layout.Element> */}
           </Layout>
           <EnableHighlightsModal
             isOpen={isEnableHighlightsModalOpen}

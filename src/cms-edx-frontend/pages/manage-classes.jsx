@@ -9,59 +9,58 @@ import AddTeacher from "../components/classes/add-teacher";
 import { useEffect, useState } from "react";
 
 const ManageClasses = () => {
-  const location = useLocation(); 
-  const navigate =useNavigate();
+  const location = useLocation();
+  const navigate = useNavigate();
   const isNewTeacher = location.pathname.endsWith("/add-teacher");
   const isNewStudent = location.pathname.endsWith("/add-student");
 
   const [selectedTeachers, setSelectedTeachers] = useState([]);
 
   const [teachers, setTeachers] = useState([]);
-    const fetchTeachers = async () => {
-      const token = await fetchCsrfToken();
-      try {
-        const response = await fetch(
-          `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/`,
-          {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": token,
-            },
-          }
-        );
-  
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to get: ${response.status} ${errorText}`);
+  const fetchTeachers = async () => {
+    const token = await fetchCsrfToken();
+    try {
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
         }
-        const result = await response.json();
-        setTeachers(result?.teachers);
-      } catch (error) {
-        console.error("Error:", error.message);
-      }
-    };
-  
-    useEffect(() => {
-      if(isNewTeacher){
-        fetchTeachers();
-      }
-    }, [isNewTeacher]);
+      );
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get: ${response.status} ${errorText}`);
+      }
+      const result = await response.json();
+      setTeachers(result?.teachers);
+    } catch (error) {
+      console.error("Error:", error.message);
+    }
+  };
 
+  useEffect(() => {
+    if (isNewTeacher) {
+      fetchTeachers();
+    }
+  }, [isNewTeacher]);
 
   const handleNextStep = async (e) => {
     e.preventDefault();
 
     const token = await fetchCsrfToken();
-    const classId=sessionStorage.getItem("classId")
-    const teachers = selectedTeachers.map(teacher => teacher.email);
+    const classId = sessionStorage.getItem("classId");
+    const teachers = selectedTeachers.map((teacher) => teacher.email);
 
     try {
-    
       const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/teachers/`,
+        `${
+          getConfig().STUDIO_BASE_URL
+        }/myplugin/classrooms/${classId}/teachers/`,
         {
           method: "POST",
           credentials: "include",
@@ -69,7 +68,7 @@ const ManageClasses = () => {
             "Content-Type": "application/json",
             "X-CSRFToken": token,
           },
-          body: JSON.stringify({ email: teachers })
+          body: JSON.stringify({ email: teachers }),
         }
       );
 
@@ -78,14 +77,12 @@ const ManageClasses = () => {
         throw new Error(`Failed to add: ${response.status} ${errorText}`);
       }
       const result = await response.json();
-       navigate(-1)
+      navigate(-1);
     } catch (error) {
       console.error("Error:", error.message);
     }
-    
-   
   };
- 
+
   return (
     <div>
       <HeaderTop isHiddenMainMenu />
@@ -107,16 +104,25 @@ const ManageClasses = () => {
                           ?.name
                       : "Class Name"}
                   </h3>
-                 {!isNewTeacher && !isNewStudent &&<button   onClick={() => navigate(`/manage-classes/add-teacher`)} className="outline-black-button fw-bold px-3">
-                    + Add More Teachers
-                  </button>}
+                  {!isNewTeacher && !isNewStudent && (
+                    <button
+                      onClick={() => navigate(`/manage-classes/add-teacher`)}
+                      className="outline-black-button fw-bold px-3"
+                    >
+                      + Add More Teachers
+                    </button>
+                  )}
                 </div>
-                {!isNewTeacher ? <ClassManagementForm  isNewStudent={isNewStudent}/> :<AddTeacher
-                  teachers={teachers}
-                  selectedTeachers={selectedTeachers}
-                  setSelectedTeachers={setSelectedTeachers}
-                  nextStep={handleNextStep}
-                 />}
+                {!isNewTeacher ? (
+                  <ClassManagementForm isNewStudent={isNewStudent} />
+                ) : (
+                  <AddTeacher
+                    teachers={teachers}
+                    selectedTeachers={selectedTeachers}
+                    setSelectedTeachers={setSelectedTeachers}
+                    nextStep={handleNextStep}
+                  />
+                )}
               </div>
               <div style={{ width: "30%" }}></div>
             </div>

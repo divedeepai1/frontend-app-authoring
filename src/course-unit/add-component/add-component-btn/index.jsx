@@ -7,7 +7,7 @@ import AddComponentIcon from './AddComponentIcon';
 
 const AddComponentButton = ({ border,background,boxshadow,type, displayName, onClick,icon }) => {
   const intl = useIntl();
-  const highlightTypes = ["engine", "text", "skills", "tools", "overview"];
+  const highlightTypes = ["engine", "text", "skills", "tools", "overview","new"];
 
   return (
     <Button

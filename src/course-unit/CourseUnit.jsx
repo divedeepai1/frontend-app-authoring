@@ -81,7 +81,7 @@ const CourseUnit = ({ courseId }) => {
 
   const handleCreateCompugradeXBlock = (type) => {
 
-    if(unitData){
+    if(true){
     
      if(type=="text"){
       sessionStorage.setItem("unitData", JSON.stringify(unitData));
@@ -100,12 +100,21 @@ const CourseUnit = ({ courseId }) => {
       sessionStorage.setItem("unitTitle", unitTitle);
       sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
      }
-     navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type}`);
+     if(type=="new-lesson"){
+      sessionStorage.setItem("Lessons", JSON.stringify(unitData.lessons));
+     }
+     if(type=="new"){
+      sessionStorage.removeItem("Lessons");
+      
+     }
+     navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type=="new"? "new-lesson":type}`);
     }
   };
 
   useEffect(() => {
     sessionStorage.removeItem("unitData");
+    
+
     sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
     const fetchData = async () => {
       try {
@@ -271,6 +280,8 @@ const CourseUnit = ({ courseId }) => {
                    {unitData?.skills_used?.length > 0 && <InstructionXBlock title={"Skills"}  data={unitData?.skills_used?.map(item => item.customer_facing_name).join(", ")} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.text && <InstructionXBlock title={"CWE Preview"} data={unitData.text}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.items?.length > 0 && <InstructionXBlock title={"Addin Preview"} data={""} preview={true} type={"preview"} handleEdit={handleCreateCompugradeXBlock}/> }
+                   {unitData?.lessons?.length > 0 && <InstructionXBlock title={"MultiPart Lesson"} data={""}  type={"new-lesson"} handleEdit={handleCreateCompugradeXBlock}/> }
+
 
                   </SortableContext>
                 </DraggableList>
