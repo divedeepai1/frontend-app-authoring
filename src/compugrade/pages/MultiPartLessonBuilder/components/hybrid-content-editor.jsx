@@ -42,8 +42,8 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
   useEffect(() => {
     // Sync local editor state when switching parts or content updates externally
     setBlocks(content?.blocks || [])
-    setVideoEnabled(content?.videos ?? false)
-    setDocumentComparisonEnabled(content?.documentComparison?.mode ?? false)
+    // setVideoEnabled(content?.videos || false)
+    // setDocumentComparisonEnabled(content?.documentComparison?.mode || false)
     setDocumentComparisonMode(content?.documentComparison?.mode || "comparison-only")
     setUploadedVideo(Array.isArray(content?.videos) && content.videos.length > 0 ? content.videos[0] : null)
     setSourceDocument(content?.sourceDocument || null)
@@ -475,7 +475,7 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
                 ) : (
                   <>
                     <Target className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-gray-900">Assessment Block</span>
+                    <span className="font-medium text-gray-900">Objective Question Block</span>
                   </>
                 )}
               </div>
@@ -540,7 +540,7 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
         >
           <Plus className="w-4 h-4" />
           <Target className="w-4 h-4" />
-          Add Assessment Block
+          Add Objective Question
         </div>
       </div>
     </div>

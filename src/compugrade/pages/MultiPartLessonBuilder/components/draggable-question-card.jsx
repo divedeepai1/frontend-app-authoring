@@ -1,7 +1,7 @@
 
 
 import { useState } from "react"
-import { GripVertical } from "lucide-react"
+import { GripVertical, ChevronDown, ChevronUp, X, Trash, Trash2 } from "lucide-react"
 
 export function DraggableQuestionCard({
   question,
@@ -14,6 +14,7 @@ export function DraggableQuestionCard({
   children,
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   const handleDragStart = (e) => {
     e.dataTransfer.effectAllowed = "move"
@@ -40,25 +41,43 @@ export function DraggableQuestionCard({
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between mb-2 border-b bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center gap-2 text-gray-400 cursor-grab active:cursor-grabbing">
           <GripVertical className="w-4 h-4" />
           <span className="text-sm font-medium text-gray-600">Question {index + 1}</span>
         </div>
+        <div className="flex items-center gap-2 ">
+          <div
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors cursor-pointer"
+            title={isCollapsed ? "Expand" : "Collapse"}
+          >
+            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </div>
+          <div
+            onClick={onDelete}
+            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
+            title="Delete question"
+          >
+            <Trash2 className="w-4 h-4" />
+          </div>
+        </div>
       </div>
 
-      <div
-        draggable
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`transition-all ${
-          isDragOver ? "border-2 border-dashed border-blue-400 bg-blue-50 rounded-lg p-2" : ""
-        }`}
-      >
-        {children}
-      </div>
+      {!isCollapsed && (
+        <div
+          draggable
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`transition-all ${
+            isDragOver ? "border-2 border-dashed border-blue-400 bg-blue-50 rounded-lg p-2" : ""
+          }`}
+        >
+          {children}
+        </div>
+      )}
     </div>
   )
 }

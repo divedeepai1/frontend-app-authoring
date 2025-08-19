@@ -46,29 +46,33 @@ export function MatchingQuestion({ question, onQuestionChange, onDelete }) {
     <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h4 className="font-medium text-gray-900">Matching Question</h4>
-        <div
+        {/* <div
           onClick={onDelete}
           className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
         >
           <Trash2 className="w-4 h-4" />
-        </div>
+        </div> */}
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-start justify-between gap-2">
+        <div>
           <label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">
             Question
           </label>
-          <ImageAttach
-            image={question.image_url ? { url: question.image_url } : null}
-            onSelect={(file) => {
-              const url = URL.createObjectURL(file)
-              onQuestionChange({ ...question, image_url: url, image_name: file.name })
-            }}
-            onRemove={() => onQuestionChange({ ...question, image_url: "", image_name: "" })}
-            label="Attach question image"
-            scope={{ questionId: question.id, kind: 'question' }}
-          />
+          <div className="mt-2 flex justify-end">
+            <ImageAttach
+              image={question.image_url ? { url: question.image_url } : null}
+              onSelect={(file) => {
+                const url = URL.createObjectURL(file)
+                onQuestionChange({ ...question, image_url: url, image_name: file.name })
+              }}
+              onRemove={() => onQuestionChange({ ...question, image_url: "", image_name: "" })}
+              label="Attach question image"
+              scope={{ questionId: question.id, kind: 'question' }}
+              showPreview={false}
+              fileName={question.image_name}
+            />
+          </div>
         </div>
         <input
             id="question-text"
@@ -118,6 +122,8 @@ export function MatchingQuestion({ question, onQuestionChange, onDelete }) {
                   }}
                   label="Attach left image"
                   scope={{ questionId: question.id, kind: 'pair-term', refId: String(index) }}
+                  showPreview={false}
+                  fileName={pair.left_image}
                 />
                 <ImageAttach
                   image={pair.right_image_url ? { url: pair.right_image_url } : null}
@@ -134,6 +140,8 @@ export function MatchingQuestion({ question, onQuestionChange, onDelete }) {
                   }}
                   label="Attach right image"
                   scope={{ questionId: question.id, kind: 'pair-definition', refId: String(index) }}
+                  showPreview={false}
+                  fileName={pair.right_image}
                 />
                 {pairs.length > 2 && (
                   <div

@@ -112,12 +112,12 @@ export function DragDropQuestion({ question, onQuestionChange, onDelete }) {
     <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h4 className="font-medium text-gray-900">Drag and Drop Question</h4>
-        <div
+        {/* <div
           onClick={onDelete}
           className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
         >
           <Trash2 className="w-4 h-4" />
-        </div>
+        </div> */}
       </div>
 
       <div className="space-y-6">
@@ -147,36 +147,10 @@ export function DragDropQuestion({ question, onQuestionChange, onDelete }) {
               label="Attach question image"
               scope={{ questionId: question.id, kind: 'question' }}
               showPreview={false}
+              fileName={question.image_name}
             />
           </div>
-          {question.image_url && (
-  <>
-    <div className="mt-3 relative inline-block">
-      <img
-        src={question.image_url}
-        alt="question"
-        style={{ maxHeight: 140 }}
-        className="w-auto rounded border"
-      />
-      <button
-        type="button"
-        onClick={() => onQuestionChange({ ...question, image_url: "", image_name: "" })}
-        className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow"
-        aria-label="Remove image"
-      >
-        <X className="w-4 h-4 text-red-600" />
-      </button>
-    </div>
-
-    {itemsError && (
-      <div className="mt-1 text-xs text-red-600">{itemsError}</div>
-    )}
-
-    {emptyItemsError && (
-      <div className="mt-1 text-xs text-red-600">{emptyItemsError}</div>
-    )}
-  </>
-)}
+          {/* No inline preview; preview shown in dialog via ImageAttach */}
 
         </div>
         </div>

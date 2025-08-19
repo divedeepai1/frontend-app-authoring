@@ -24,12 +24,12 @@ export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
     <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h4 className="font-medium text-gray-900">Short Answer Question</h4>
-        <div
+        {/* <div
           onClick={onDelete}
           className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
         >
           <Trash2 className="w-4 h-4" />
-        </div>
+        </div> */}
       </div>
 
       <div className="space-y-4">
@@ -61,19 +61,7 @@ export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
               showPreview={false}
             />
           </div>
-          {question.image_url && (
-            <div className="mt-3 relative inline-block">
-              <img src={question.image_url} alt="question" style={{ maxHeight: 140 }} className="w-auto rounded border" />
-              <button
-                type="button"
-                onClick={() => onQuestionChange({ ...question, image_url: "", image_name: "" })}
-                className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow"
-                aria-label="Remove image"
-              >
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-red-600"><path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 1 0 5.7 7.11L10.59 12l-4.9 4.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.9a1 1 0 0 0 1.41-1.41L13.41 12l4.9-4.89a1 1 0 0 0-.01-1.4z"/></svg>
-              </button>
-            </div>
-          )}
+          {/* No inline preview; preview shown in dialog via ImageAttach */}
         </div>
         </div>
 

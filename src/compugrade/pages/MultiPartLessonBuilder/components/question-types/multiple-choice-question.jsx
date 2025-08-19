@@ -79,12 +79,12 @@ export function MultipleChoiceQuestion({ question, onQuestionChange, onDelete })
     <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h4 className="font-medium text-gray-900">Multiple Choice Question</h4>
-        <div
+        {/* <div
           onClick={onDelete}
           className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
         >
           <Trash2 className="w-4 h-4" />
-        </div>
+        </div> */}
       </div>
 
       <div className="space-y-4">
@@ -110,22 +110,11 @@ export function MultipleChoiceQuestion({ question, onQuestionChange, onDelete })
               onRemove={() => handleQuestionImageRemove()}
               label="Attach question image"
               scope={{ questionId: question.id, kind: 'question' }}
+              fileName={question.image_name}
               showPreview={false}
             />
           </div>
-          {question.image_url && (
-            <div className="mt-3 relative inline-block">
-              <img src={question.image_url} alt="question" style={{ maxHeight: 140 }} className="w-auto rounded border" />
-              <button
-                type="button"
-                onClick={handleQuestionImageRemove}
-                className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full p-1 shadow"
-                aria-label="Remove image"
-              >
-                <X className="w-4 h-4 text-red-600" />
-              </button>
-            </div>
-          )}
+          {/* No inline preview; preview shown in dialog via ImageAttach */}
         </div>
 
         <div>
@@ -155,6 +144,8 @@ export function MultipleChoiceQuestion({ question, onQuestionChange, onDelete })
                   onRemove={() => handleOptionImageRemove(index)}
                   label="Attach option image"
                   scope={{ questionId: question.id, kind: 'option', refId: String(index) }}
+                  fileName={options[index]?.image}
+                  showPreview={false}
                 />
                 {options.length > 2 && (
                   <div
