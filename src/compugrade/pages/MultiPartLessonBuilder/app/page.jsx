@@ -7,6 +7,10 @@ import {
   BookOpen,
   Users,
   Clock,
+  Settings,
+  FileText,
+  Video,
+  X,
 } from "lucide-react";
 import { AddPartDialog } from "../components/add-part-dialog";
 import { EditPartDialog } from "../components/edit-part-dialog";
@@ -45,90 +49,111 @@ export default function LessonBuilder() {
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
 
+  // Lesson-level configuration (moved from part configuration)
+  const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
+  const [lessonConfig, setLessonConfig] = useState({
+    sourceDocument: null,
+    answerKey: null,
+    videoEnabled: false,
+    videos: [],
+    lessonParts: [],
+  });
+
+ 
+
   function fromBackendToFrontend(backendData) {
-    const lessons = backendData?.map((lesson) => {
-      const sourceDocument =
-        lesson.content.source_document &&
-        !isFile(lesson.content.source_document)
-          ? lesson.content.source_document
-          : null;
-
-      const answerKey =
-        lesson.content.answer_key && !isFile(lesson.content.answer_key)
-          ? lesson.content.answer_key
-          : null;
-
-      const video =
-        lesson.content.video && !isFile(lesson.content.video)
-          ? lesson.content.video
-          : null;
-
+    const lessons = backendData?.lessons?.map((lesson) => {
       const blocks = [];
-      const objectiveItems = lesson.content.items?.filter(
-        (item) => item.objective_type !== "text"
-      );
-      const textItems = lesson.content.items?.filter(
-        (item) => item.objective_type === "text"
-      );
-
-      if (objectiveItems && objectiveItems.length > 0) {
-        blocks.push({
-          id: "objective-block-" + lesson.id,
-          type: "objective",
-          content: {
-            questions: objectiveItems.map((item) => ({
-              id: item.id,
-              objective_type: item.objective_type,
-              ...item.objective_json,
-            })),
-          },
-        });
-      }
-
-      if (textItems && textItems.length > 0) {
-        textItems.forEach((item) => {
+  
+      lesson.items?.forEach((item) => {
+        if (item.block_type === "objective") {
+          blocks.push({
+            id: "objective-block-" + item.id,
+            name: item.block_name,
+            type: "objective",
+            content: {
+              questions: [
+                {
+                  id: "objective-question-" + item.id,
+                  ...item.objective_json,
+                },
+              ],
+            },
+          });
+        } else if (item.block_type === "text") {
           blocks.push({
             id: "text-block-" + item.id,
+            name: item.block_name,
             type: "text",
             content: {
               html: item.natural_text || "",
             },
           });
-        });
-      }
-
+        } else if (item.block_type === "instruction") {
+          blocks.push({
+            id: "instruction-block-" + item.id,
+            name: item.block_name,
+            type: "instruction",
+            content: {
+              html: item.natural_text || "",
+              attachments: {
+                image: item.image_name || null,
+                video: item.video_name || null,
+              },
+            },
+          });
+        } else if (item.block_type === "doc-comparison") {
+          blocks.push({
+            id: "doc-comparison-block-" + item.id,
+            name: item.block_name,
+            type: "doc-comparison",
+            content: {
+              mode: item.comparison_mode || "",
+              document: item.image_name || null,
+            },
+          });
+        }
+      });
+  
       return {
         id: lesson.id,
         title: lesson.title,
         weightage: lesson.weightage,
         content: {
           blocks,
-          sourceDocument: sourceDocument,
-          answerKey: answerKey,
-          videos: video ? [video] : [],
-          documentComparison: {
-            mode: lesson.content.comparison_mode || "",
-          },
         },
       };
     });
-
-    return { lessons };
+  
+    return {
+      rubricId: backendData.rubric_id,
+      sourceDocument: backendData.source_document || null,
+      answerKey: backendData.answer_key || null,
+      videos: backendData.video ? [backendData.video] : [],
+      lessonParts: lessons || [],
+    };
   }
+  
+  
 
   useEffect(() => {
-    const savedData = sessionStorage.getItem("Lessons");
+    const savedData = sessionStorage.getItem("Rubric");
 
     if (savedData) {
       const parsedData = JSON.parse(savedData);
       const frontendData = fromBackendToFrontend(parsedData);
-      console.log(frontendData);
-      setLessonParts(frontendData.lessons);
-      if (frontendData.lessons.length > 0) {
-        setSelectedPartId(frontendData.lessons[0].id);
+      setLessonParts(frontendData?.lessonParts);
+      setLessonConfig(frontendData);
+      if (frontendData.lessonParts.length > 0) {
+        setSelectedPartId(frontendData.lessonParts[0].id);
       }
     }
   }, []);
+
+  // keep nested lessonParts in sync with root lessonParts for now
+  useEffect(() => {
+    setLessonConfig((cfg) => ({ ...cfg, lessonParts }));
+  }, [lessonParts]);
 
   const [images, setImages] = useState([]);
   const [nextImageId, setNextImageId] = useState(1);
@@ -261,72 +286,154 @@ export default function LessonBuilder() {
     return input instanceof File || input instanceof Blob;
   }
 
-  async function frontendToBackend(frontendData, rubricId) {
-    const lessons = await Promise.all(
-      frontendData.map(async (lesson) => {
-        let sourceDocBase64 = "";
-        let answerKeyBase64 = "";
-        let videoBase64 = "";
-
-        if (lesson.content.sourceDocument) {
-          if (isFile(lesson.content.sourceDocument)) {
-            sourceDocBase64 = await fileToBase64(lesson.content.sourceDocument);
-          } else {
-            sourceDocBase64 = lesson.content.sourceDocument; // already URL
-          }
-        }
-
-        if (lesson.content.videos?.[0]) {
-          if (isFile(lesson.content.videos[0])) {
-            videoBase64 = await fileToBase64(lesson.content.videos[0]);
-          } else {
-            videoBase64 = lesson.content.videos[0]; // already URL
-          }
-        }
-
-        if (lesson.content.answerKey) {
-          if (isFile(lesson.content.answerKey)) {
-            answerKeyBase64 = await fileToBase64(lesson.content.answerKey);
-          } else {
-            answerKeyBase64 = lesson.content.answerKey; // already URL
-          }
-        }
-
+  async function frontendToBackend(currentLessonConfig, rubricId) {
+  
+    let sourceDocBase64 = "";
+    let answerKeyBase64 = "";
+    let videoBase64 = "";
+  
+    if (currentLessonConfig.sourceDocument) {
+      if (isFile(currentLessonConfig.sourceDocument)) {
+        sourceDocBase64 = await fileToBase64(currentLessonConfig.sourceDocument);
+      } else {
+        sourceDocBase64 = currentLessonConfig.sourceDocument;
+      }
+    }
+  
+    if (currentLessonConfig.videos?.[0]) {
+      if (isFile(currentLessonConfig.videos[0])) {
+        videoBase64 = await fileToBase64(currentLessonConfig.videos[0]);
+      } else {
+        videoBase64 = currentLessonConfig.videos[0];
+      }
+    }
+  
+    if (currentLessonConfig.answerKey) {
+      if (isFile(currentLessonConfig.answerKey)) {
+        answerKeyBase64 = await fileToBase64(currentLessonConfig.answerKey);
+      } else {
+        answerKeyBase64 = currentLessonConfig.answerKey;
+      }
+    }
+  
+    const lesson_parts = await Promise.all(
+      (currentLessonConfig.lessonParts || []).map(async (lesson) => {
+        const items = await Promise.all(
+          (lesson.content.blocks || []).map(async (block) => {
+            if (block.type === "objective") {
+              
+              return block.content.questions.map((question) => ({
+                id: question.id,
+                instruction_category: "OB",
+                block_name:block.name,
+                block_type:block.type,
+                item_type: "g",
+                objective_json: question,
+              }));
+            } else if (block.type === "text") {
+            
+              return [
+                {
+                  id: block.id,
+                  block_name:block.name,
+                  instruction_category: "Text",
+                  block_type:block.type,
+                  item_type: "u",
+                  natural_text: block.content.html || "",
+                },
+              ];
+            } else if (block.type === "instruction") {
+              // Instruction block with possible attachments
+              let imageBase64 = "";
+              let videoBase64 = "";
+  
+              if (block.content.attachments?.image) {
+                if (isFile(block.content.attachments.image)) {
+                  imageBase64 = await fileToBase64(
+                    block.content.attachments.image
+                  );
+                } else {
+                  imageBase64 = block.content.attachments.image;
+                }
+              }
+  
+              if (block.content.attachments?.video) {
+                if (isFile(block.content.attachments.video)) {
+                  videoBase64 = await fileToBase64(
+                    block.content.attachments.video
+                  );
+                } else {
+                  videoBase64 = block.content.attachments.video;
+                }
+              }
+  
+              return [
+                {
+                  id: block.id,
+                  block_name:block.name,
+                  instruction_category: "Text",
+                  block_type:block.type,
+                  item_type: "u",
+                  natural_text: block.content.html || "",
+                  image: imageBase64,
+                  video: videoBase64,
+                },
+              ];
+            } else if (block.type === "doc-comparison") {
+             
+              let documentBase64 = "";
+             
+              if (block.content.document) {
+                if (isFile(block.content.document)) {
+                  documentBase64 = await fileToBase64(block.content.document);
+                } else {
+                  documentBase64 = block.content.document;
+                }
+              }
+  
+              // if (Array.isArray(block.content.documents)) {
+              //   documentsBase64 = await Promise.all(
+              //     block.content.documents.map(async (doc) =>
+              //       isFile(doc) ? await fileToBase64(doc) : doc
+              //     )
+              //   );
+              // }
+  
+              return [
+                {
+                  id: block.id,
+                  block_name:block.name,
+                  instruction_category: "OB",
+                  block_type:block.type,
+                  item_type: "g",
+                  comparison_mode: block.content.mode,
+                  answer_key: documentBase64,
+      
+                },
+              ];
+            }
+            return [];
+          })
+        );
+  
         return {
           id: lesson.id,
           title: lesson.title,
           weightage: lesson.weightage,
-          content: {
-            items: lesson.content.blocks.flatMap((block, blockIndex) => {
-              if (block.type === "objective") {
-                return block.content.questions.map((question, qIndex) => ({
-                  id: question.id,
-                  instruction_category: "OB",
-                  objective_type: question.objective_type,
-                  objective_json: question,
-                }));
-              } else if (block.type === "text") {
-                return [
-                  {
-                    id: block.id,
-                    natural_text: block.content.html || "",
-                    objective_type: "text",
-                  },
-                ];
-              }
-              return [];
-            }),
-            comparison_mode: lesson.content.documentComparison?.mode || "",
-            source_document: sourceDocBase64,
-            answer_key: answerKeyBase64,
-            video: videoBase64,
-          },
+          items: items.flat(),
         };
       })
     );
-
-    return { rubric_id: rubricId, lessons };
+  
+    return {
+      rubric_id: rubricId,
+      source_document: sourceDocBase64,
+      answer_key: answerKeyBase64,
+      video: videoBase64,
+      lessons:lesson_parts,
+    };
   }
+  
 
   const handleUploadToS3 = async (items) => {
     const uploadPromises = items?.flatMap((item) => {
@@ -433,7 +540,7 @@ export default function LessonBuilder() {
 
   const handleSubmit = async () => {
     setLoading(true);
-    const backendPayload = await frontendToBackend(lessonParts, blockId);
+    const backendPayload = await frontendToBackend(lessonConfig, blockId);
     try {
       console.log(JSON.stringify(backendPayload, null, 2));
       const response = await fetch(
@@ -471,8 +578,6 @@ export default function LessonBuilder() {
       ...newPart,
       content: {
         blocks: [],
-        videoEnabled: true,
-        documentComparison: { enabled: false, documents: [] },
       },
     };
     setLessonParts([...lessonParts, part]);
@@ -691,13 +796,7 @@ export default function LessonBuilder() {
                 {/* Content Editing Areas */}
                 <HybridContentEditor
                   selectedPart={selectedPart}
-                  content={
-                    selectedPart.content || {
-                      blocks: [],
-                      videoEnabled: true,
-                      documentComparison: { enabled: false, documents: [] },
-                    }
-                  }
+                  content={selectedPart.content || { blocks: [] }}
                   onContentChange={handleContentChange}
                 />
               </div>
@@ -724,6 +823,23 @@ export default function LessonBuilder() {
           {/* Enhanced Right Panel - Lesson Parts Outline (30%) */}
           <div className="w-80 bg-white border-l border-gray-200 shadow-sm overflow-y-auto">
             <div className="px-4 py-2">
+              {/* Lesson Configuration launcher */}
+              <div
+                className="mb-3 rounded-lg border border-blue-200 bg-gradient-to-r from-white to-blue-50 cursor-pointer hover:shadow-sm"
+                onClick={() => setLessonConfigOpen(true)}
+                style={{ borderLeftWidth: "4px", borderLeftColor: "#3b82f6" }}
+              >
+                <div className="flex items-center gap-3 p-3">
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <Settings className="w-5 h-5 mb-1 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 mt-1">Lesson Configuration</div>
+                    <p className="text-xs text-gray-500">Manage documents, videos, and settings</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Lesson Outline
@@ -827,6 +943,212 @@ export default function LessonBuilder() {
           onOpenChange={setValidationOpen}
           errors={validationErrors}
         />
+
+        {/* Lesson Configuration Modal */}
+        {lessonConfigOpen && (
+          <div className="fixed inset-0 z-50 pt-[3%] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 border-none" onClick={() => setLessonConfigOpen(false)} />
+            <div className="relative bg-white rounded-lg shadow-xl w-[92vw] max-w-3xl max-h-[87vh] overflow-auto">
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <Settings className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold">Lesson Configuration</div>
+                    <p className="text-xs text-gray-500">Configure lesson-wide documents and videos</p>
+                  </div>
+                </div>
+                <button className="p-1 rounded hover:bg-gray-100 border-none" onClick={() => setLessonConfigOpen(false)}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                {/* Document Uploads */}
+                <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-900">Lesson Documents</label>
+                      <p className="text-xs text-gray-500">Upload source materials and answer keys</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Source Document</label>
+                      {lessonConfig.sourceDocument ? (
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-blue-200">
+                              <FileText className="w-4 h-4 text-blue-700" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">{lessonConfig.sourceDocument.name || "Uploaded"}</span>
+                              <p className="text-xs text-gray-500">Source document uploaded</p>
+                            </div>
+                          </div>
+                          <div
+                            onClick={() => setLessonConfig((c) => ({ ...c, sourceDocument: null }))}
+                            className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".doc,.docx"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) setLessonConfig((c) => ({ ...c, sourceDocument: file }));
+                            }}
+                            className="hidden"
+                            id="lesson-source-document"
+                          />
+                          <label htmlFor="lesson-source-document" className="cursor-pointer">
+                            <div className="p-2 rounded-full bg-gray-100 group-hover:bg-blue-100 w-fit mx-auto mb-2 transition-colors">
+                              <Upload className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
+                              Upload source document
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">DOC, DOCX files supported</p>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Answer Key</label>
+                      {lessonConfig.answerKey ? (
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-green-200">
+                              <FileText className="w-4 h-4 text-green-700" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">{lessonConfig.answerKey.name || "Uploaded"}</span>
+                              <p className="text-xs text-gray-500">Answer key uploaded</p>
+                            </div>
+                          </div>
+                          <div
+                            onClick={() => setLessonConfig((c) => ({ ...c, answerKey: null }))}
+                            className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-green-400 hover:bg-green-50 transition-all duration-200 cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".doc,.docx"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) setLessonConfig((c) => ({ ...c, answerKey: file }));
+                            }}
+                            className="hidden"
+                            id="lesson-answer-key"
+                          />
+                          <label htmlFor="lesson-answer-key" className="cursor-pointer">
+                            <div className="p-2 rounded-full bg-gray-100 group-hover:bg-green-100 w-fit mx-auto mb-2 transition-colors">
+                              <Upload className="w-5 h-5 text-gray-400 group-hover:text-green-600" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-700 group-hover:text-green-700">
+                              Upload answer key
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">DOC, DOCX files supported</p>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Video Attachments */}
+                <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-purple-50">
+                        <Video className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-900">Video Attachments</label>
+                        <p className="text-xs text-gray-500">Enable video uploads for this lesson</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600">{lessonConfig.videoEnabled ? "Enabled" : "Disabled"}</span>
+                      <div
+                        onClick={() => setLessonConfig((c) => ({ ...c, videoEnabled: !c.videoEnabled }))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          lessonConfig.videoEnabled ? "bg-blue-600" : "bg-gray-200"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            lessonConfig.videoEnabled ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {lessonConfig.videoEnabled && (
+                    <div className="space-y-2 pt-3 border-t border-gray-100">
+                      {lessonConfig.videos?.[0] ? (
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-purple-200">
+                              <Video className="w-4 h-4 text-purple-700" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">{lessonConfig.videos[0].name || "Uploaded"}</span>
+                              <p className="text-xs text-gray-500">Video file uploaded</p>
+                            </div>
+                          </div>
+                          <div
+                            onClick={() => setLessonConfig((c) => ({ ...c, videos: [] }))}
+                            className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) setLessonConfig((c) => ({ ...c, videos: [f] }));
+                            }}
+                            className="hidden"
+                            id="lesson-video-upload"
+                          />
+                          <label htmlFor="lesson-video-upload" className="cursor-pointer">
+                            <div className="p-2 rounded-full bg-gray-100 group-hover:bg-purple-100 w-fit mx-auto mb-2 transition-colors">
+                              <Video className="w-5 h-5 text-gray-400 group-hover:text-purple-600" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-700 group-hover:text-purple-700">
+                              Upload video file
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">MP4, MOV, AVI files supported</p>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ImagesProvider>
   );

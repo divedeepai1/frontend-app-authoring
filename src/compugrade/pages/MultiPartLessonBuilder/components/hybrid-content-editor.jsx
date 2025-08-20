@@ -1,12 +1,10 @@
 
 import { useEffect, useState } from "react"
-import { Settings } from "lucide-react"
+import { Layers, Settings } from "lucide-react"
 import {
   Plus,
   FileText,
   Target,
-  Video,
-  FileDiffIcon as FileCompare,
   Trash2,
   GripVertical,
   Upload,
@@ -15,7 +13,9 @@ import {
   ChevronUp,
 } from "lucide-react"
 import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor"
+import { FileDiffIcon , Image as ImageIcon, Video , Label } from "lucide-react"
 import { ObjectiveEditor } from "./objective-editor"
+import EditableBlockName from "./ui/input-name"
 
 export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
 
@@ -35,6 +35,7 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
     content.documentComparison?.mode || "comparison-only",
   )
   const [partConfigExpanded, setPartConfigExpanded] = useState(false)
+  const [previewState, setPreviewState] = useState({ open: false, url: null, type: null, name: "" })
 
   const updateContent = (newContent) => {
     onContentChange(newContent)
@@ -54,8 +55,42 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
     const newBlock = {
       id: `text-${Date.now()}`,
       type: "text",
+      name: "Add Text Block",
       content: {
         html: "",
+      },
+      isCollapsed: false,
+    }
+    const newBlocks = [...blocks, newBlock]
+    setBlocks(newBlocks)
+    updateContent({ ...content, blocks: newBlocks })
+  }
+
+  const addInstructionBlock = () => {
+    const newBlock = {
+      id: `instruction-${Date.now()}`,
+      type: "instruction",
+      name: "Add Instruction",
+      content: {
+        html: "",
+        attachments: { image: null, video: null },
+      },
+      isCollapsed: false,
+    }
+    const newBlocks = [...blocks, newBlock]
+    setBlocks(newBlocks)
+    updateContent({ ...content, blocks: newBlocks })
+  }
+
+  const addDocComparisonBlock = () => {
+    const newBlock = {
+      id: `doccmp-${Date.now()}`,
+      type: "doc-comparison",
+      name: "Document Comparison",
+      content: {
+        mode: "comparison-only",
+        documents: [], // legacy list (kept for reference)
+        document: null, // single file (new)
       },
       isCollapsed: false,
     }
@@ -68,6 +103,7 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
     const newBlock = {
       id: `objective-${Date.now()}`,
       type: "objective",
+      name: "Add Objective Question",
       content: {
         questions: [],
       },
@@ -80,6 +116,12 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
 
   const updateBlock = (blockId, newContent) => {
     const newBlocks = blocks.map((block) => (block.id === blockId ? { ...block, content: newContent } : block))
+    setBlocks(newBlocks)
+    updateContent({ ...content, blocks: newBlocks })
+  }
+
+  const renameBlock = (blockId, newName) => {
+    const newBlocks = blocks.map((block) => (block.id === blockId ? { ...block, name: newName } : block))
     setBlocks(newBlocks)
     updateContent({ ...content, blocks: newBlocks })
   }
@@ -182,273 +224,43 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
     setDraggedBlockIndex(null)
   }
 
+  const getInstructionNumber = (blockId) => {
+    const instructionBlocks = blocks.filter((b) => b.type === "instruction")
+    const idx = instructionBlocks.findIndex((b) => b.id === blockId)
+    return idx >= 0 ? idx + 1 : 0
+  }
+
+  const triggerHiddenInput = (inputId) => {
+    const el = document.getElementById(inputId)
+    if (el) el.click()
+  }
+
+  const handleInstructionImageSelect = (block, files, inputEl) => {
+    const file = files?.[0]
+    if (!file) { if (inputEl) inputEl.value = ""; return }
+    const contentWithAttachments = { ...block.content, attachments: { ...block.content.attachments, image: file } }
+    updateBlock(block.id, contentWithAttachments)
+    if (inputEl) inputEl.value = ""
+  }
+
+  const handleInstructionVideoSelect = (block, files, inputEl) => {
+    const file = files?.[0]
+    if (!file) { if (inputEl) inputEl.value = ""; return }
+    const contentWithAttachments = { ...block.content, attachments: { ...block.content.attachments, video: file } }
+    updateBlock(block.id, contentWithAttachments)
+    if (inputEl) inputEl.value = ""
+  }
+
+  const removeInstructionAttachment = (block, type) => {
+    const next = { ...block.content.attachments }
+    if (type === "image") next.image = null
+    if (type === "video") next.video = null
+    updateBlock(block.id, { ...block.content, attachments: next })
+  }
+
   return (
     <div className="space-y-4">
-      {/* Part Configuration Section */}
-      <div className="rounded-lg shadow-lg bg-gradient-to-br from-white to-blue-50"style={{
-    border: "1px solid #bfdbfe",
-  }}>
-        <div className="p-2">
-          <div
-            onClick={() => setPartConfigExpanded(!partConfigExpanded)}
-            className="flex  items-center justify-between w-full text-left group"
-          >
-            <div className="flex items-center justify-center gap-x-3 pl-3">
-              <div className="p-1 rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                <Settings className="w-5 h-5 text-blue-600 mb-1" />
-              </div>
-              <div>
-                <label className="text-base font-semibold text-gray-900 mt-2">Part Configuration</label>
-                <p className="text-sm text-gray-500 mb-1">Manage documents, videos, and comparison settings</p>
-              </div>
-            </div>
-            <div className="p-1 rounded-full hover:bg-gray-100 transition-colors">
-              {partConfigExpanded ? (
-                <ChevronUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              )}
-            </div>
-          </div>
-
-          {partConfigExpanded && (
-            <div className="mt-4 space-y-4">
-              {/* Document Uploads */}
-              <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-blue-50">
-                    <FileText className="w-5 h-5 text-blue-600 mb-1" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-gray-900">Part Documents</label>
-                    <p className="text-xs text-gray-500">Upload source materials and answer keys</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Source Document</label>
-                    {sourceDocument ? (
-                      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-blue-200">
-                            <FileText className="w-4 h-4 text-blue-700" />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">{sourceDocument.name}</span>
-                            <p className="text-xs text-gray-500">Source document uploaded</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={removeSourceDocument}
-                          className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer">
-                        <input
-                          type="file"
-                          accept=".doc,.docx"
-                          onChange={handleSourceDocumentUpload}
-                          className="hidden"
-                          id="source-document"
-                        />
-                        <label htmlFor="source-document" className="cursor-pointer">
-                          <div className="p-2 rounded-full bg-gray-100 group-hover:bg-blue-100 w-fit mx-auto mb-2 transition-colors">
-                            <Upload className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
-                          </div>
-                          <p className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
-                            Upload source document
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">DOC, DOCX files supported</p>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Answer Key</label>
-                    {answerKey ? (
-                      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-green-200">
-                            <FileText className="w-4 h-4 text-green-700" />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">{answerKey.name}</span>
-                            <p className="text-xs text-gray-500">Answer key uploaded</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={removeAnswerKey}
-                          className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-green-400 hover:bg-green-50 transition-all duration-200 cursor-pointer">
-                        <input
-                          type="file"
-                          accept=".doc,.docx"
-                          onChange={handleAnswerKeyUpload}
-                          className="hidden"
-                          id="answer-key"
-                        />
-                        <label htmlFor="answer-key" className="cursor-pointer">
-                          <div className="p-2 rounded-full bg-gray-100 group-hover:bg-green-100 w-fit mx-auto mb-2 transition-colors">
-                            <Upload className="w-5 h-5 text-gray-400 group-hover:text-green-600" />
-                          </div>
-                          <p className="text-sm font-medium text-gray-700 group-hover:text-green-700">
-                            Upload answer key
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">DOC, DOCX files supported</p>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Video Attachments */}
-              <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-purple-50">
-                      <Video className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-semibold text-gray-900">Video Attachments</label>
-                      <p className="text-xs text-gray-500">Enable video uploads for this part</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">{videoEnabled ? "Enabled" : "Disabled"}</span>
-                    <div
-                      onClick={() => handleVideoToggle(!videoEnabled)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        videoEnabled ? "bg-blue-600" : "bg-gray-200"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          videoEnabled ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {videoEnabled && (
-                  <div className="space-y-2 pt-3 border-t border-gray-100">
-                    {uploadedVideo ? (
-                      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-purple-200">
-                            <Video className="w-4 h-4 text-purple-700" />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">{uploadedVideo.name || ""}</span>
-                            <p className="text-xs text-gray-500">Video file uploaded</p>
-                          </div>
-                        </div>
-                        <div
-                          onClick={removeVideo}
-                          className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 cursor-pointer">
-                        <input
-                          type="file"
-                          accept="video/*"
-                          onChange={handleVideoUpload}
-                          className="hidden"
-                          id="video-upload"
-                        />
-                        <label htmlFor="video-upload" className="cursor-pointer">
-                          <div className="p-2 rounded-full bg-gray-100 group-hover:bg-purple-100 w-fit mx-auto mb-2 transition-colors">
-                            <Video className="w-5 h-5 text-gray-400 group-hover:text-purple-600" />
-                          </div>
-                          <p className="text-sm font-medium text-gray-700 group-hover:text-purple-700">
-                            Upload video file
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">MP4, MOV, AVI files supported</p>
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Document Comparison */}
-              <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-orange-50">
-                      <FileCompare className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-semibold text-gray-900">Document Comparison</label>
-                      <p className="text-xs text-gray-500">Enable document comparison features</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">{documentComparisonEnabled ? "Enabled" : "Disabled"}</span>
-                    <div
-                      onClick={() => handleDocumentComparisonToggle(!documentComparisonEnabled)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        documentComparisonEnabled ? "bg-blue-600" : "bg-gray-200"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          documentComparisonEnabled ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {documentComparisonEnabled && (
-                  <div className="space-y-3 pt-4 border-t border-gray-100">
-                    <label className="text-sm font-medium text-gray-700">Comparison Mode</label>
-                    <div className="relative">
-                      <select
-                        value={documentComparisonMode}
-                        onChange={(e) => handleComparisonModeChange(e.target.value)}
-                        className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none pr-10"
-                      >
-                        <option value="comparison-only">Document Comparison Only Mode</option>
-                        <option value="state-of-document">State-of-the-Document Comparison</option>
-                        <option value="graded-comparison">Graded Document Comparison</option>
-                        <option value="assessment-mode">Assessment Mode</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
-                    <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                      <p className="text-xs text-orange-800">
-                        {documentComparisonMode === "comparison-only" &&
-                          "Students will compare documents side-by-side without grading."}
-                        {documentComparisonMode === "state-of-document" &&
-                          "Students will analyze the current state of documents."}
-                        {documentComparisonMode === "graded-comparison" &&
-                          "Document comparison will be graded automatically."}
-                        {documentComparisonMode === "assessment-mode" &&
-                          "Full assessment mode with detailed comparison metrics."}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Part Configuration Section moved to Lesson-level modal in page.jsx */}
 
       {/* Content Blocks */}
       <div className="space-y-3">
@@ -467,20 +279,18 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
                 <div className="cursor-move opacity-50 group-hover:opacity-100">
                   <GripVertical className="w-4 h-4 text-gray-400" />
                 </div>
-                {block.type === "text" ? (
-                  <>
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-gray-900">Text Content Block</span>
-                  </>
-                ) : (
-                  <>
-                    <Target className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-gray-900">Objective Question Block</span>
-                  </>
-                )}
+                {block.type === "text" && <FileText className="w-5 h-5 text-blue-600" />}
+                {block.type === "objective" && <Target className="w-5 h-5 text-green-600" />}
+                {block.type === "instruction" && <Layers className="w-5 h-5 text-indigo-600" />}
+                {block.type === "doc-comparison" && <FileDiffIcon className="w-5 h-5 text-orange-600" />}
+
+               
+
+                <EditableBlockName block={block} renameBlock={renameBlock} />
               </div>
 
               <div className="flex items-center gap-2">
+                
                 <div
                   onClick={() => toggleBlockCollapse(block.id)}
                   className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
@@ -502,14 +312,167 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
             {/* Block Content */}
             {!block.isCollapsed && (
               <div className="p-3">
-                {block.type === "text" ? (
+                {block.type === "text" && (
                   <EnhancedRichTextEditor
                     content={block.content}
                     onContentChange={(newContent) => updateBlock(block.id, newContent)}
                     isCollapsed={false}
                     onToggleCollapse={() => toggleBlockCollapse(block.id)}
                   />
-                ) : (
+                )}
+                {block.type === "instruction" && (
+                  <div className="border rounded-lg overflow-hidden">
+                     
+                  <div className="flex items-center justify-between p-2 bg-indigo-50 border-b border-indigo-200">
+                  <div className="px-2 py-0.5  text-indigo-700">Instruction {getInstructionNumber(block.id)}</div>
+                
+                  <div className="flex items-center gap-2 mr-2">
+                    <button onClick={() => triggerHiddenInput(`instr-img-${block.id}`)} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"><ImageIcon className="w-4 h-4" /> Image</button>
+                    <button onClick={() => triggerHiddenInput(`instr-vid-${block.id}`)} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 border-purple-200 border bg-transparent rounded"><Video className="w-4 h-4" /> Video</button>
+                  </div>
+                  </div>
+                
+                    <div className="p-2">
+                      <EnhancedRichTextEditor
+                        content={block.content}
+                        onContentChange={(newContent) => updateBlock(block.id, newContent)}
+                        isCollapsed={false}
+                        onToggleCollapse={() => toggleBlockCollapse(block.id)}
+                        hideMediaButtons
+                      />
+                      {/* Hidden inputs for attachments */}
+                      <input id={`instr-img-${block.id}`} type="file" accept="image/*" className="hidden" onChange={(e) => handleInstructionImageSelect(block, e.target.files, e.target)} />
+                      <input id={`instr-vid-${block.id}`} type="file" accept="video/*" className="hidden" onChange={(e) => handleInstructionVideoSelect(block, e.target.files, e.target)} />
+
+                      {/* Attachment chips */}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {block.content.attachments?.image && (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs">
+                            <span>Image attached</span>
+                            <div onClick={() => removeInstructionAttachment(block, "image")} className="text-red-500">
+                              <X className="w-3 h-3" />
+                            </div>
+                          </div>
+                        )}
+                        {block.content.attachments?.video && (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs">
+                            <span>Video attached</span>
+                            <div onClick={() => removeInstructionAttachment(block, "video")} className="text-red-500">
+                              <X className="w-3 h-3" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {block.type === "doc-comparison" && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Document Comparison Mode</label>
+                      <select
+                        value={block.content.mode}
+                        onChange={(e) => updateBlock(block.id, { ...block.content, mode: e.target.value })}
+                        className="mt-1 w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      >
+                        <option value="comparison-only">Document Comparison Only</option>
+                        <option value="state-of-document">State of the Document</option>
+                        <option value="graded-comparison">Graded Comparison</option>
+                        <option value="assessment-mode">Assessment Mode</option>
+                      </select>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {block.content.mode === 'comparison-only' && 'Students will compare documents side-by-side without additional features'}
+                        {block.content.mode === 'state-of-document' && 'Track and analyze document state changes over time with version history'}
+                        {block.content.mode === 'graded-comparison' && 'Document comparison with automated grading criteria and scoring rubrics'}
+                        {block.content.mode === 'assessment-mode' && 'Full assessment mode with comparison, evaluation, and comprehensive feedback'}
+                      </p>
+                    </div>
+
+                    <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileDiffIcon className="w-5 h-5 text-orange-600" />
+                        <div className="text-sm font-medium text-orange-800">Comparison Configuration</div>
+                      </div>
+                      <p className="text-sm text-orange-700">
+                        {block.content.mode === 'comparison-only' && 'Students will compare documents side-by-side without additional features. Students will interact with this comparison during the lesson.'}
+                        {block.content.mode === 'state-of-document' && 'Track and analyze document state changes over time with version history. Students will interact with this comparison during the lesson.'}
+                        {block.content.mode === 'graded-comparison' && 'Document comparison with automated grading criteria and scoring rubrics. Students will interact with this comparison during the lesson.'}
+                        {block.content.mode === 'assessment-mode' && 'Full assessment mode with comparison, evaluation, and comprehensive feedback. Students will interact with this comparison during the lesson.'}
+                      </p>
+                    </div>
+
+                    {/* Legacy multi-document UI - commented but kept */}
+                    {/**
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Relevant Document (DOC/DOCX)</label>
+                      <input
+                        type="file"
+                        accept=".doc,.docx"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || [])
+                          const docs = files.map((f) => ({ name: f.name, type: 'doc', url: URL.createObjectURL(f) }))
+                          updateBlock(block.id, { ...block.content, documents: [ ...(block.content.documents||[]), ...docs ] })
+                        }}
+                        className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      {(block.content.documents || []).map((document, i) => (
+                        <div key={i} className="flex items-center justify-between gap-4 p-2 rounded">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📄</span>
+                            <div className="text-sm font-medium">{document.name}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button className="px-2 py-1 text-xs border-none bg-red-50 rounded" onClick={() => {
+                              const updated = (block.content.documents||[]).filter((_, idx) => idx !== i)
+                              updateBlock(block.id, { ...block.content, documents: updated })
+                            }}>
+                              <X className="w-4 h-4"  color="red"/>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    */}
+
+                    {/* New single-file UI */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Relevant Document (DOC/DOCX)</label>
+                      {block.content.document ? (
+                        <div className="flex items-center justify-between gap-4 p-2 rounded border border-orange-200 bg-orange-50">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📄</span>
+                            <div className="text-sm font-medium">Comparison Document Attached</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="px-2 py-1 text-xs border-none bg-red-50 rounded"
+                              onClick={() => updateBlock(block.id, { ...block.content, document: null })}
+                            >
+                              <X className="w-4 h-4" color="red" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <input
+                          type="file"
+                          accept=".doc,.docx"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0]
+                            if (f) {
+                              updateBlock(block.id, { ...block.content, document: f })
+                              e.target.value = ""
+                            }
+                          }}
+                          className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+                {block.type === "objective" && (
                   <ObjectiveEditor
                     content={block.content}
                     onContentChange={(newContent) => updateBlock(block.id, newContent)}
@@ -524,7 +487,7 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
       </div>
 
       {/* Add Block divs */}
-      <div className="flex gap-3 justify-center">
+      <div className="flex gap-3 flex-wrap w-full px-[5%] items-center justify-center">
         <div
           onClick={addTextBlock}
           className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 hover:bg-blue-50 bg-transparent rounded-lg transition-colors"
@@ -535,6 +498,17 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
         </div>
 
         <div
+          onClick={addInstructionBlock}
+          className="flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-600 hover:bg-indigo-50 bg-transparent rounded-lg transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <Layers className="w-4 h-4" />
+          Add Instruction
+        </div>
+
+       
+
+        <div
           onClick={addObjectiveBlock}
           className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-700 hover:bg-green-50 bg-transparent rounded-lg transition-colors"
         >
@@ -542,7 +516,41 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
           <Target className="w-4 h-4" />
           Add Objective Question
         </div>
+        <div
+          onClick={addDocComparisonBlock}
+          className="flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-600 hover:bg-orange-50 bg-transparent rounded-lg transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <FileText className="w-4 h-4" />
+          Add Document Comparison
+        </div>
       </div>
+
+      {/* Preview Modal */}
+      {previewState.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setPreviewState({ open: false, url: null, type: null, name: "" })} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-[90vw] max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 border-b">
+              <div className="text-sm font-medium truncate pr-4">{previewState.name}</div>
+              <button
+                className="p-1 rounded hover:bg-gray-100"
+                onClick={() => setPreviewState({ open: false, url: null, type: null, name: "" })}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-3 flex items-center justify-center bg-gray-50">
+              {previewState.type === "image" && (
+                <img src={previewState.url} alt={previewState.name} className="max-h-[70vh] max-w-full object-contain" />
+              )}
+              {previewState.type === "video" && (
+                <video src={previewState.url} controls className="max-h-[70vh] max-w-full" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

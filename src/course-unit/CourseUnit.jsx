@@ -101,10 +101,10 @@ const CourseUnit = ({ courseId }) => {
       sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
      }
      if(type=="new-lesson"){
-      sessionStorage.setItem("Lessons", JSON.stringify(unitData.lessons));
+      sessionStorage.setItem("Rubric", JSON.stringify(unitData?.rubric));
      }
      if(type=="new"){
-      sessionStorage.removeItem("Lessons");
+      sessionStorage.removeItem("Rubric");
       
      }
      navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type=="new"? "new-lesson":type}`);
@@ -278,9 +278,9 @@ const CourseUnit = ({ courseId }) => {
                    {unitData?.description	 && <InstructionXBlock title={"Overview"}  data={unitData.description	} type={"overview"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.tools && <InstructionXBlock title={"Tools and Terms"} data={unitData.tools} type={"tools"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.skills_used?.length > 0 && <InstructionXBlock title={"Skills"}  data={unitData?.skills_used?.map(item => item.customer_facing_name).join(", ")} type={"skills"} handleEdit={handleCreateCompugradeXBlock}/>}
-                   {unitData?.text && <InstructionXBlock title={"CWE Preview"} data={unitData.text}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
+                   {unitData?.text && <InstructionXBlock title={"CWE Preview"} data={""}  type={"text"} handleEdit={handleCreateCompugradeXBlock}/>}
                    {unitData?.items?.length > 0 && <InstructionXBlock title={"Addin Preview"} data={""} preview={true} type={"preview"} handleEdit={handleCreateCompugradeXBlock}/> }
-                   {unitData?.lessons?.length > 0 && <InstructionXBlock title={"MultiPart Lesson"} data={""}  type={"new-lesson"} handleEdit={handleCreateCompugradeXBlock}/> }
+                   {unitData?.rubric && <InstructionXBlock title={"MultiPart Lesson"} data={""}  type={"new-lesson"} handleEdit={handleCreateCompugradeXBlock}/> }
 
 
                   </SortableContext>
