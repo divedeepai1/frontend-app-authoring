@@ -158,7 +158,7 @@ export default function LessonBuilder() {
   const [images, setImages] = useState([]);
   const [nextImageId, setNextImageId] = useState(1);
 
-  console.log(images);
+  // console.log(images);
 
   const validateLesson = (parts) => {
     const errors = [];
@@ -450,7 +450,7 @@ export default function LessonBuilder() {
           const uploadUrl = item?.image_url;
           if (!uploadUrl) return null;
   
-          console.log("Uploading MAIN image:", file.file.name, "→", uploadUrl);
+          // console.log("Uploading MAIN image:", file.file.name, "→", uploadUrl);
   
           return fetch(uploadUrl, {
             method: "PUT",
@@ -464,23 +464,23 @@ export default function LessonBuilder() {
       const optionFileUploads = files.flatMap((file) => {
         if (!file?.option || !Array.isArray(file.option) || file.option.length === 0)
           return [];
-        console.log(item?.objective_image_urls,"length of urls")
+        // console.log(item?.objective_image_urls,"length of urls")
         if(item?.objective_image_urls.length > 0){
   
         return file.option
           .map((option,index) => {
-            console.log(option, "option in file")
+            // console.log(option, "option in file")
             if (!option?.file.name || !option?.file) return null;
   
             // Match by name
             const matchedImage = item?.objective_image_urls?.[index];
   
             if (!matchedImage?.image_url) {
-              console.warn("No upload URL found for option:", option.name);
+              // console.warn("No upload URL found for option:", option.name);
               return null;
             }
   
-            console.log("Uploading OPTION image:", option.file.name, "→", matchedImage.image_url);
+            // console.log("Uploading OPTION image:", option.file.name, "→", matchedImage.image_url);
   
             return fetch(matchedImage.image_url, {
               method: "PUT",
@@ -542,7 +542,7 @@ export default function LessonBuilder() {
     setLoading(true);
     const backendPayload = await frontendToBackend(lessonConfig, blockId);
     try {
-      console.log(JSON.stringify(backendPayload, null, 2));
+      // console.log(JSON.stringify(backendPayload, null, 2));
       const response = await fetch(
         base_url + "/api/openedx/create_base_lesson_from_scratch",
         {
