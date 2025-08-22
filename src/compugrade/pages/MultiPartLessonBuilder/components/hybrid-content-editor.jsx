@@ -1,6 +1,5 @@
-
-import { useEffect, useState } from "react"
-import { Layers, Settings } from "lucide-react"
+import { useEffect, useState } from "react";
+import { Download, Eye, Layers, Settings } from "lucide-react";
 import {
   Plus,
   FileText,
@@ -11,45 +10,71 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-} from "lucide-react"
-import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor"
-import { FileDiffIcon , Image as ImageIcon, Video , Label } from "lucide-react"
-import { ObjectiveEditor } from "./objective-editor"
-import EditableBlockName from "./ui/input-name"
+} from "lucide-react";
+import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor";
+import { FileDiffIcon, Image as ImageIcon, Video, Label } from "lucide-react";
+import { ObjectiveEditor } from "./objective-editor";
+import EditableBlockName from "./ui/input-name";
+import { get } from "lodash";
+import downloadFile from "../utils/downloadFile";
 
-export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
+export function HybridContentEditor({
+  content,
+  onContentChange,
+  selectedPart,
+}) {
+  const [blocks, setBlocks] = useState(content.blocks || []);
 
-  const [blocks, setBlocks] = useState(
-    content.blocks || []
-  )
-
-  const [videoEnabled, setVideoEnabled] = useState(content.videoEnabled ?? false)
+  const [videoEnabled, setVideoEnabled] = useState(
+    content.videoEnabled ?? false
+  );
   const [documentComparisonEnabled, setDocumentComparisonEnabled] = useState(
-    content.documentComparison?.enabled ?? false,
-  )
-  const [uploadedVideo, setUploadedVideo] = useState(null)
-  const [draggedBlockIndex, setDraggedBlockIndex] = useState(null)
-  const [sourceDocument, setSourceDocument] = useState(null)
-  const [answerKey, setAnswerKey] = useState(null)
+    content.documentComparison?.enabled ?? false
+  );
+  const [uploadedVideo, setUploadedVideo] = useState(null);
+  const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
+  const [sourceDocument, setSourceDocument] = useState(null);
+  const [answerKey, setAnswerKey] = useState(null);
   const [documentComparisonMode, setDocumentComparisonMode] = useState(
-    content.documentComparison?.mode || "comparison-only",
-  )
-  const [partConfigExpanded, setPartConfigExpanded] = useState(false)
-  const [previewState, setPreviewState] = useState({ open: false, url: null, type: null, name: "" })
+    content.documentComparison?.mode || "comparison-only"
+  );
+  const [partConfigExpanded, setPartConfigExpanded] = useState(false);
+  const [previewState, setPreviewState] = useState({
+    open: false,
+    url: null,
+    type: null,
+    name: "",
+  });
+
+  function getUrl(item) {
+    if (item instanceof File || item instanceof Blob) {
+      return URL.createObjectURL(item);
+    } 
+    else{
+      return item
+    }
+   
+  }
 
   const updateContent = (newContent) => {
-    onContentChange(newContent)
-  }
+    onContentChange(newContent);
+  };
   useEffect(() => {
     // Sync local editor state when switching parts or content updates externally
-    setBlocks(content?.blocks || [])
+    setBlocks(content?.blocks || []);
     // setVideoEnabled(content?.videos || false)
     // setDocumentComparisonEnabled(content?.documentComparison?.mode || false)
-    setDocumentComparisonMode(content?.documentComparison?.mode || "comparison-only")
-    setUploadedVideo(Array.isArray(content?.videos) && content.videos.length > 0 ? content.videos[0] : null)
-    setSourceDocument(content?.sourceDocument || null)
-    setAnswerKey(content?.answerKey || null)
-  },[content,selectedPart])  
+    setDocumentComparisonMode(
+      content?.documentComparison?.mode || "comparison-only"
+    );
+    setUploadedVideo(
+      Array.isArray(content?.videos) && content.videos.length > 0
+        ? content.videos[0]
+        : null
+    );
+    setSourceDocument(content?.sourceDocument || null);
+    setAnswerKey(content?.answerKey || null);
+  }, [content, selectedPart]);
 
   const addTextBlock = () => {
     const newBlock = {
@@ -60,11 +85,11 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
         html: "",
       },
       isCollapsed: false,
-    }
-    const newBlocks = [...blocks, newBlock]
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+    };
+    const newBlocks = [...blocks, newBlock];
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const addInstructionBlock = () => {
     const newBlock = {
@@ -76,11 +101,11 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
         attachments: { image: null, video: null },
       },
       isCollapsed: false,
-    }
-    const newBlocks = [...blocks, newBlock]
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+    };
+    const newBlocks = [...blocks, newBlock];
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const addDocComparisonBlock = () => {
     const newBlock = {
@@ -93,11 +118,11 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
         document: null, // single file (new)
       },
       isCollapsed: false,
-    }
-    const newBlocks = [...blocks, newBlock]
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+    };
+    const newBlocks = [...blocks, newBlock];
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const addObjectiveBlock = () => {
     const newBlock = {
@@ -108,155 +133,183 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
         questions: [],
       },
       isCollapsed: false,
-    }
-    const newBlocks = [...blocks, newBlock]
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+    };
+    const newBlocks = [...blocks, newBlock];
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const updateBlock = (blockId, newContent) => {
-    const newBlocks = blocks.map((block) => (block.id === blockId ? { ...block, content: newContent } : block))
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+    const newBlocks = blocks.map((block) =>
+      block.id === blockId ? { ...block, content: newContent } : block
+    );
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const renameBlock = (blockId, newName) => {
-    const newBlocks = blocks.map((block) => (block.id === blockId ? { ...block, name: newName } : block))
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+    const newBlocks = blocks.map((block) =>
+      block.id === blockId ? { ...block, name: newName } : block
+    );
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const toggleBlockCollapse = (blockId) => {
     const newBlocks = blocks.map((block) =>
-      block.id === blockId ? { ...block, isCollapsed: !block.isCollapsed } : block,
-    )
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+      block.id === blockId
+        ? { ...block, isCollapsed: !block.isCollapsed }
+        : block
+    );
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const deleteBlock = (blockId) => {
-   
-    const newBlocks = blocks.filter((block) => block.id !== blockId)
-    setBlocks(newBlocks)
-    updateContent({ ...content, blocks: newBlocks })
-  }
+    const newBlocks = blocks.filter((block) => block.id !== blockId);
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   const handleVideoToggle = (enabled) => {
-    setVideoEnabled(enabled)
-    updateContent({ ...content, videoEnabled: enabled })
-  }
+    setVideoEnabled(enabled);
+    updateContent({ ...content, videoEnabled: enabled });
+  };
 
   const handleVideoUpload = (event) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
-      setUploadedVideo(file)
-      updateContent({ ...content, videos: [file] })
+      setUploadedVideo(file);
+      updateContent({ ...content, videos: [file] });
     }
-  }
+  };
 
   const removeVideo = () => {
-    setUploadedVideo(null)
-    updateContent({ ...content, videos: [] })
-  }
+    setUploadedVideo(null);
+    updateContent({ ...content, videos: [] });
+  };
 
   const handleDocumentComparisonToggle = (enabled) => {
-    setDocumentComparisonEnabled(enabled)
+    setDocumentComparisonEnabled(enabled);
     const newDocComparison = {
       enabled,
       mode: enabled ? documentComparisonMode : "comparison-only",
       documents: enabled ? content.documentComparison?.documents || [] : [],
-    }
-    updateContent({ ...content, documentComparison: newDocComparison })
-  }
+    };
+    updateContent({ ...content, documentComparison: newDocComparison });
+  };
 
   const handleComparisonModeChange = (mode) => {
-    setDocumentComparisonMode(mode)
+    setDocumentComparisonMode(mode);
     const newDocComparison = {
       enabled: documentComparisonEnabled,
       mode,
       documents: content.documentComparison?.documents || [],
-    }
-    updateContent({ ...content, documentComparison: newDocComparison })
-  }
+    };
+    updateContent({ ...content, documentComparison: newDocComparison });
+  };
 
   const handleSourceDocumentUpload = (event) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
-      setSourceDocument(file)
-      updateContent({ ...content, sourceDocument: file })
+      setSourceDocument(file);
+      updateContent({ ...content, sourceDocument: file });
     }
-  }
+  };
 
   const handleAnswerKeyUpload = (event) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
-      setAnswerKey(file)
-      updateContent({ ...content, answerKey: file })
+      setAnswerKey(file);
+      updateContent({ ...content, answerKey: file });
     }
-  }
+  };
 
   const removeSourceDocument = () => {
-    setSourceDocument(null)
-    updateContent({ ...content, sourceDocument: null })
-  }
+    setSourceDocument(null);
+    updateContent({ ...content, sourceDocument: null });
+  };
 
   const removeAnswerKey = () => {
-    setAnswerKey(null)
-    updateContent({ ...content, answerKey: null })
-  }
+    setAnswerKey(null);
+    updateContent({ ...content, answerKey: null });
+  };
 
   const handleBlockDragStart = (index) => {
-    setDraggedBlockIndex(index)
-  }
+    setDraggedBlockIndex(index);
+  };
 
   const handleBlockDrop = (dropIndex) => {
     if (draggedBlockIndex !== null && draggedBlockIndex !== dropIndex) {
-      const newBlocks = [...blocks]
-      const draggedBlock = newBlocks[draggedBlockIndex]
+      const newBlocks = [...blocks];
+      const draggedBlock = newBlocks[draggedBlockIndex];
 
-      newBlocks.splice(draggedBlockIndex, 1)
-      const insertIndex = draggedBlockIndex < dropIndex ? dropIndex - 1 : dropIndex
-      newBlocks.splice(insertIndex, 0, draggedBlock)
+      newBlocks.splice(draggedBlockIndex, 1);
+      const insertIndex =
+        draggedBlockIndex < dropIndex ? dropIndex - 1 : dropIndex;
+      newBlocks.splice(insertIndex, 0, draggedBlock);
 
-      setBlocks(newBlocks)
-      updateContent({ ...content, blocks: newBlocks })
+      setBlocks(newBlocks);
+      updateContent({ ...content, blocks: newBlocks });
     }
-    setDraggedBlockIndex(null)
-  }
+    setDraggedBlockIndex(null);
+  };
 
   const getInstructionNumber = (blockId) => {
-    const instructionBlocks = blocks.filter((b) => b.type === "instruction")
-    const idx = instructionBlocks.findIndex((b) => b.id === blockId)
-    return idx >= 0 ? idx + 1 : 0
-  }
+    const instructionBlocks = blocks.filter((b) => b.type === "instruction");
+    const idx = instructionBlocks.findIndex((b) => b.id === blockId);
+    return idx >= 0 ? idx + 1 : 0;
+  };
 
   const triggerHiddenInput = (inputId) => {
-    const el = document.getElementById(inputId)
-    if (el) el.click()
-  }
+    const el = document.getElementById(inputId);
+    if (el) el.click();
+  };
 
   const handleInstructionImageSelect = (block, files, inputEl) => {
-    const file = files?.[0]
-    if (!file) { if (inputEl) inputEl.value = ""; return }
-    const contentWithAttachments = { ...block.content, attachments: { ...block.content.attachments, image: file } }
-    updateBlock(block.id, contentWithAttachments)
-    if (inputEl) inputEl.value = ""
-  }
+    const file = files?.[0];
+    if (!file) {
+      if (inputEl) inputEl.value = "";
+      return;
+    }
+    const nextImages = [...(block.content.attachments?.images || []), file];
+    const contentWithAttachments = {
+      ...block.content,
+      attachments: {
+        ...block.content.attachments,
+        images: nextImages,
+      },
+    };
+    updateBlock(block.id, contentWithAttachments);
+    if (inputEl) inputEl.value = "";
+  };
 
   const handleInstructionVideoSelect = (block, files, inputEl) => {
-    const file = files?.[0]
-    if (!file) { if (inputEl) inputEl.value = ""; return }
-    const contentWithAttachments = { ...block.content, attachments: { ...block.content.attachments, video: file } }
-    updateBlock(block.id, contentWithAttachments)
-    if (inputEl) inputEl.value = ""
-  }
+    const file = files?.[0];
+    if (!file) {
+      if (inputEl) inputEl.value = "";
+      return;
+    }
+    const nextVideos = [...(block.content.attachments?.videos || []), file];
+    const contentWithAttachments = {
+      ...block.content,
+      attachments: {
+        ...block.content.attachments,
+        videos: nextVideos,
+      },
+    };
+    updateBlock(block.id, contentWithAttachments);
+    if (inputEl) inputEl.value = "";
+  };
 
-  const removeInstructionAttachment = (block, type) => {
-    const next = { ...block.content.attachments }
-    if (type === "image") next.image = null
-    if (type === "video") next.video = null
-    updateBlock(block.id, { ...block.content, attachments: next })
-  }
+  const removeInstructionAttachment = (block, type, index) => {
+    const next = { ...block.content.attachments };
+    if (type === "image")
+      next.images = (next.images || []).filter((_, i) => i !== index);
+    if (type === "video")
+      next.videos = (next.videos || []).filter((_, i) => i !== index);
+    updateBlock(block.id, { ...block.content, attachments: next });
+  };
 
   return (
     <div className="space-y-4">
@@ -279,23 +332,32 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
                 <div className="cursor-move opacity-50 group-hover:opacity-100">
                   <GripVertical className="w-4 h-4 text-gray-400" />
                 </div>
-                {block.type === "text" && <FileText className="w-5 h-5 text-blue-600" />}
-                {block.type === "objective" && <Target className="w-5 h-5 text-green-600" />}
-                {block.type === "instruction" && <Layers className="w-5 h-5 text-indigo-600" />}
-                {block.type === "doc-comparison" && <FileDiffIcon className="w-5 h-5 text-orange-600" />}
+                {block.type === "text" && (
+                  <FileText className="w-5 h-5 text-blue-600" />
+                )}
+                {block.type === "objective" && (
+                  <Target className="w-5 h-5 text-green-600" />
+                )}
+                {block.type === "instruction" && (
+                  <Layers className="w-5 h-5 text-indigo-600" />
+                )}
+                {block.type === "doc-comparison" && (
+                  <FileDiffIcon className="w-5 h-5 text-orange-600" />
+                )}
 
-               
-
-                <EditableBlockName block={block} renameBlock={renameBlock} />
+                <EditableBlockName block={block} renameBlock={renameBlock} instructionNo={getInstructionNumber(block.id)} />
               </div>
 
               <div className="flex items-center gap-2">
-                
                 <div
                   onClick={() => toggleBlockCollapse(block.id)}
                   className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
                 >
-                  {block.isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                  {block.isCollapsed ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4" />
+                  )}
                 </div>
 
                 {blocks.length > 0 && (
@@ -315,52 +377,144 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
                 {block.type === "text" && (
                   <EnhancedRichTextEditor
                     content={block.content}
-                    onContentChange={(newContent) => updateBlock(block.id, newContent)}
+                    onContentChange={(newContent) =>
+                      updateBlock(block.id, newContent)
+                    }
                     isCollapsed={false}
                     onToggleCollapse={() => toggleBlockCollapse(block.id)}
                   />
                 )}
                 {block.type === "instruction" && (
                   <div className="border rounded-lg overflow-hidden">
-                     
-                  <div className="flex items-center justify-between p-2 bg-indigo-50 border-b border-indigo-200">
-                  <div className="px-2 py-0.5  text-indigo-700">Instruction {getInstructionNumber(block.id)}</div>
-                
-                  <div className="flex items-center gap-2 mr-2">
-                    <button onClick={() => triggerHiddenInput(`instr-img-${block.id}`)} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"><ImageIcon className="w-4 h-4" /> Image</button>
-                    <button onClick={() => triggerHiddenInput(`instr-vid-${block.id}`)} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 border-purple-200 border bg-transparent rounded"><Video className="w-4 h-4" /> Video</button>
-                  </div>
-                  </div>
-                
+                    <div className="flex items-center justify-between p-2 bg-indigo-50 border-b border-indigo-200">
+                      <div className="px-2 py-0.5  text-indigo-700">
+                        Instruction {getInstructionNumber(block.id)}
+                      </div>
+
+                      <div className="flex items-center gap-2 mr-2">
+                        <button
+                          onClick={() =>
+                            triggerHiddenInput(`instr-img-${block.id}`)
+                          }
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"
+                        >
+                          <ImageIcon className="w-4 h-4" /> Image
+                        </button>
+                        <button
+                          onClick={() =>
+                            triggerHiddenInput(`instr-vid-${block.id}`)
+                          }
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 border-purple-200 border bg-transparent rounded"
+                        >
+                          <Video className="w-4 h-4" /> Video
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="p-2">
                       <EnhancedRichTextEditor
                         content={block.content}
-                        onContentChange={(newContent) => updateBlock(block.id, newContent)}
+                        onContentChange={(newContent) =>
+                          updateBlock(block.id, newContent)
+                        }
                         isCollapsed={false}
                         onToggleCollapse={() => toggleBlockCollapse(block.id)}
                         hideMediaButtons
                       />
                       {/* Hidden inputs for attachments */}
-                      <input id={`instr-img-${block.id}`} type="file" accept="image/*" className="hidden" onChange={(e) => handleInstructionImageSelect(block, e.target.files, e.target)} />
-                      <input id={`instr-vid-${block.id}`} type="file" accept="video/*" className="hidden" onChange={(e) => handleInstructionVideoSelect(block, e.target.files, e.target)} />
+                      <input
+                        id={`instr-img-${block.id}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleInstructionImageSelect(
+                            block,
+                            e.target.files,
+                            e.target
+                          )
+                        }
+                      />
+                      <input
+                        id={`instr-vid-${block.id}`}
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleInstructionVideoSelect(
+                            block,
+                            e.target.files,
+                            e.target
+                          )
+                        }
+                      />
 
                       {/* Attachment chips */}
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {block.content.attachments?.image && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs">
-                            <span>Image attached</span>
-                            <div onClick={() => removeInstructionAttachment(block, "image")} className="text-red-500">
-                              <X className="w-3 h-3" />
+                        {(block.content.attachments?.images || []).map(
+                          (img, idx) => (
+                            <div
+                              key={`img-${idx}`}
+                              className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs cursor-pointer"
+                              onClick={() =>
+                                setPreviewState({
+                                  open: true,
+                                  url: getUrl(img),
+                                  type: "image",
+                                  name: "Image Attached " + (idx + 1),
+                                })
+                              }
+                            >
+                              <Eye size={13} />
+                              <span>{"Image Attached " + (idx + 1)}</span>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeInstructionAttachment(
+                                    block,
+                                    "image",
+                                    idx
+                                  );
+                                }}
+                                className="text-red-500 cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </div>
                             </div>
-                          </div>
+                          )
                         )}
-                        {block.content.attachments?.video && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs">
-                            <span>Video attached</span>
-                            <div onClick={() => removeInstructionAttachment(block, "video")} className="text-red-500">
-                              <X className="w-3 h-3" />
+
+                        {(block.content.attachments?.videos || []).map(
+                          (vid, idx) => (
+                            <div
+                              key={`vid-${idx}`}
+                              className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs cursor-pointer"
+                              onClick={() =>
+                                setPreviewState({
+                                  open: true,
+                                  url: getUrl(vid),
+                                  type: "video",
+                                  name: "Video Attached " + (idx + 1),
+                                })
+                              }
+                            >
+                              <Eye size={13} />
+                              <span>{"Video Attached " + (idx + 1)}</span>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeInstructionAttachment(
+                                    block,
+                                    "video",
+                                    idx
+                                  );
+                                }}
+                                className="text-red-500 cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </div>
                             </div>
-                          </div>
+                          )
                         )}
                       </div>
                     </div>
@@ -369,35 +523,58 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
                 {block.type === "doc-comparison" && (
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Document Comparison Mode</label>
+                      <label className="text-sm font-medium text-gray-700">
+                        Document Comparison Mode
+                      </label>
                       <select
                         value={block.content.mode}
-                        onChange={(e) => updateBlock(block.id, { ...block.content, mode: e.target.value })}
+                        onChange={(e) =>
+                          updateBlock(block.id, {
+                            ...block.content,
+                            mode: e.target.value,
+                          })
+                        }
                         className="mt-1 w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                       >
-                        <option value="comparison-only">Document Comparison Only</option>
-                        <option value="state-of-document">State of the Document</option>
-                        <option value="graded-comparison">Graded Comparison</option>
+                        <option value="comparison-only">
+                          Document Comparison Only
+                        </option>
+                        <option value="state-of-document">
+                          State of the Document
+                        </option>
+                        <option value="graded-comparison">
+                          Graded Comparison
+                        </option>
                         <option value="assessment-mode">Assessment Mode</option>
                       </select>
                       <p className="text-xs text-gray-600 mt-1">
-                        {block.content.mode === 'comparison-only' && 'Students will compare documents side-by-side without additional features'}
-                        {block.content.mode === 'state-of-document' && 'Track and analyze document state changes over time with version history'}
-                        {block.content.mode === 'graded-comparison' && 'Document comparison with automated grading criteria and scoring rubrics'}
-                        {block.content.mode === 'assessment-mode' && 'Full assessment mode with comparison, evaluation, and comprehensive feedback'}
+                        {block.content.mode === "comparison-only" &&
+                          "Students will compare documents side-by-side without additional features"}
+                        {block.content.mode === "state-of-document" &&
+                          "Track and analyze document state changes over time with version history"}
+                        {block.content.mode === "graded-comparison" &&
+                          "Document comparison with automated grading criteria and scoring rubrics"}
+                        {block.content.mode === "assessment-mode" &&
+                          "Full assessment mode with comparison, evaluation, and comprehensive feedback"}
                       </p>
                     </div>
 
                     <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <FileDiffIcon className="w-5 h-5 text-orange-600" />
-                        <div className="text-sm font-medium text-orange-800">Comparison Configuration</div>
+                        <div className="text-sm font-medium text-orange-800">
+                          Comparison Configuration
+                        </div>
                       </div>
                       <p className="text-sm text-orange-700">
-                        {block.content.mode === 'comparison-only' && 'Students will compare documents side-by-side without additional features. Students will interact with this comparison during the lesson.'}
-                        {block.content.mode === 'state-of-document' && 'Track and analyze document state changes over time with version history. Students will interact with this comparison during the lesson.'}
-                        {block.content.mode === 'graded-comparison' && 'Document comparison with automated grading criteria and scoring rubrics. Students will interact with this comparison during the lesson.'}
-                        {block.content.mode === 'assessment-mode' && 'Full assessment mode with comparison, evaluation, and comprehensive feedback. Students will interact with this comparison during the lesson.'}
+                        {block.content.mode === "comparison-only" &&
+                          "Students will compare documents side-by-side without additional features. Students will interact with this comparison during the lesson."}
+                        {block.content.mode === "state-of-document" &&
+                          "Track and analyze document state changes over time with version history. Students will interact with this comparison during the lesson."}
+                        {block.content.mode === "graded-comparison" &&
+                          "Document comparison with automated grading criteria and scoring rubrics. Students will interact with this comparison during the lesson."}
+                        {block.content.mode === "assessment-mode" &&
+                          "Full assessment mode with comparison, evaluation, and comprehensive feedback. Students will interact with this comparison during the lesson."}
                       </p>
                     </div>
 
@@ -439,17 +616,33 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
 
                     {/* New single-file UI */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Relevant Document (DOC/DOCX)</label>
+                      <label className="text-sm font-medium text-gray-700">
+                        Relevant Document (DOC/DOCX)
+                      </label>
                       {block.content.document ? (
                         <div className="flex items-center justify-between gap-4 p-2 rounded border border-orange-200 bg-orange-50">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">📄</span>
-                            <div className="text-sm font-medium">Comparison Document Attached</div>
+                            <div className="text-sm font-medium">
+                              Comparison Document Attached
+                            </div>
                           </div>
+
                           <div className="flex items-center gap-2">
+                             <div
+                                                         onClick={() => downloadFile(block.content.document, "answer-key")}
+                                                          className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                                        >
+                                                          <Download className="w-4 h-4" />
+                            </div>
                             <button
                               className="px-2 py-1 text-xs border-none bg-red-50 rounded"
-                              onClick={() => updateBlock(block.id, { ...block.content, document: null })}
+                              onClick={() =>
+                                updateBlock(block.id, {
+                                  ...block.content,
+                                  document: null,
+                                })
+                              }
                             >
                               <X className="w-4 h-4" color="red" />
                             </button>
@@ -460,10 +653,13 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
                           type="file"
                           accept=".doc,.docx"
                           onChange={(e) => {
-                            const f = e.target.files?.[0]
+                            const f = e.target.files?.[0];
                             if (f) {
-                              updateBlock(block.id, { ...block.content, document: f })
-                              e.target.value = ""
+                              updateBlock(block.id, {
+                                ...block.content,
+                                document: f,
+                              });
+                              e.target.value = "";
                             }
                           }}
                           className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded"
@@ -475,7 +671,9 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
                 {block.type === "objective" && (
                   <ObjectiveEditor
                     content={block.content}
-                    onContentChange={(newContent) => updateBlock(block.id, newContent)}
+                    onContentChange={(newContent) =>
+                      updateBlock(block.id, newContent)
+                    }
                     isCollapsed={false}
                     onToggleCollapse={() => toggleBlockCollapse(block.id)}
                   />
@@ -506,8 +704,6 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
           Add Instruction
         </div>
 
-       
-
         <div
           onClick={addObjectiveBlock}
           className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-700 hover:bg-green-50 bg-transparent rounded-lg transition-colors"
@@ -529,28 +725,62 @@ export function HybridContentEditor({ content, onContentChange ,selectedPart}) {
       {/* Preview Modal */}
       {previewState.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setPreviewState({ open: false, url: null, type: null, name: "" })} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() =>
+              setPreviewState({ open: false, url: null, type: null, name: "" })
+            }
+          />
           <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-[90vw] max-h-[85vh] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 border-b">
-              <div className="text-sm font-medium truncate pr-4">{previewState.name}</div>
-              <button
-                className="p-1 rounded hover:bg-gray-100"
-                onClick={() => setPreviewState({ open: false, url: null, type: null, name: "" })}
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="text-sm font-medium truncate pr-4">
+                {previewState.name}
+              </div>
+              <div className="flex items-center gap-2">
+                {previewState.url && (
+                  <a
+                    href={previewState.url}
+                    download={previewState.name}
+                    className="p-1 rounded"
+                  >
+                    <Download className="w-5 h-5 text-gray-500 " />
+                  </a>
+                )}
+                <button
+                  className="p-1 rounded border-none bg-transparent"
+                  onClick={() =>
+                    setPreviewState({
+                      open: false,
+                      url: null,
+                      type: null,
+                      name: "",
+                    })
+                  }
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
+
             <div className="p-3 flex items-center justify-center bg-gray-50">
               {previewState.type === "image" && (
-                <img src={previewState.url} alt={previewState.name} className="max-h-[70vh] max-w-full object-contain" />
+                <img
+                  src={previewState.url}
+                  alt={previewState.name}
+                  className="max-h-[70vh] max-w-full object-contain"
+                />
               )}
               {previewState.type === "video" && (
-                <video src={previewState.url} controls className="max-h-[70vh] max-w-full" />
+                <video
+                  src={previewState.url}
+                  controls
+                  className="max-h-[70vh] max-w-full"
+                />
               )}
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

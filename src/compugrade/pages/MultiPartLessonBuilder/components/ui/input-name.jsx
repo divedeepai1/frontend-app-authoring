@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 
-export default function EditableBlockName({ block, renameBlock }) {
+export default function EditableBlockName({ block, renameBlock, instructionNo }) {
   const inputRef = useRef(null);
   const [value, setValue] = useState(
     block.name ||
@@ -13,6 +13,7 @@ export default function EditableBlockName({ block, renameBlock }) {
         ? "Document Comparison"
         : "Add Objective Question")
   );
+  const [isFocused, setIsFocused] = useState(false);
 
   const defaultText =
     block.type === "text"
@@ -37,12 +38,14 @@ export default function EditableBlockName({ block, renameBlock }) {
   };
 
   return (
-    <div className="flex items-center gap-2 group">
+    <div className="flex items-center group">
       <input
         ref={inputRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onFocus={() => setIsFocused(true)}
         onBlur={() => {
+          setIsFocused(false);
           if (value.trim() === "") {
             setValue(defaultText);
             renameBlock(block.id, defaultText);
@@ -55,10 +58,16 @@ export default function EditableBlockName({ block, renameBlock }) {
         placeholder={block.type === "instruction" ? "Instruction" : "Block name"}
         className="text-sm font-medium p-2 rounded text-gray-900 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
       />
+
+      {/* Show instruction number only when NOT focused */}
+      {!isFocused && block.type === "instruction" && (
+        <span className="text-sm font-medium">{instructionNo}</span>
+      )}
+
       <div
         type="button"
         onClick={() => inputRef.current?.focus()}
-        className="cursor-pointer hidden group-hover:block text-gray-500 hover:text-blue-600 transition-colors"
+        className="cursor-pointer hidden group-hover:block text-gray-500 hover:text-blue-600 transition-colors ml-2"
       >
         <Pencil size={16} />
       </div>

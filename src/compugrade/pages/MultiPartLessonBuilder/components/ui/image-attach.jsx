@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { X, Image as ImageIcon, Eye } from 'lucide-react'
+import { X, Image as ImageIcon, Eye, Download } from 'lucide-react'
 import { useImages } from './images-context'
 
 // scope: { questionId: string, kind: 'question'|'option'|'answer'|'item'|'blank'|'pair-term'|'pair-definition'|'category', refId?: string, role?: string }
@@ -77,6 +77,18 @@ export function ImageAttach({ image, onSelect, onRemove, label = 'Attach image',
           <div className="relative bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-medium text-gray-800 truncate mr-4">{fileName || 'Image preview'}</div>
+
+              <div>
+
+               {image.url && (
+                                <a
+                                  href={image.url}
+                                  download={fileName || 'image'}
+                                  className="p-1 rounded "
+                                >
+                                  <Download className="w-5 h-5 text-gray-500 " />
+                                </a>
+                              )}
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
@@ -85,6 +97,7 @@ export function ImageAttach({ image, onSelect, onRemove, label = 'Attach image',
               >
                 <X className="w-5 h-5" />
               </button>
+              </div>
             </div>
             <div className="max-h-[70vh] overflow-auto border rounded">
               <img src={image.url} alt="preview" className="w-full h-auto block" />
