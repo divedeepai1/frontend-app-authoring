@@ -10,13 +10,16 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
 
   const renderBlockPreview = (block) => {
     if (block.type === "instruction") {
+        const instructionBlocks =
+        currentPart?.content?.blocks?.filter((b) => b.type === "instruction") || [];
+        const instructionIndex = instructionBlocks.findIndex((b) => b.id === block.id);
       return (
         <div
           key={block.id}
           className="border rounded-lg p-3 mb-3 bg-blue-50 hover:shadow-md transition"
         >
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 mb-1">
-            <BookOpenText size={18} className="text-blue-600" /> Instructions
+            <BookOpenText size={18} className="text-blue-600" /> {block.name} {instructionIndex + 1}
           </div>
           <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm leading-relaxed">
             
@@ -34,7 +37,7 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
-              <Target size={18} className="text-green-600" /> Objective Block
+              <Target size={18} className="text-green-600" /> {block.name}
             </div>
             <span className="text-xs font-medium bg-green-600 text-white px-2 py-0.5 rounded-full">
               {questions.length} Question{questions.length !== 1 ? "s" : ""}
@@ -61,7 +64,7 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
           className="border rounded-lg p-3 mb-3 bg-purple-50 hover:shadow-md transition"
         >
           <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 mb-1">
-            <FileText size={18} className="text-purple-600" /> Text Block
+            <FileText size={18} className="text-purple-600" /> {block.name}
           </div>
           <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm leading-relaxed">
             
@@ -75,7 +78,7 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-4 relative">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-4 relative ">
         {/* Close Button */}
         <button
           onClick={() => setOpen(false)}
@@ -93,7 +96,7 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
             <h3 className="text-lg font-semibold mb-3">
               Part : {currentPart.title}
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto max-h-[52vh]">
               {currentPart.content?.blocks?.map((block) =>
                 renderBlockPreview(block)
               )}

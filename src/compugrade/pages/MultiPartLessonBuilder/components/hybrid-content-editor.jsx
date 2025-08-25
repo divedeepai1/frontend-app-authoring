@@ -95,10 +95,10 @@ export function HybridContentEditor({
     const newBlock = {
       id: `instruction-${Date.now()}`,
       type: "instruction",
-      name: "Add Instruction",
+      name: "Instruction",
       content: {
         html: "",
-        attachments: { image: null, video: null },
+        attachments: { images: [], videos: [] },
       },
       isCollapsed: false,
     };
@@ -171,69 +171,69 @@ export function HybridContentEditor({
     updateContent({ ...content, blocks: newBlocks });
   };
 
-  const handleVideoToggle = (enabled) => {
-    setVideoEnabled(enabled);
-    updateContent({ ...content, videoEnabled: enabled });
-  };
+  // const handleVideoToggle = (enabled) => {
+  //   setVideoEnabled(enabled);
+  //   updateContent({ ...content, videoEnabled: enabled });
+  // };
 
-  const handleVideoUpload = (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setUploadedVideo(file);
-      updateContent({ ...content, videos: [file] });
-    }
-  };
+  // const handleVideoUpload = (event) => {
+  //   const file = event.target.files?.[0];
+  //   if (file) {
+  //     setUploadedVideo(file);
+  //     updateContent({ ...content, videos: [file] });
+  //   }
+  // };
 
-  const removeVideo = () => {
-    setUploadedVideo(null);
-    updateContent({ ...content, videos: [] });
-  };
+  // const removeVideo = () => {
+  //   setUploadedVideo(null);
+  //   updateContent({ ...content, videos: [] });
+  // };
 
-  const handleDocumentComparisonToggle = (enabled) => {
-    setDocumentComparisonEnabled(enabled);
-    const newDocComparison = {
-      enabled,
-      mode: enabled ? documentComparisonMode : "comparison-only",
-      documents: enabled ? content.documentComparison?.documents || [] : [],
-    };
-    updateContent({ ...content, documentComparison: newDocComparison });
-  };
+  // const handleDocumentComparisonToggle = (enabled) => {
+  //   setDocumentComparisonEnabled(enabled);
+  //   const newDocComparison = {
+  //     enabled,
+  //     mode: enabled ? documentComparisonMode : "comparison-only",
+  //     documents: enabled ? content.documentComparison?.documents || [] : [],
+  //   };
+  //   updateContent({ ...content, documentComparison: newDocComparison });
+  // };
 
-  const handleComparisonModeChange = (mode) => {
-    setDocumentComparisonMode(mode);
-    const newDocComparison = {
-      enabled: documentComparisonEnabled,
-      mode,
-      documents: content.documentComparison?.documents || [],
-    };
-    updateContent({ ...content, documentComparison: newDocComparison });
-  };
+  // const handleComparisonModeChange = (mode) => {
+  //   setDocumentComparisonMode(mode);
+  //   const newDocComparison = {
+  //     enabled: documentComparisonEnabled,
+  //     mode,
+  //     documents: content.documentComparison?.documents || [],
+  //   };
+  //   updateContent({ ...content, documentComparison: newDocComparison });
+  // };
 
-  const handleSourceDocumentUpload = (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSourceDocument(file);
-      updateContent({ ...content, sourceDocument: file });
-    }
-  };
+  // const handleSourceDocumentUpload = (event) => {
+  //   const file = event.target.files?.[0];
+  //   if (file) {
+  //     setSourceDocument(file);
+  //     updateContent({ ...content, sourceDocument: file });
+  //   }
+  // };
 
-  const handleAnswerKeyUpload = (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAnswerKey(file);
-      updateContent({ ...content, answerKey: file });
-    }
-  };
+  // const handleAnswerKeyUpload = (event) => {
+  //   const file = event.target.files?.[0];
+  //   if (file) {
+  //     setAnswerKey(file);
+  //     updateContent({ ...content, answerKey: file });
+  //   }
+  // };
 
-  const removeSourceDocument = () => {
-    setSourceDocument(null);
-    updateContent({ ...content, sourceDocument: null });
-  };
+  // const removeSourceDocument = () => {
+  //   setSourceDocument(null);
+  //   updateContent({ ...content, sourceDocument: null });
+  // };
 
-  const removeAnswerKey = () => {
-    setAnswerKey(null);
-    updateContent({ ...content, answerKey: null });
-  };
+  // const removeAnswerKey = () => {
+  //   setAnswerKey(null);
+  //   updateContent({ ...content, answerKey: null });
+  // };
 
   const handleBlockDragStart = (index) => {
     setDraggedBlockIndex(index);
@@ -267,12 +267,15 @@ export function HybridContentEditor({
   };
 
   const handleInstructionImageSelect = (block, files, inputEl) => {
-    const file = files?.[0];
-    if (!file) {
+    const fileList = Array.from(files || []);
+    if (fileList.length === 0) {
       if (inputEl) inputEl.value = "";
       return;
     }
-    const nextImages = [...(block.content.attachments?.images || []), file];
+    const nextImages = [
+      ...(block.content.attachments?.images || []),
+      ...fileList,
+    ];
     const contentWithAttachments = {
       ...block.content,
       attachments: {
@@ -285,12 +288,15 @@ export function HybridContentEditor({
   };
 
   const handleInstructionVideoSelect = (block, files, inputEl) => {
-    const file = files?.[0];
-    if (!file) {
+    const fileList = Array.from(files || []);
+    if (fileList.length === 0) {
       if (inputEl) inputEl.value = "";
       return;
     }
-    const nextVideos = [...(block.content.attachments?.videos || []), file];
+    const nextVideos = [
+      ...(block.content.attachments?.videos || []),
+      ...fileList,
+    ];
     const contentWithAttachments = {
       ...block.content,
       attachments: {
@@ -426,6 +432,7 @@ export function HybridContentEditor({
                         id={`instr-img-${block.id}`}
                         type="file"
                         accept="image/*"
+                        multiple
                         className="hidden"
                         onChange={(e) =>
                           handleInstructionImageSelect(
@@ -439,6 +446,7 @@ export function HybridContentEditor({
                         id={`instr-vid-${block.id}`}
                         type="file"
                         accept="video/*"
+                        multiple
                         className="hidden"
                         onChange={(e) =>
                           handleInstructionVideoSelect(
@@ -449,13 +457,13 @@ export function HybridContentEditor({
                         }
                       />
 
-                      {/* Attachment chips */}
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      {/* Attachment cards */}
+                      <div className="mt-2 flex flex-wrap gap-3">
                         {(block.content.attachments?.images || []).map(
                           (img, idx) => (
                             <div
                               key={`img-${idx}`}
-                              className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs cursor-pointer"
+                              className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-green-200 text-green-700 text-sm cursor-pointer shadow-sm hover:shadow"
                               onClick={() =>
                                 setPreviewState({
                                   open: true,
@@ -465,8 +473,10 @@ export function HybridContentEditor({
                                 })
                               }
                             >
-                              <Eye size={13} />
-                              <span>{"Image Attached " + (idx + 1)}</span>
+                              <div className="flex items-center gap-2">
+                                <Eye className="w-4 h-4" />
+                                <span className="truncate">{"Image Attached " + (idx + 1)}</span>
+                              </div>
                               <div
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -476,9 +486,9 @@ export function HybridContentEditor({
                                     idx
                                   );
                                 }}
-                                className="text-red-500 cursor-pointer"
+                                className="absolute top-1 right-1 p-0.5 rounded-fullborder  text-red-500  cursor-pointer"
                               >
-                                <X className="w-3 h-3" />
+                                <X className="w-3.5 h-3.5" />
                               </div>
                             </div>
                           )
@@ -488,7 +498,7 @@ export function HybridContentEditor({
                           (vid, idx) => (
                             <div
                               key={`vid-${idx}`}
-                              className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs cursor-pointer"
+                              className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-purple-200 text-purple-700 text-sm cursor-pointer shadow-sm hover:shadow"
                               onClick={() =>
                                 setPreviewState({
                                   open: true,
@@ -498,8 +508,10 @@ export function HybridContentEditor({
                                 })
                               }
                             >
-                              <Eye size={13} />
-                              <span>{"Video Attached " + (idx + 1)}</span>
+                              <div className="flex items-center gap-2 pr-6">
+                                <Eye className="w-4 h-4" />
+                                <span className="truncate">{"Video Attached " + (idx + 1)}</span>
+                              </div>
                               <div
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -509,9 +521,9 @@ export function HybridContentEditor({
                                     idx
                                   );
                                 }}
-                                className="text-red-500 cursor-pointer"
+                                className="absolute top-1 right-1 p-0.5 rounded-fullborder  text-red-500  cursor-pointer"
                               >
-                                <X className="w-3 h-3" />
+                                <X className="w-3.5 h-3.5" />
                               </div>
                             </div>
                           )

@@ -24,6 +24,7 @@ import { ImagesProvider } from "../components/ui/images-context";
 import { ValidationErrorsModal } from "../components/validation-errors-modal";
 import LessonPreviewDialog from "../components/ui/preview";
 import downloadFile from "../utils/downloadFile";
+import ToastContainer from "../components/ui/toast";
 
 export default function LessonBuilder() {
   const { blockId, sequenceId, courseId } = useParams();
@@ -52,6 +53,10 @@ export default function LessonBuilder() {
   const [deletingPart, setDeletingPart] = useState(null);
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
+  const [toasts, setToasts] = useState([]);
+  const [aiVideoLoading, setAiVideoLoading] = useState(false);
+  const [aiInstructionsLoading, setAiInstructionsLoading] = useState(false);
+  const [saveDraftLoading, setSaveDraftLoading] = useState(false);
 
   // Lesson-level configuration (moved from part configuration)
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
@@ -91,7 +96,7 @@ export default function LessonBuilder() {
             id: "text-block-" + item.id,
             name: item.block_name,
             type: "text",
-            content: {
+      content: {
               html: item.natural_text || "",
             },
           });
@@ -153,6 +158,52 @@ export default function LessonBuilder() {
       }
     }
   }, []);
+
+  const addToast = ({ title, message, variant = "info", duration = 3500 }) => {
+    const id = Date.now().toString();
+    const toast = { id, title, message, variant };
+    setToasts((prev) => [...prev, toast]);
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, duration);
+    }
+  };
+
+  const handleSubmitDraft = async () => {
+    setSaveDraftLoading(true);
+    const backendPayload = await frontendToBackend(lessonConfig, blockId);
+    try {
+      const response = await fetch(
+        base_url + "/api/openedx/create_base_lesson_from_scratch",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(backendPayload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to create base items: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+      const mergedResult = await mergeLessonItems(result);
+      const promises = [];
+      promises.push(handleUploadToS3(mergedResult?.items));
+
+      await Promise.all(promises);
+      navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
+    } catch (error) {
+      console.error("Error during saving draft:", error);
+    } finally {
+      setSaveDraftLoading(false);
+    }
+  };
+
+  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   // keep nested lessonParts in sync with root lessonParts for now
   useEffect(() => {
@@ -291,8 +342,8 @@ export default function LessonBuilder() {
   }
 
   async function frontendToBackend(currentLessonConfig, rubricId) {
-    let sourceDocBase64 = "";
-    let answerKeyBase64 = "";
+      let sourceDocBase64 = "";
+      let answerKeyBase64 = "";
     let videoBase64 = "";
 
     if (currentLessonConfig.sourceDocument) {
@@ -342,7 +393,7 @@ export default function LessonBuilder() {
                   instruction_category: "Text",
                   block_type: block.type,
                   item_type: "u",
-                  natural_text: block.content.html || "",
+                natural_text: block.content.html || "",
                 },
               ];
             } else if (block.type === "instruction") {
@@ -423,8 +474,8 @@ export default function LessonBuilder() {
 
     return {
       rubric_id: rubricId,
-      source_document: sourceDocBase64,
-      answer_key: answerKeyBase64,
+          source_document: sourceDocBase64,
+          answer_key: answerKeyBase64,
       video: videoBase64,
       lessons: lesson_parts,
     };
@@ -537,23 +588,24 @@ export default function LessonBuilder() {
     setLoading(true);
     const backendPayload = await frontendToBackend(lessonConfig, blockId);
     try {
+      backendPayload.publish_flag = true;
       // console.log(JSON.stringify(backendPayload, null, 2));
-      const response = await fetch(
-        base_url + "/api/openedx/create_base_lesson_from_scratch",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const response = await fetch(
+            base_url + "/api/openedx/create_base_lesson_from_scratch",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
           body: JSON.stringify(backendPayload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to create base items: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const result = await response.json();
+            }
+          );
+      
+          if (!response.ok) {
+            throw new Error(
+              `Failed to create base items: ${response.status} ${response.statusText}`
+            );
+          }
+      
+          const result = await response.json();
       const mergedResult = await mergeLessonItems(result);
       const promises = [];
       promises.push(handleUploadToS3(mergedResult?.items));
@@ -653,6 +705,16 @@ export default function LessonBuilder() {
     await handleSubmit();
   };
 
+  const handleSaveDraftClick = async () => {
+    const errors = validateLesson(lessonParts);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setValidationOpen(true);
+      return;
+    }
+    await handleSubmitDraft();
+  };
+
   const openEditDialog = (part) => {
     setEditingPart(part);
     setShowEditDialog(true);
@@ -663,12 +725,152 @@ export default function LessonBuilder() {
     setShowDeleteDialog(true);
   };
 
+ 
+
   const selectedPart = lessonParts.find((part) => part.id == selectedPartId);
   const totalWeight = lessonParts.reduce(
     (sum, part) => sum + part.weightage,
     0
   );
   const isWeightValid = totalWeight === 100;
+
+
+  const getRubricFromSession = () => {
+    try {
+      const savedData = sessionStorage.getItem("Rubric");
+      if (!savedData) return null;
+      return JSON.parse(savedData);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const canRunAiVideo = (partId) => {
+    const rubric = getRubricFromSession();
+    if (!rubric) return false;
+    const hasVideo = !!rubric.video;
+    const lessons = Array.isArray(rubric.lessons) ? rubric.lessons : [];
+    const partExists = lessons.some((l) => String(l.id) === String(partId));
+    return hasVideo && partExists;
+  };
+
+  const getAiVideoDisableReason = (partId) => {
+    const rubric = getRubricFromSession();
+    if (!rubric) return "The Lesson is not saved yet. Save it to enable AI Video";
+    if (!rubric.video) return "Attach video in Configuration and save lesson to enable AI Video";
+    const lessons = Array.isArray(rubric.lessons) ? rubric.lessons : [];
+    const partExists = lessons.some((l) => String(l.id) === String(partId));
+    if (!partExists) return "This part is not saved/exist in Lesson yet. Save the lesson to enable AI Video";
+    return "";
+  };
+
+  const videoSplicing = async (sub_rubric_id) => {
+    if (aiVideoLoading) return;
+    if (!canRunAiVideo(sub_rubric_id)) {
+      const reason = getAiVideoDisableReason(sub_rubric_id);
+      addToast({ title: "AI Video Unavailable", message: reason || "Cannot run splice the video.", variant: "error" });
+      return;
+    }
+    setAiVideoLoading(true);
+    try {
+      const url = new URL(base_url + "/api/openedx/get_base_timestamps_for_rubric_video");
+      url.searchParams.append("rubric_id", blockId);
+      url.searchParams.append("sub_rubric_id", sub_rubric_id);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed : ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      addToast({ title: "AI Video Ready", message: "Timestamps added successfully.", variant: "success" });
+      return result;
+    } catch (error) {
+      console.error("Error :", error);
+      addToast({ title: "AI Video Error", message: error.message || "Request failed.", variant: "error" });
+    } finally {
+      setAiVideoLoading(false);
+    }
+  };
+
+  const handleAiInstructionsClick = () => {
+    if (aiInstructionsLoading) return;
+    const el = document.getElementById("ai-instructions-doc");
+    if (el) el.click();
+  };
+
+  const handleAiInstructionsSelected = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      addToast({ title: "No file selected", message: "Please choose a DOC/DOCX file.", variant: "info" });
+      return;
+    }
+    setAiInstructionsLoading(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const response = await fetch(base_url + "/api/openedx/create_rubric_item_from_docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rubric_openedx_based_id: blockId, docx_base64: base64 , instruction_category:"Text" })
+      });
+      if (!response.ok) {
+        throw new Error(`Failed : ${response.status} ${response.statusText}`);
+      }
+      const result = await response.json();
+      const extracted = Array.isArray(result?.extracted_items)
+        ? result.extracted_items
+        : [];
+
+      if (extracted.length === 0) {
+        addToast({ title: "No Instructions Found", message: "The document did not return any instructions.", variant: "info" });
+      } else {
+        setLessonParts((parts) =>
+          (parts || []).map((part) => {
+            if (String(part.id) !== String(selectedPartId)) return part;
+
+            const existingBlocks = part.content?.blocks || [];
+            const timestamp = Date.now();
+            const newBlocks = extracted.map((text, idx) => ({
+              id: `instruction-${timestamp}-${idx}`,
+              type: "instruction",
+              name: "Instruction",
+              content: {
+                html: text || "",
+                attachments: { images: [], videos: [] },
+              },
+              isCollapsed: false,
+            }));
+
+            return {
+              ...part,
+              content: {
+                ...(part.content || {}),
+                blocks: [...existingBlocks, ...newBlocks],
+              },
+            };
+          })
+        );
+
+        addToast({
+          title: "AI Instructions Ready",
+          message: `Added ${extracted.length} instruction${extracted.length > 1 ? "s" : ""}.`,
+          variant: "success",
+        });
+      }
+    } catch (error) {
+      console.error("AI Instructions error:", error);
+      addToast({ title: "AI Instructions Error", message: error.message || "Request failed.", variant: "error" });
+    } finally {
+      setAiInstructionsLoading(false);
+      // reset input to allow re-pick of same file
+      if (event?.target) event.target.value = "";
+    }
+  };
+  
 
   return (
     <ImagesProvider
@@ -677,45 +879,85 @@ export default function LessonBuilder() {
       nextImageId={nextImageId}
       setNextImageId={setNextImageId}
     >
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Enhanced Header */}
-        <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="px-4 py-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Enhanced Header */}
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-4 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <BookOpen className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
                   <h1 className="text-2xl font-bold text-gray-900">
                     Lesson Builder
                   </h1>
                   <p className="text-sm text-gray-600 mt-1">
                     Create and organize your lesson content with ease
                   </p>
-                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-4 text-sm text-gray-600 mr-4">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    <span>For Students</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>Auto-saved</span>
-                  </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* <div className="hidden md:flex items-center gap-4 text-sm text-gray-600 mr-4">
+                <div className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  <span>For Students</span>
                 </div>
-                {/* <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
-                  <Save className="w-4 h-4" />
-                  Save Draft
-                </div> */}
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  <span>Auto-saved</span>
+                </div>
+              </div> */}
+
+              <div
+                  // onClick={() => setOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                Add-in Preview
+              </div>
+               
                 <div
                   onClick={() => setOpen(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                 >
-                  Preview
-                </div>
+                Preview
+              </div>
+              <div
+                onClick={!saveDraftLoading ? handleSaveDraftClick : undefined}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white 
+        border border-transparent rounded-md transition-colors
+        ${
+          saveDraftLoading
+            ? "bg-blue-400 cursor-not-allowed"
+            : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        }`}
+              >
+                {saveDraftLoading ? (
+                  <svg
+                    className="w-4 h-4 animate-spin text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                    ></path>
+                  </svg>
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {saveDraftLoading ? "Saving..." : "Save Draft"}
+              </div>
                 <div
                   onClick={!loading ? handlePublishClick : undefined}
                   className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white 
@@ -748,63 +990,153 @@ export default function LessonBuilder() {
                       ></path>
                     </svg>
                   ) : (
-                    <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4" />
                   )}
                   {loading ? "Publishing..." : "Publish Lesson"}
-                </div>
               </div>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <div className="flex h-[calc(100vh-88px)]">
-          {/* Left Panel - Main Editing Area (70%) */}
-          <div className="flex-1 px-4 py-3 overflow-y-auto">
-            {selectedPart ? (
-              <div className="space-y-6">
-                {/* Enhanced Part Header */}
+      <div className="flex h-[calc(100vh-88px)]">
+        {/* Left Panel - Main Editing Area (70%) */}
+        <div className="flex-1 px-4 py-3 overflow-y-auto">
+          {selectedPart ? (
+            <div className="space-y-6">
+              {/* Enhanced Part Header */}
                 <div
-                  className="p-3 bg-white rounded-lg shadow-sm "
+                  className="p-3 bg-white flex justify-between items-center rounded-lg shadow-sm "
                   style={{
                     border: "1px solid #d1d5db",
                     borderLeftWidth: "4px",
                     borderLeftColor: "#27AAE1",
                   }}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-[#27AAE1]/10 rounded-lg">
-                      <Layers className="w-6 h-6 text-[#27AAE1]" />
-                    </div>
-                    <div className="flex-1">
+                  <div className="flex items-center jus gap-4">
+                  <div className="p-2 bg-[#27AAE1]/10 rounded-lg">
+                    <Layers className="w-6 h-6 text-[#27AAE1]" />
+                  </div>
+                  <div className="flex-1">
                       <h2 className="text-2xl font-bold text-gray-900">
                         {selectedPart.title}
                       </h2>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-sm text-gray-600">
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-sm text-gray-600">
                           Weight:{" "}
                           <span className="font-semibold">
                             {selectedPart.weightage}%
                           </span>
-                        </span>
-                      </div>
+                      </span>
                     </div>
                   </div>
-                </div>
-
-                {/* Content Editing Areas */}
-                <HybridContentEditor
-                  selectedPart={selectedPart}
-                  content={selectedPart.content || { blocks: [] }}
-                  onContentChange={handleContentChange}
-                />
-              </div>
-            ) : (
-              <div className="h-full p-8 bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  <div className="text-center">
-                    <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                      <BookOpen className="w-10 h-10 text-gray-400" />
+                 
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                    <div className="relative group">
+                      <button
+                        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
+                          aiVideoLoading
+                            ? "bg-blue-400 text-white cursor-not-allowed"
+                            : canRunAiVideo(selectedPart.id)
+                            ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            : "bg-blue-300 text-white cursor-not-allowed"
+                        }`}
+                        onClick={canRunAiVideo(selectedPart.id) && !aiVideoLoading ? () => videoSplicing(selectedPart.id) : undefined}
+                        aria-disabled={!canRunAiVideo(selectedPart.id) || aiVideoLoading}
+                      >
+                        {aiVideoLoading ? (
+                          <svg
+                            className="w-4 h-4 animate-spin text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                            ></path>
+                          </svg>
+                        ) : null}
+                        {aiVideoLoading ? "Video splicing..." : "AI Video"}
+                      </button>
+                      {!canRunAiVideo(selectedPart.id) && (
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-gray-900 text-white text-xs px-2 py-1 shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                          {getAiVideoDisableReason(selectedPart.id)}
+                        </div>
+                      )}
                     </div>
+                    <div className="relative">
+                      <button
+                        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
+                          aiInstructionsLoading
+                            ? "bg-blue-400 text-white cursor-not-allowed"
+                            : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        }`}
+                        onClick={!aiInstructionsLoading ? handleAiInstructionsClick : undefined}
+                        aria-disabled={aiInstructionsLoading}
+                      >
+                        {aiInstructionsLoading ? (
+                          <svg
+                            className="w-4 h-4 animate-spin text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                            ></path>
+                          </svg>
+                        ) : null}
+                        {aiInstructionsLoading ? "Generating..." : "AI Instructions"}
+                      </button>
+                      <input
+                        id="ai-instructions-doc"
+                        type="file"
+                        accept=".doc,.docx"
+                        className="hidden"
+                        onChange={handleAiInstructionsSelected}
+                      />
+                    </div>
+
+                      </div>
+                </div>
+              </div>
+
+              {/* Content Editing Areas */}
+              <HybridContentEditor
+                selectedPart={selectedPart}
+                  content={selectedPart.content || { blocks: [] }}
+                onContentChange={handleContentChange}
+              />
+            </div>
+          ) : (
+            <div className="h-full p-8 bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <BookOpen className="w-10 h-10 text-gray-400" />
+                  </div>
                     <p className="text-xl font-semibold mb-2">
                       Select a lesson part to edit
                     </p>
@@ -812,15 +1144,15 @@ export default function LessonBuilder() {
                       Choose a part from the outline to start creating your
                       content
                     </p>
-                  </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          {/* Enhanced Right Panel - Lesson Parts Outline (30%) */}
-          <div className="w-80 bg-white border-l border-gray-200 shadow-sm overflow-y-auto">
-            <div className="px-4 py-2">
+        {/* Enhanced Right Panel - Lesson Parts Outline (30%) */}
+        <div className="w-80 bg-white border-l border-gray-200 shadow-sm overflow-y-auto">
+          <div className="px-4 py-2">
               {/* Lesson Configuration launcher */}
               <div
                 className="mb-3 rounded-lg border border-blue-200 bg-gradient-to-r from-white to-blue-50 cursor-pointer hover:shadow-sm"
@@ -842,67 +1174,67 @@ export default function LessonBuilder() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Lesson Outline
                 </h3>
-                <div
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                  onClick={() => setShowAddDialog(true)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Part
-                </div>
+              <div
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                onClick={() => setShowAddDialog(true)}
+              >
+                <Plus className="w-4 h-4" />
+                Add Part
               </div>
+            </div>
 
-              <div className="space-y-3 mb-3">
-                {lessonParts.map((part, index) => (
-                  <DraggablePartCard
-                    key={part.id}
-                    part={part}
-                    index={index}
-                    isSelected={selectedPartId === part.id}
-                    onSelect={() => setSelectedPartId(part.id)}
-                    onEdit={() => openEditDialog(part)}
-                    onDuplicate={() => handleDuplicatePart(part.id)}
-                    onDelete={() => openDeleteDialog(part)}
-                    onDragStart={handlePartDragStart}
-                    onDragOver={handlePartDragOver}
-                    onDrop={handlePartDrop}
-                  />
-                ))}
-              </div>
+            <div className="space-y-3 mb-3">
+              {lessonParts.map((part, index) => (
+                <DraggablePartCard
+                  key={part.id}
+                  part={part}
+                  index={index}
+                  isSelected={selectedPartId === part.id}
+                  onSelect={() => setSelectedPartId(part.id)}
+                  onEdit={() => openEditDialog(part)}
+                  onDuplicate={() => handleDuplicatePart(part.id)}
+                  onDelete={() => openDeleteDialog(part)}
+                  onDragStart={handlePartDragStart}
+                  onDragOver={handlePartDragOver}
+                  onDrop={handlePartDrop}
+                />
+              ))}
+            </div>
 
-              {/* Enhanced Summary */}
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+            {/* Enhanced Summary */}
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
                 <h4 className="font-semibold text-gray-900 mb-3">
                   Lesson Summary
                 </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Parts:</span>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Parts:</span>
                     <span className="font-semibold text-gray-900">
                       {lessonParts.length}
                     </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Weight:</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Weight:</span>
                     <span
                       className={`font-semibold ${
                         isWeightValid ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                      {totalWeight}%
-                    </span>
-                  </div>
+                    {totalWeight}%
+                  </span>
+                </div>
                   {!isWeightValid && (
                     <p className="text-xs text-red-600 mt-2">
                       ⚠️ Weights should total 100%
                     </p>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Questions:</span>
-                    <span className="font-semibold text-gray-900">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Questions:</span>
+                  <span className="font-semibold text-gray-900">
                       {lessonParts.reduce(
                         (sum, part) =>
                           sum +
@@ -913,13 +1245,13 @@ export default function LessonBuilder() {
                           ),
                         0
                       )}
-                    </span>
-                  </div>
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
         <AddPartDialog
           open={showAddDialog}
@@ -927,19 +1259,19 @@ export default function LessonBuilder() {
           onAddPart={handleAddPart}
         />
 
-        <EditPartDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          part={editingPart}
-          onUpdatePart={handleUpdatePart}
-        />
+      <EditPartDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        part={editingPart}
+        onUpdatePart={handleUpdatePart}
+      />
 
-        <DeleteConfirmationDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          partTitle={deletingPart?.title || ""}
-          onConfirm={() => deletingPart && handleDeletePart(deletingPart.id)}
-        />
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        partTitle={deletingPart?.title || ""}
+        onConfirm={() => deletingPart && handleDeletePart(deletingPart.id)}
+      />
         <ValidationErrorsModal
           open={validationOpen}
           onOpenChange={setValidationOpen}
@@ -958,7 +1290,7 @@ export default function LessonBuilder() {
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-lg bg-blue-100">
                     <Settings className="w-5 h-5 text-blue-600" />
-                  </div>
+    </div>
                   <div>
                     <div className="text-base font-semibold">
                       Lesson Configuration
@@ -1268,6 +1600,7 @@ export default function LessonBuilder() {
           setOpen={setOpen}
         />
       </div>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </ImagesProvider>
   );
 }

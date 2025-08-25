@@ -8,7 +8,7 @@ export default function EditableBlockName({ block, renameBlock, instructionNo })
       (block.type === "text"
         ? "Add Text Block"
         : block.type === "instruction"
-        ? "Add Instruction"
+        ? "Instruction"
         : block.type === "doc-comparison"
         ? "Document Comparison"
         : "Add Objective Question")
@@ -19,7 +19,7 @@ export default function EditableBlockName({ block, renameBlock, instructionNo })
     block.type === "text"
       ? "Add Text Block"
       : block.type === "instruction"
-      ? "Add Instruction"
+      ? "Instruction"
       : block.type === "doc-comparison"
       ? "Document Comparison"
       : "Add Objective Question";
