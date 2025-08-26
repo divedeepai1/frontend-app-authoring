@@ -5,13 +5,13 @@ import { useLocation } from "react-router";
 
 export default function MultiQuiz() {
   const location = useLocation();
-  const { quizType, quizId ,status} = location.state || {};
+  const { quizType, quizId ,status ,data} = location.state || {};
 
   return (
     <div className="min-h-screen bg-white">
       <HeaderTop isHiddenMainMenu />
       <Header />
-      <QuizBuilder quizType={quizType} quizId={quizId} status={status}/>
+      <QuizBuilder quizType={quizType} quizId={quizId} status={status} data={data}/>
     </div>
   );
 }

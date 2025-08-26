@@ -55,7 +55,12 @@ function QuizForm() {
       }
       const responseData = await response.json();
       sessionStorage.setItem("quizId", responseData.id);
+      if(quizType==="multiple_choice"){
+      navigate("/mcq-quiz");
+      }
+      else{
       navigate("/create-multi-quiz", { state: { quizType } });
+      }
     } catch (error) {
       console.error("Error:", error.message);
     }

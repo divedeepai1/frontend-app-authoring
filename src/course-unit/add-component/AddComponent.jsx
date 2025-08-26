@@ -119,7 +119,7 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock }) => {
         })}
          <li>
           <AddComponentButton
-            onClick={() => navigate("/quiz-dashboard")}
+            onClick={() => {navigate("/quiz-dashboard") , sessionStorage.setItem("unit_id",blockId)}}
             displayName={"Quiz X Block Generator"}
             type={"text"}
           />

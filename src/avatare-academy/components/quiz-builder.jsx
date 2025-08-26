@@ -5,12 +5,12 @@ import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../cms-csrftoken"
 import { useNavigate } from "react-router"
 
-export default function QuizBuilder({ quizType, quizId, status }) {
+export default function QuizBuilder({ quizType, quizId, status, data }) {
   const [validationErrors, setValidationErrors] = useState([])
   const [isPublish,setIsPublish]=useState(false);
   const [showValidation, setShowValidation] = useState(false)
   const [questions, setQuestions] = useState([
-    { id: 1, type: quizType === "multiple_choice" ? "multiple_choice" : "", questionText: "", options: ["", "", "", ""], answer: "", points: 0, blanks: [], pairs: [], },
+    { id: 1, type: quizType === "multiple_choice" ? "multiple_choice" : "", questionText: "", options: ["", "", "", ""], answer: "", points: 0, blanks: [], pairs: [],connections: [], },
   ])
   const navigate = useNavigate()
 
@@ -24,68 +24,115 @@ export default function QuizBuilder({ quizType, quizId, status }) {
       points: 0,
       blanks: [],
       pairs: [],
+      connections: [],
     }
     setQuestions([...questions, newQuestion])
   }
 
-  useEffect(() => {
-    const fetchQuizData = async () => {
-      const token = await fetchCsrfToken()
-      try {
-        const response = await fetch(
-          `${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/`,
-          {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": token,
-            },
-          }
-        )
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Failed to fetch quiz: ${response.status} ${errorText}`)
-        }
-        const responseData = await response.json()
-        const parsedQuestions = responseData.questions.map((q) => {
-          const base = {
-            id: q.id,
-            type: q.question_type,
-            questionText: q.text,
-            points: q.points,
-            answer: "",
-            options: [],
-            blanks: [],
-            pairs: [],
-          }
-          if (q.question_type === "true_false") {
-            const correct = q.options.find((opt) => opt.is_correct)
-            return { ...base, answer: correct?.text.toLowerCase() }
-          }
-          if (q.question_type === "multiple_choice") {
-            const correctIndex = q.options.findIndex((opt) => opt.is_correct)
-            return { ...base, options: q.options.map((o) => o.text), answer: correctIndex.toString() }
-          }
-          if (q.question_type === "fill_blank") {
-            return { ...base, blanks: q.correct_answers.map((a) => a.answer_text) }
-          }
-          if (q.question_type === "short_answer" || q.question_type === "long_answer") {
-            return { ...base, answer: q.correct_answers?.[0]?.answer_text || "" }
-          }
-          return base
-        })
-        setQuestions(parsedQuestions)
-      } catch (error) {
-        console.error("Error:", error.message)
+  const parseQuestions = (questionsData) => {
+    return questionsData.map((q) => {
+      const base = {
+        id: q.id,
+        type: q.question_type,
+        questionText: q.text,
+        points: q.points,
+        answer: "",
+        options: [],
+        blanks: [],
+        pairs: [],
+        connections: []
       }
+
+      if (q.question_type === "true_false") {
+        const correct = q.options.find((opt) => opt.is_correct)
+        return { ...base, answer: correct?.text.toLowerCase() }
+      }
+
+      if (q.question_type === "multiple_choice") {
+        const correctIndex = q.options.findIndex((opt) => opt.is_correct)
+        return {
+          ...base,
+          options: q.options.map((o) => o.text),
+          answer: correctIndex.toString()
+        }
+      }
+
+      if (q.question_type === "fill_blank") {
+        return { ...base, blanks: q.correct_answers.map((a) => a.answer_text) }
+      }
+
+      if (q.question_type === "short_answer" || q.question_type === "long_answer") {
+        return { ...base, answer: q.correct_answers?.[0]?.answer_text || "" }
+      }
+
+      if (q.question_type === "matching") {
+        const groupedPairs = {}
+
+        q.options.forEach((opt) => {
+          const pairId = opt.match_pair_id
+          if (!groupedPairs[pairId]) groupedPairs[pairId] = []
+          groupedPairs[pairId].push(opt)
+        })
+
+        const pairs = Object.values(groupedPairs).map((pair) => ({
+          columnA: pair[0]?.text || "",
+          columnAImage: pair[0]?.image || null,
+          columnB: pair[1]?.text || "",
+          columnBImage: pair[1]?.image || null,
+        }))
+
+        const connections = q.correct_answers.map((ans, index) => {
+          const fromIndex = pairs.findIndex((p) => p.columnA === ans.pair_value)
+          const toIndex = pairs.findIndex((p) => p.columnB === ans.answer_text)
+          return {
+            id: Date.now() + index,
+            fromIndex,
+            toIndex,
+          }
+        })
+
+        return { ...base, pairs, connections }
+      }
+
+      return base
+    })
+  }
+
+  const fetchQuizData = async () => {
+    const token = await fetchCsrfToken()
+    try {
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+        }
+      )
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to fetch quiz: ${response.status} ${errorText}`)
+      }
+
+      const responseData = await response.json()
+      setQuestions(parseQuestions(responseData.questions))
+    } catch (error) {
+      console.error("Error:", error.message)
     }
+  }
+
+  useEffect(() => {
     if (quizId) {
       fetchQuizData()
-      sessionStorage.setItem("quizId", quizId);
+      sessionStorage.setItem("quizId", quizId)
       setIsPublish(status)
+    } else if (data?.length > 0) {
+      setQuestions(parseQuestions(data))
     }
-  }, [quizId])
+  }, [quizId, data])
 
   const updateQuestion = (id, updatedQuestion) => {
     setQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, ...updatedQuestion } : q)))
@@ -101,7 +148,8 @@ export default function QuizBuilder({ quizType, quizId, status }) {
       const questionNumber = index + 1
       const questionErrors = []
       if (!question.type) questionErrors.push("Question type is required")
-      if (!question.questionText.trim()) questionErrors.push("Question text is required")
+        if (!question.questionText.trim() && question.type !== "matching")
+          questionErrors.push("Question text is required")
       if (!question.points || question.points <= 0) questionErrors.push("Answer points must be greater than 0")
       switch (question.type) {
         case "true_false":
@@ -119,6 +167,18 @@ export default function QuizBuilder({ quizType, quizId, status }) {
         case "long_answer":
           if (!question.answer.trim()) questionErrors.push("Correct answer is required")
           break
+        case "matching":
+            if (!question.pairs || question.pairs.length < 2) {
+              questionErrors.push("At least 2 matching pairs are required")
+            } else {
+              const invalidPair = question.pairs.some(
+                (pair) => !pair.columnA.trim() || !pair.columnB.trim()
+              )
+              if (invalidPair) {
+                questionErrors.push("Each matching pair must have values in both columns")
+              }
+            }
+            break
       }
       if (questionErrors.length > 0) {
         errors.push({ questionNumber, errors: questionErrors })
@@ -165,6 +225,7 @@ export default function QuizBuilder({ quizType, quizId, status }) {
   }
   
   function convertQuestionsToBackendFormat(id, questionsList) {
+    console.log(questionsList)
     return {
       quiz_id: id,
       auto_order: true,
@@ -210,7 +271,49 @@ export default function QuizBuilder({ quizType, quizId, status }) {
               position: i + 1,
             })),
           }
+        } 
+        if (question.type === "matching") {
+          let pairIdCounter = 1
+          const options = []
+          const correct_answers = []
+        
+          const columnARefs = []
+          const columnBRefs = []
+        
+          question.pairs.forEach((pair, index) => {
+            columnARefs[index] = options.length
+            options.push({ text: pair.columnA || "", match_pair_id: "" })
+        
+            columnBRefs[index] = options.length
+            options.push({ text: pair.columnB || "", match_pair_id: "" })
+          })
+        
+          for (const conn of question.connections || []) {
+            const fromIndex = conn.fromIndex
+            const toIndex = conn.toIndex
+        
+            const pairId = `pair${pairIdCounter++}`
+        
+            correct_answers.push({
+              pair_value: pairId,
+              answer_text: `${question.pairs[fromIndex]?.columnA} = ${question.pairs[toIndex]?.columnB}`,
+            })
+        
+            const aOptionIndex = columnARefs[fromIndex]
+            const bOptionIndex = columnBRefs[toIndex]
+        
+            if (aOptionIndex !== undefined) options[aOptionIndex].match_pair_id = pairId
+            if (bOptionIndex !== undefined) options[bOptionIndex].match_pair_id = pairId
+          }
+        
+          return {
+            ...base,
+            options,
+            correct_answers,
+          }
         }
+        
+        
         return base
       }),
     }
