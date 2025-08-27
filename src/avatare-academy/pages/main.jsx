@@ -178,7 +178,7 @@ const Main = () => {
 
                   <p className="mb-3" style={{ fontSize: "14px", color: "#6b7280" }}>
                     Quiz Type :{" "}
-                    {quiz.quiz_type === "macthing"
+                    {quiz.quiz_type === "matching"
                       ? "Matching Quiz"
                       : quiz.quiz_type === "multi_component"
                       ? "Multi Component Quiz"

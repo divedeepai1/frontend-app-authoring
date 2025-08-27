@@ -13,6 +13,7 @@ import { X } from "lucide-react"
 export default function QuestionCard({ question, questionNumber, onUpdate ,hasValidationError ,handleRemove,quizType }) {
   const renderQuestionContent = () => {
     switch (question.type) {
+      
       case "true_false":
         return <TrueFalseQuestion question={question} onUpdate={onUpdate} />
       case "multiple_choice":

@@ -8,17 +8,20 @@ const allQuestionTypes = [
   { value: "fill_blank", label: "Fill in the Blank" },
   { value: "short_answer", label: "Short Answer" },
   { value: "long_answer", label: "Long Answer" },
-  // { value: "matching", label: "Matching Columns" },
+  { value: "matching", label: "Matching Columns" },
 ]
 
 export default function QuestionTypeSelector({ selectedType, onTypeChange, quizType }) {
-  console.log(quizType)
+
+  console.log("Selected Type:", selectedType);
+  console.log("Quiz Type:", quizType);
+  
   const [isOpen, setIsOpen] = useState(false)
 
   const filteredQuestionTypes =
     quizType == "multiple_choice"
       ? allQuestionTypes.filter((q) => q.value === "multiple_choice")
-      : allQuestionTypes
+      : quizType == "matching" ? allQuestionTypes.filter((q) => q.value === "matching") : allQuestionTypes
 
   const selectedLabel =
     filteredQuestionTypes.find((type) => type.value === selectedType)?.label || "Select Question Type"
@@ -29,7 +32,9 @@ export default function QuestionTypeSelector({ selectedType, onTypeChange, quizT
   }
 
   return (
-    <div className="mb-3">
+    <>
+    {quizType =="multiple_choice" || quizType=="multi_component" ?
+      <div className="mb-3">
       <Form.Label className="mb-2" style={{ fontSize: "14px", fontWeight: "600" }}>
         Question Type
       </Form.Label>
@@ -107,6 +112,9 @@ export default function QuestionTypeSelector({ selectedType, onTypeChange, quizT
           onClick={() => setIsOpen(false)}
         />
       )}
-    </div>
+    </div>:
+    <>
+    </>}
+    </>
   )
 }

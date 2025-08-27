@@ -16,11 +16,62 @@ export default function MatchingQuestion({ question, onUpdate }) {
   const [tempLine, setTempLine] = useState(null);
   const containerRef = useRef(null);
 
+  
+
   const validPairs = pairs.filter(
     (pair) =>
       (pair.columnA.trim() || pair.columnAImage) &&
       (pair.columnB.trim() || pair.columnBImage)
   );
+
+  useEffect(() => {
+  
+    const recalculateConnections = () => {
+      const updatedConnections = connections.map(conn => {
+        const startPos = getItemCenter(conn.leftIndex, "left");
+        const endPos = getItemCenter(conn.rightIndex, "right");
+        
+        if (startPos && endPos) {
+          return {
+            ...conn,
+            x1: startPos.x,
+            y1: startPos.y,
+            x2: endPos.x,
+            y2: endPos.y,
+          };
+        }
+        return conn;
+      });
+      
+      if (JSON.stringify(updatedConnections) !== JSON.stringify(connections)) {
+        setConnections(updatedConnections);
+      }
+    };
+  
+  
+    const timer = setTimeout(recalculateConnections, 100);
+    return () => clearTimeout(timer);
+  }, [pairs, validPairs.length]); 
+  
+  useEffect(() => {
+    if (question.connections && question.connections.length > 0) {
+    
+      const connectionsWithCoords = question.connections.map(conn => {
+        const startPos = getItemCenter(conn.leftIndex, "left");
+        const endPos = getItemCenter(conn.rightIndex, "right");
+        
+        return {
+          ...conn,
+          x1: startPos?.x || 0,
+          y1: startPos?.y || 0,
+          x2: endPos?.x || 0,
+          y2: endPos?.y || 0,
+        };
+      });
+      
+      setConnections(connectionsWithCoords);
+    }
+  }, [question.connections, pairs]);
 
   const addMorePair = () => {
     const newPairs = [

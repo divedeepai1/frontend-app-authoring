@@ -122,7 +122,7 @@ function McqForm() {
 
         const responseData = await response.json();
         navigate("/create-multi-quiz", {
-          state: { quizType: "multiple_choice", data: responseData?.quiz?.questions },
+          state: { quizType: "multiple_choice", data: responseData?.questions },
         });
       }
     } catch (error) {
@@ -132,7 +132,7 @@ function McqForm() {
     }
   };
 
-  const handleCancel = () => navigate("/quiz-dashboard");
+  
 
   return (
     <>

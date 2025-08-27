@@ -10,7 +10,7 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
   const [isPublish,setIsPublish]=useState(false);
   const [showValidation, setShowValidation] = useState(false)
   const [questions, setQuestions] = useState([
-    { id: 1, type: quizType === "multiple_choice" ? "multiple_choice" : "", questionText: "", options: ["", "", "", ""], answer: "", points: 0, blanks: [], pairs: [],connections: [], },
+    { id: 1, type: quizType === "multiple_choice" ? "multiple_choice" : quizType ==="matching" ? "matching" : "", questionText: "", options: ["", "", "", ""], answer: "", points: 0, blanks: [], pairs: [],connections: [], },
   ])
   const navigate = useNavigate()
 
@@ -66,33 +66,70 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
       }
 
       if (q.question_type === "matching") {
-        const groupedPairs = {}
-
-        q.options.forEach((opt) => {
-          const pairId = opt.match_pair_id
-          if (!groupedPairs[pairId]) groupedPairs[pairId] = []
-          groupedPairs[pairId].push(opt)
-        })
-
-        const pairs = Object.values(groupedPairs).map((pair) => ({
-          columnA: pair[0]?.text || "",
-          columnAImage: pair[0]?.image || null,
-          columnB: pair[1]?.text || "",
-          columnBImage: pair[1]?.image || null,
-        }))
-
-        const connections = q.correct_answers.map((ans, index) => {
-          const fromIndex = pairs.findIndex((p) => p.columnA === ans.pair_value)
-          const toIndex = pairs.findIndex((p) => p.columnB === ans.answer_text)
-          return {
-            id: Date.now() + index,
-            fromIndex,
-            toIndex,
+      
+        const columnAOptions = [];
+        const columnBOptions = [];
+        
+      
+        q.options.forEach((opt, index) => {
+          if (index % 2 === 0) {
+            columnAOptions.push({ ...opt, originalIndex: index });
+          } else {
+            columnBOptions.push({ ...opt, originalIndex: index });
           }
-        })
-
-        return { ...base, pairs, connections }
+        });
+      
+   
+        const pairs = [];
+        const maxLength = Math.max(columnAOptions.length, columnBOptions.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+          pairs.push({
+            columnA: columnAOptions[i]?.text || "",
+            columnAImage: columnAOptions[i]?.image || null,
+            columnB: columnBOptions[i]?.text || "",
+            columnBImage: columnBOptions[i]?.image || null,
+          });
+        }
+      
+     
+        const connections = [];
+        const processedPairs = new Set();
+      
+      
+        q.correct_answers.forEach((answer, index) => {
+          const pairId = answer.pair_value;
+          
+          if (processedPairs.has(pairId)) return;
+          processedPairs.add(pairId);
+      
+       
+          const optionA = columnAOptions.find(opt => opt.match_pair_id === pairId);
+          const optionB = columnBOptions.find(opt => opt.match_pair_id === pairId);
+      
+          if (optionA && optionB) {
+          
+            const leftIndex = columnAOptions.findIndex(opt => opt.match_pair_id === pairId);
+            const rightIndex = columnBOptions.findIndex(opt => opt.match_pair_id === pairId);
+      
+            if (leftIndex !== -1 && rightIndex !== -1) {
+              connections.push({
+                id: `${leftIndex}-${rightIndex}`,
+                leftIndex,
+                rightIndex,
+                x1: 0, 
+                y1: 0,   
+                x2: 0, 
+                y2: 0, 
+              });
+            }
+          }
+        });
+      
+        return { ...base, pairs, connections };
       }
+      
+
 
       return base
     })
@@ -272,46 +309,61 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
             })),
           }
         } 
-        if (question.type === "matching") {
-          let pairIdCounter = 1
-          const options = []
-          const correct_answers = []
+   
+if (question.type === "matching") {
+  let pairIdCounter = 1;
+  const options = [];
+  const correct_answers = [];
+
+  const columnARefs = [];
+  const columnBRefs = [];
+
+
+  question.pairs.forEach((pair, index) => {
+    columnARefs[index] = options.length;
+    options.push({
+      text: pair.columnA || "",
+      image: pair.columnAImage || null,
+      match_pair_id: "", 
+    });
+
+    columnBRefs[index] = options.length;
+    options.push({
+      text: pair.columnB || "",
+      image: pair.columnBImage || null,
+      match_pair_id: "", 
+    });
+  });
+
+ 
+  for (const conn of question.connections || []) {
+    const fromIndex = conn.leftIndex;  
+    const toIndex = conn.rightIndex;   
+
+    const pairId = `pair${pairIdCounter++}`;
+
+  
+    correct_answers.push({
+      pair_value: pairId,
+      answer_text: `${question.pairs[fromIndex]?.columnA} = ${question.pairs[toIndex]?.columnB}`,
+    });
+
+    // Set match_pair_id for both connected options
+    const aOptionIndex = columnARefs[fromIndex];  // Column A option index
+    const bOptionIndex = columnBRefs[toIndex];    // Column B option index
+
+    if (aOptionIndex !== undefined) options[aOptionIndex].match_pair_id = pairId;
+    if (bOptionIndex !== undefined) options[bOptionIndex].match_pair_id = pairId;
+  }
+
+  return {
+    ...base,
+    options,
+    correct_answers,
+  };
+}
         
-          const columnARefs = []
-          const columnBRefs = []
         
-          question.pairs.forEach((pair, index) => {
-            columnARefs[index] = options.length
-            options.push({ text: pair.columnA || "", match_pair_id: "" })
-        
-            columnBRefs[index] = options.length
-            options.push({ text: pair.columnB || "", match_pair_id: "" })
-          })
-        
-          for (const conn of question.connections || []) {
-            const fromIndex = conn.fromIndex
-            const toIndex = conn.toIndex
-        
-            const pairId = `pair${pairIdCounter++}`
-        
-            correct_answers.push({
-              pair_value: pairId,
-              answer_text: `${question.pairs[fromIndex]?.columnA} = ${question.pairs[toIndex]?.columnB}`,
-            })
-        
-            const aOptionIndex = columnARefs[fromIndex]
-            const bOptionIndex = columnBRefs[toIndex]
-        
-            if (aOptionIndex !== undefined) options[aOptionIndex].match_pair_id = pairId
-            if (bOptionIndex !== undefined) options[bOptionIndex].match_pair_id = pairId
-          }
-        
-          return {
-            ...base,
-            options,
-            correct_answers,
-          }
-        }
         
         
         return base
@@ -349,7 +401,7 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
     <Container className="py-4">
       <Row>
         <Col>
-          <h2>{quizType === "multiple_choice" ? "Multiple Choice" : "Multi Component"} Quiz</h2>
+          <h2>{quizType === "multiple_choice" ? "Multiple Choice" : quizType === "multi_component" ? "Multi Component" : "Matching"} Quiz</h2>
           {showValidation && validationErrors.length > 0 && (
             <Alert variant="danger">
               <Alert.Heading>Please fix the following errors:</Alert.Heading>
@@ -376,7 +428,7 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
               hasValidationError={validationErrors.some((e) => e.questionNumber === index + 1)}
             />
           ))}
-                  <div className="d-flex mt-4" style={{width:"100%" ,height:"50px" ,borderRadius:"8px",}}>
+                  {quizType !=="matching" && <div className="d-flex mt-4" style={{width:"100%" ,height:"50px" ,borderRadius:"8px",}}>
             <button
               onClick={addQuestion}
               className="primary-button"
@@ -389,7 +441,7 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
             >
               Add {questions.length > 0 && "Another"} Question
             </button>
-          </div>
+          </div>}
 
           <div className="mt-4" style={{ display:"flex",  gap: "0.5rem" }}>
             {/* <button  onClick={handleSave} className="px-4 py-2 secondary-button">
