@@ -10,16 +10,13 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
 
   const renderBlockPreview = (block) => {
     if (block.type === "instruction") {
-        const instructionBlocks =
-        currentPart?.content?.blocks?.filter((b) => b.type === "instruction") || [];
-        const instructionIndex = instructionBlocks.findIndex((b) => b.id === block.id);
       return (
         <div
           key={block.id}
           className="border rounded-lg p-3 mb-3 bg-blue-50 hover:shadow-md transition"
         >
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 mb-1">
-            <BookOpenText size={18} className="text-blue-600" /> {block.name} {instructionIndex + 1}
+            <BookOpenText size={18} className="text-blue-600" /> {block.name} 
           </div>
           <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm leading-relaxed">
             

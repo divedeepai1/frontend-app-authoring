@@ -92,10 +92,11 @@ export function HybridContentEditor({
   };
 
   const addInstructionBlock = () => {
+    const ins = blocks.filter(b=>b.type==="instruction").length+1
     const newBlock = {
       id: `instruction-${Date.now()}`,
       type: "instruction",
-      name: "Instruction",
+      name: "Instruction " + ins,
       content: {
         html: "",
         attachments: { images: [], videos: [] },
@@ -351,7 +352,7 @@ export function HybridContentEditor({
                   <FileDiffIcon className="w-5 h-5 text-orange-600" />
                 )}
 
-                <EditableBlockName block={block} renameBlock={renameBlock} instructionNo={getInstructionNumber(block.id)} />
+                <EditableBlockName block={block} renameBlock={renameBlock}  />
               </div>
 
               <div className="flex items-center gap-2">

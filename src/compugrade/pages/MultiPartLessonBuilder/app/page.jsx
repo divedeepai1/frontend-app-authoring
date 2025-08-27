@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Plus,
   Save,
@@ -10,6 +10,7 @@ import {
   Settings,
   FileText,
   Video,
+  Eye,
   X,
   Download,
 } from "lucide-react";
@@ -57,6 +58,7 @@ export default function LessonBuilder() {
   const [aiVideoLoading, setAiVideoLoading] = useState(false);
   const [aiInstructionsLoading, setAiInstructionsLoading] = useState(false);
   const [saveDraftLoading, setSaveDraftLoading] = useState(false);
+  const [partConfigOpen, setPartConfigOpen] = useState(false);
 
   // Lesson-level configuration (moved from part configuration)
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
@@ -67,10 +69,13 @@ export default function LessonBuilder() {
     videos: [],
     lessonParts: [],
   });
+  const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
+  const videoObjectUrlRef = useRef("");
+
+  console.log(lessonParts);
 
   // console.log(lessonConfig)
-
- 
 
   function fromBackendToFrontend(backendData) {
     const lessons = backendData?.lessons?.map((lesson) => {
@@ -96,7 +101,7 @@ export default function LessonBuilder() {
             id: "text-block-" + item.id,
             name: item.block_name,
             type: "text",
-      content: {
+            content: {
               html: item.natural_text || "",
             },
           });
@@ -120,7 +125,7 @@ export default function LessonBuilder() {
             type: "doc-comparison",
             content: {
               mode: item.comparison_mode || "",
-              document: item.image_name[0] || null,
+              document: item.image_name?.[0] || null,
             },
           });
         }
@@ -130,6 +135,8 @@ export default function LessonBuilder() {
         id: lesson.id,
         title: lesson.title,
         weightage: lesson.weightage,
+        sourceDocument: lesson.source_document || null,
+        answerKey: lesson.answer_key || null,
         content: {
           blocks,
         },
@@ -141,6 +148,7 @@ export default function LessonBuilder() {
       sourceDocument: backendData.source_document || null,
       answerKey: backendData.answer_key || null,
       videos: backendData.video ? [backendData.video] : [],
+      videoEnabled: !!backendData.video,
       lessonParts: lessons || [],
     };
   }
@@ -153,6 +161,10 @@ export default function LessonBuilder() {
       const frontendData = fromBackendToFrontend(parsedData);
       setLessonParts(frontendData?.lessonParts);
       setLessonConfig(frontendData);
+      // Auto-enable video toggle if a video is present
+      if ((frontendData?.videos && frontendData.videos.length > 0) && !frontendData.videoEnabled) {
+        setLessonConfig((c) => ({ ...c, videoEnabled: true }));
+      }
       if (frontendData.lessonParts.length > 0) {
         setSelectedPartId(frontendData.lessonParts[0].id);
       }
@@ -203,7 +215,8 @@ export default function LessonBuilder() {
     }
   };
 
-  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
+  const removeToast = (id) =>
+    setToasts((prev) => prev.filter((t) => t.id !== id));
 
   // keep nested lessonParts in sync with root lessonParts for now
   useEffect(() => {
@@ -342,8 +355,8 @@ export default function LessonBuilder() {
   }
 
   async function frontendToBackend(currentLessonConfig, rubricId) {
-      let sourceDocBase64 = "";
-      let answerKeyBase64 = "";
+    let sourceDocBase64 = "";
+    let answerKeyBase64 = "";
     let videoBase64 = "";
 
     if (currentLessonConfig.sourceDocument) {
@@ -374,6 +387,24 @@ export default function LessonBuilder() {
 
     const lesson_parts = await Promise.all(
       (currentLessonConfig.lessonParts || []).map(async (lesson) => {
+        let partSourceDoc = "";
+        if (lesson.sourceDocument) {
+          if (isFile(lesson.sourceDocument)) {
+            partSourceDoc = await fileToBase64(lesson.sourceDocument);
+          } else {
+            partSourceDoc = lesson.sourceDocument;
+          }
+        }
+
+        let partAnswerKey = "";
+        if (lesson.answerKey) {
+          if (isFile(lesson.answerKey)) {
+            partAnswerKey = await fileToBase64(lesson.answerKey);
+          } else {
+            partAnswerKey = lesson.answerKey;
+          }
+        }
+
         const items = await Promise.all(
           (lesson.content.blocks || []).map(async (block) => {
             if (block.type === "objective") {
@@ -393,7 +424,7 @@ export default function LessonBuilder() {
                   instruction_category: "Text",
                   block_type: block.type,
                   item_type: "u",
-                natural_text: block.content.html || "",
+                  natural_text: block.content.html || "",
                 },
               ];
             } else if (block.type === "instruction") {
@@ -439,14 +470,6 @@ export default function LessonBuilder() {
                 }
               }
 
-              // if (Array.isArray(block.content.documents)) {
-              //   documentsBase64 = await Promise.all(
-              //     block.content.documents.map(async (doc) =>
-              //       isFile(doc) ? await fileToBase64(doc) : doc
-              //     )
-              //   );
-              // }
-
               return [
                 {
                   id: block.id,
@@ -467,6 +490,8 @@ export default function LessonBuilder() {
           id: lesson.id,
           title: lesson.title,
           weightage: lesson.weightage,
+          source_document: partSourceDoc,
+          answer_key: partAnswerKey,
           items: items.flat(),
         };
       })
@@ -474,8 +499,8 @@ export default function LessonBuilder() {
 
     return {
       rubric_id: rubricId,
-          source_document: sourceDocBase64,
-          answer_key: answerKeyBase64,
+      source_document: sourceDocBase64,
+      answer_key: answerKeyBase64,
       video: videoBase64,
       lessons: lesson_parts,
     };
@@ -590,22 +615,22 @@ export default function LessonBuilder() {
     try {
       backendPayload.publish_flag = true;
       // console.log(JSON.stringify(backendPayload, null, 2));
-        const response = await fetch(
-            base_url + "/api/openedx/create_base_lesson_from_scratch",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+      const response = await fetch(
+        base_url + "/api/openedx/create_base_lesson_from_scratch",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(backendPayload),
-            }
-          );
-      
-          if (!response.ok) {
-            throw new Error(
-              `Failed to create base items: ${response.status} ${response.statusText}`
-            );
-          }
-      
-          const result = await response.json();
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to create base items: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
       const mergedResult = await mergeLessonItems(result);
       const promises = [];
       promises.push(handleUploadToS3(mergedResult?.items));
@@ -626,6 +651,8 @@ export default function LessonBuilder() {
       content: {
         blocks: [],
       },
+      sourceDocument: null,
+      answerKey: null,
     };
     setLessonParts([...lessonParts, part]);
     setSelectedPartId(part.id);
@@ -725,8 +752,6 @@ export default function LessonBuilder() {
     setShowDeleteDialog(true);
   };
 
- 
-
   const selectedPart = lessonParts.find((part) => part.id == selectedPartId);
   const totalWeight = lessonParts.reduce(
     (sum, part) => sum + part.weightage,
@@ -734,6 +759,15 @@ export default function LessonBuilder() {
   );
   const isWeightValid = totalWeight === 100;
 
+  const selectedPartConfig = selectedPart || {
+    sourceDocument: null,
+    answerKey: null,
+  };
+
+  const setSelectedPartConfig = (configUpdates) => {
+    if (!selectedPart) return;
+    handleUpdatePart(selectedPart.id, { ...configUpdates });
+  };
 
   const getRubricFromSession = () => {
     try {
@@ -756,11 +790,14 @@ export default function LessonBuilder() {
 
   const getAiVideoDisableReason = (partId) => {
     const rubric = getRubricFromSession();
-    if (!rubric) return "The Lesson is not saved yet. Save it to enable AI Video";
-    if (!rubric.video) return "Attach video in Configuration and save lesson to enable AI Video";
+    if (!rubric)
+      return "The Lesson is not saved yet. Save it to enable AI Video";
+    if (!rubric.video)
+      return "Attach video in Configuration and save lesson to enable AI Video";
     const lessons = Array.isArray(rubric.lessons) ? rubric.lessons : [];
     const partExists = lessons.some((l) => String(l.id) === String(partId));
-    if (!partExists) return "This part is not saved/exist in Lesson yet. Save the lesson to enable AI Video";
+    if (!partExists)
+      return "This part is not saved/exist in Lesson yet. Save the lesson to enable AI Video";
     return "";
   };
 
@@ -768,18 +805,24 @@ export default function LessonBuilder() {
     if (aiVideoLoading) return;
     if (!canRunAiVideo(sub_rubric_id)) {
       const reason = getAiVideoDisableReason(sub_rubric_id);
-      addToast({ title: "AI Video Unavailable", message: reason || "Cannot run splice the video.", variant: "error" });
+      addToast({
+        title: "AI Video Unavailable",
+        message: reason || "Cannot run splice the video.",
+        variant: "error",
+      });
       return;
     }
     setAiVideoLoading(true);
     try {
-      const url = new URL(base_url + "/api/openedx/get_base_timestamps_for_rubric_video");
+      const url = new URL(
+        base_url + "/api/openedx/get_base_timestamps_for_rubric_video"
+      );
       url.searchParams.append("rubric_id", blockId);
       url.searchParams.append("sub_rubric_id", sub_rubric_id);
 
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!response.ok) {
@@ -787,11 +830,19 @@ export default function LessonBuilder() {
       }
 
       const result = await response.json();
-      addToast({ title: "AI Video Ready", message: "Timestamps added successfully.", variant: "success" });
+      addToast({
+        title: "AI Video Ready",
+        message: "Timestamps added successfully.",
+        variant: "success",
+      });
       return result;
     } catch (error) {
       console.error("Error :", error);
-      addToast({ title: "AI Video Error", message: error.message || "Request failed.", variant: "error" });
+      addToast({
+        title: "AI Video Error",
+        message: error.message || "Request failed.",
+        variant: "error",
+      });
     } finally {
       setAiVideoLoading(false);
     }
@@ -806,27 +857,42 @@ export default function LessonBuilder() {
   const handleAiInstructionsSelected = async (event) => {
     const file = event.target.files?.[0];
     if (!file) {
-      addToast({ title: "No file selected", message: "Please choose a DOC/DOCX file.", variant: "info" });
+      addToast({
+        title: "No file selected",
+        message: "Please choose a DOC/DOCX file.",
+        variant: "info",
+      });
       return;
     }
     setAiInstructionsLoading(true);
     try {
       const base64 = await fileToBase64(file);
-      const response = await fetch(base_url + "/api/openedx/create_rubric_item_from_docx", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rubric_openedx_based_id: blockId, docx_base64: base64 , instruction_category:"Text" })
-      });
+      const response = await fetch(
+        base_url + "/api/openedx/create_rubric_item_from_docx",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rubric_openedx_based_id: blockId,
+            docx_base64: base64,
+            instruction_category: "Text",
+          }),
+        }
+      );
       if (!response.ok) {
         throw new Error(`Failed : ${response.status} ${response.statusText}`);
       }
       const result = await response.json();
-      const extracted = Array.isArray(result?.extracted_items)
-        ? result.extracted_items
+      const extracted = Array.isArray(result?.instructions)
+        ? result.instructions
         : [];
 
       if (extracted.length === 0) {
-        addToast({ title: "No Instructions Found", message: "The document did not return any instructions.", variant: "info" });
+        addToast({
+          title: "No Instructions Found",
+          message: "The document did not return any instructions.",
+          variant: "info",
+        });
       } else {
         setLessonParts((parts) =>
           (parts || []).map((part) => {
@@ -834,10 +900,11 @@ export default function LessonBuilder() {
 
             const existingBlocks = part.content?.blocks || [];
             const timestamp = Date.now();
+            const ins = existingBlocks.filter(b=>b.type==="instruction").length + 1;
             const newBlocks = extracted.map((text, idx) => ({
               id: `instruction-${timestamp}-${idx}`,
               type: "instruction",
-              name: "Instruction",
+              name: "Instruction " + (ins + idx),
               content: {
                 html: text || "",
                 attachments: { images: [], videos: [] },
@@ -857,20 +924,25 @@ export default function LessonBuilder() {
 
         addToast({
           title: "AI Instructions Ready",
-          message: `Added ${extracted.length} instruction${extracted.length > 1 ? "s" : ""}.`,
+          message: `Added ${extracted.length} instruction${
+            extracted.length > 1 ? "s" : ""
+          }.`,
           variant: "success",
         });
       }
     } catch (error) {
       console.error("AI Instructions error:", error);
-      addToast({ title: "AI Instructions Error", message: error.message || "Request failed.", variant: "error" });
+      addToast({
+        title: "AI Instructions Error",
+        message: error.message || "Request failed.",
+        variant: "error",
+      });
     } finally {
       setAiInstructionsLoading(false);
       // reset input to allow re-pick of same file
       if (event?.target) event.target.value = "";
     }
   };
-  
 
   return (
     <ImagesProvider
@@ -879,26 +951,26 @@ export default function LessonBuilder() {
       nextImageId={nextImageId}
       setNextImageId={setNextImageId}
     >
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Enhanced Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <BookOpen className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Lesson Builder
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Enhanced Header */}
+        <header className="bg-white border-b border-gray-200 shadow-sm">
+          <div className="px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center  gap-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <BookOpen className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="mt-2">
+                  <h1 className="text-[20px] font-bold text-gray-900">
+                    {sessionStorage?.getItem("unitTitle")}
                   </h1>
                   <p className="text-sm text-gray-600 mt-1">
                     Create and organize your lesson content with ease
                   </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* <div className="hidden md:flex items-center gap-4 text-sm text-gray-600 mr-4">
+              <div className="flex items-center gap-3">
+                {/* <div className="hidden md:flex items-center gap-4 text-sm text-gray-600 mr-4">
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
                   <span>For Students</span>
@@ -909,55 +981,55 @@ export default function LessonBuilder() {
                 </div>
               </div> */}
 
-              <div
+                <div
                   // onClick={() => setOpen(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                 >
-                Add-in Preview
-              </div>
-               
+                  Add-in Preview
+                </div>
+
                 <div
                   onClick={() => setOpen(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
                 >
-                Preview
-              </div>
-              <div
-                onClick={!saveDraftLoading ? handleSaveDraftClick : undefined}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white 
+                  Preview
+                </div>
+                <div
+                  onClick={!saveDraftLoading ? handleSaveDraftClick : undefined}
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white 
         border border-transparent rounded-md transition-colors
         ${
           saveDraftLoading
             ? "bg-blue-400 cursor-not-allowed"
             : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         }`}
-              >
-                {saveDraftLoading ? (
-                  <svg
-                    className="w-4 h-4 animate-spin text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                    ></path>
-                  </svg>
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                {saveDraftLoading ? "Saving..." : "Save Draft"}
-              </div>
+                >
+                  {saveDraftLoading ? (
+                    <svg
+                      className="w-4 h-4 animate-spin text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                      ></path>
+                    </svg>
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {saveDraftLoading ? "Saving..." : "Save Draft"}
+                </div>
                 <div
                   onClick={!loading ? handlePublishClick : undefined}
                   className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white 
@@ -990,21 +1062,21 @@ export default function LessonBuilder() {
                       ></path>
                     </svg>
                   ) : (
-                <Upload className="w-4 h-4" />
+                    <Upload className="w-4 h-4" />
                   )}
                   {loading ? "Publishing..." : "Publish Lesson"}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="flex h-[calc(100vh-88px)]">
-        {/* Left Panel - Main Editing Area (70%) */}
-        <div className="flex-1 px-4 py-3 overflow-y-auto">
-          {selectedPart ? (
-            <div className="space-y-6">
-              {/* Enhanced Part Header */}
+        <div className="flex h-[calc(100vh-88px)]">
+          {/* Left Panel - Main Editing Area (70%) */}
+          <div className="flex-1 px-4 py-3 overflow-y-auto">
+            {selectedPart ? (
+              <div className="space-y-6">
+                {/* Enhanced Part Header */}
                 <div
                   className="p-3 bg-white flex justify-between items-center rounded-lg shadow-sm "
                   style={{
@@ -1014,129 +1086,146 @@ export default function LessonBuilder() {
                   }}
                 >
                   <div className="flex items-center jus gap-4">
-                  <div className="p-2 bg-[#27AAE1]/10 rounded-lg">
-                    <Layers className="w-6 h-6 text-[#27AAE1]" />
-                  </div>
-                  <div className="flex-1">
+                    <div className="p-2 bg-[#27AAE1]/10 rounded-lg">
+                      <Layers className="w-6 h-6 text-[#27AAE1]" />
+                    </div>
+                    <div className="flex-1">
                       <h2 className="text-2xl font-bold text-gray-900">
                         {selectedPart.title}
                       </h2>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-sm text-gray-600">
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-sm text-gray-600">
                           Weight:{" "}
                           <span className="font-semibold">
                             {selectedPart.weightage}%
                           </span>
-                      </span>
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                 
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                    <div className="relative group">
-                      <button
-                        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
-                          aiVideoLoading
-                            ? "bg-blue-400 text-white cursor-not-allowed"
-                            : canRunAiVideo(selectedPart.id)
-                            ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                            : "bg-blue-300 text-white cursor-not-allowed"
-                        }`}
-                        onClick={canRunAiVideo(selectedPart.id) && !aiVideoLoading ? () => videoSplicing(selectedPart.id) : undefined}
-                        aria-disabled={!canRunAiVideo(selectedPart.id) || aiVideoLoading}
+                      <div
+                        onClick={() => setPartConfigOpen(true)}
+                        className="p-1 px-2 rounded-lg bg-blue-100 cursor-pointer "
                       >
-                        {aiVideoLoading ? (
-                          <svg
-                            className="w-4 h-4 animate-spin text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                            ></path>
-                          </svg>
-                        ) : null}
-                        {aiVideoLoading ? "Video splicing..." : "AI Video"}
-                      </button>
-                      {!canRunAiVideo(selectedPart.id) && (
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-gray-900 text-white text-xs px-2 py-1 shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                          {getAiVideoDisableReason(selectedPart.id)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <button
-                        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
-                          aiInstructionsLoading
-                            ? "bg-blue-400 text-white cursor-not-allowed"
-                            : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                        }`}
-                        onClick={!aiInstructionsLoading ? handleAiInstructionsClick : undefined}
-                        aria-disabled={aiInstructionsLoading}
-                      >
-                        {aiInstructionsLoading ? (
-                          <svg
-                            className="w-4 h-4 animate-spin text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                            ></path>
-                          </svg>
-                        ) : null}
-                        {aiInstructionsLoading ? "Generating..." : "AI Instructions"}
-                      </button>
-                      <input
-                        id="ai-instructions-doc"
-                        type="file"
-                        accept=".doc,.docx"
-                        className="hidden"
-                        onChange={handleAiInstructionsSelected}
-                      />
-                    </div>
-
+                        <Settings className="w-5 h-5 mb-1 text-blue-600" />
                       </div>
-                </div>
-              </div>
 
-              {/* Content Editing Areas */}
-              <HybridContentEditor
-                selectedPart={selectedPart}
-                  content={selectedPart.content || { blocks: [] }}
-                onContentChange={handleContentChange}
-              />
-            </div>
-          ) : (
-            <div className="h-full p-8 bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center">
-                  <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                    <BookOpen className="w-10 h-10 text-gray-400" />
+                      <div className="relative group">
+                        <button
+                          className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
+                            aiVideoLoading
+                              ? "bg-blue-400 text-white cursor-not-allowed"
+                              : canRunAiVideo(selectedPart.id)
+                              ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                              : "bg-blue-300 text-white cursor-not-allowed"
+                          }`}
+                          onClick={
+                            canRunAiVideo(selectedPart.id) && !aiVideoLoading
+                              ? () => videoSplicing(selectedPart.id)
+                              : undefined
+                          }
+                          aria-disabled={
+                            !canRunAiVideo(selectedPart.id) || aiVideoLoading
+                          }
+                        >
+                          {aiVideoLoading ? (
+                            <svg
+                              className="w-4 h-4 animate-spin text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                              ></path>
+                            </svg>
+                          ) : null}
+                          {aiVideoLoading ? "Video splicing..." : "AI Video"}
+                        </button>
+                        {!canRunAiVideo(selectedPart.id) && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-gray-900 text-white text-xs px-2 py-1 shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                            {getAiVideoDisableReason(selectedPart.id)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <button
+                          className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
+                            aiInstructionsLoading
+                              ? "bg-blue-400 text-white cursor-not-allowed"
+                              : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                          }`}
+                          onClick={
+                            !aiInstructionsLoading
+                              ? handleAiInstructionsClick
+                              : undefined
+                          }
+                          aria-disabled={aiInstructionsLoading}
+                        >
+                          {aiInstructionsLoading ? (
+                            <svg
+                              className="w-4 h-4 animate-spin text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                              ></path>
+                            </svg>
+                          ) : null}
+                          {aiInstructionsLoading
+                            ? "Generating..."
+                            : "AI Instructions"}
+                        </button>
+                        <input
+                          id="ai-instructions-doc"
+                          type="file"
+                          accept=".doc,.docx"
+                          className="hidden"
+                          onChange={handleAiInstructionsSelected}
+                        />
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Content Editing Areas */}
+                <HybridContentEditor
+                  selectedPart={selectedPart}
+                  content={selectedPart.content || { blocks: [] }}
+                  onContentChange={handleContentChange}
+                />
+              </div>
+            ) : (
+              <div className="h-full p-8 bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                      <BookOpen className="w-10 h-10 text-gray-400" />
+                    </div>
                     <p className="text-xl font-semibold mb-2">
                       Select a lesson part to edit
                     </p>
@@ -1144,15 +1233,15 @@ export default function LessonBuilder() {
                       Choose a part from the outline to start creating your
                       content
                     </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Enhanced Right Panel - Lesson Parts Outline (30%) */}
-        <div className="w-80 bg-white border-l border-gray-200 shadow-sm overflow-y-auto">
-          <div className="px-4 py-2">
+          {/* Enhanced Right Panel - Lesson Parts Outline (30%) */}
+          <div className="w-80 bg-white border-l border-gray-200 shadow-sm overflow-y-auto">
+            <div className="px-4 py-2">
               {/* Lesson Configuration launcher */}
               <div
                 className="mb-3 rounded-lg border border-blue-200 bg-gradient-to-r from-white to-blue-50 cursor-pointer hover:shadow-sm"
@@ -1174,67 +1263,67 @@ export default function LessonBuilder() {
                 </div>
               </div>
 
-            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Lesson Outline
                 </h3>
-              <div
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                onClick={() => setShowAddDialog(true)}
-              >
-                <Plus className="w-4 h-4" />
-                Add Part
+                <div
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                  onClick={() => setShowAddDialog(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Part
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-3 mb-3">
-              {lessonParts.map((part, index) => (
-                <DraggablePartCard
-                  key={part.id}
-                  part={part}
-                  index={index}
-                  isSelected={selectedPartId === part.id}
-                  onSelect={() => setSelectedPartId(part.id)}
-                  onEdit={() => openEditDialog(part)}
-                  onDuplicate={() => handleDuplicatePart(part.id)}
-                  onDelete={() => openDeleteDialog(part)}
-                  onDragStart={handlePartDragStart}
-                  onDragOver={handlePartDragOver}
-                  onDrop={handlePartDrop}
-                />
-              ))}
-            </div>
+              <div className="space-y-3 mb-3">
+                {lessonParts.map((part, index) => (
+                  <DraggablePartCard
+                    key={part.id}
+                    part={part}
+                    index={index}
+                    isSelected={selectedPartId === part.id}
+                    onSelect={() => setSelectedPartId(part.id)}
+                    onEdit={() => openEditDialog(part)}
+                    onDuplicate={() => handleDuplicatePart(part.id)}
+                    onDelete={() => openDeleteDialog(part)}
+                    onDragStart={handlePartDragStart}
+                    onDragOver={handlePartDragOver}
+                    onDrop={handlePartDrop}
+                  />
+                ))}
+              </div>
 
-            {/* Enhanced Summary */}
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+              {/* Enhanced Summary */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
                 <h4 className="font-semibold text-gray-900 mb-3">
                   Lesson Summary
                 </h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Parts:</span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Parts:</span>
                     <span className="font-semibold text-gray-900">
                       {lessonParts.length}
                     </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Weight:</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Weight:</span>
                     <span
                       className={`font-semibold ${
                         isWeightValid ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                    {totalWeight}%
-                  </span>
-                </div>
+                      {totalWeight}%
+                    </span>
+                  </div>
                   {!isWeightValid && (
                     <p className="text-xs text-red-600 mt-2">
                       ⚠️ Weights should total 100%
                     </p>
                   )}
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Questions:</span>
-                  <span className="font-semibold text-gray-900">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Questions:</span>
+                    <span className="font-semibold text-gray-900">
                       {lessonParts.reduce(
                         (sum, part) =>
                           sum +
@@ -1245,13 +1334,13 @@ export default function LessonBuilder() {
                           ),
                         0
                       )}
-                  </span>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
         <AddPartDialog
           open={showAddDialog}
@@ -1259,19 +1348,19 @@ export default function LessonBuilder() {
           onAddPart={handleAddPart}
         />
 
-      <EditPartDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        part={editingPart}
-        onUpdatePart={handleUpdatePart}
-      />
+        <EditPartDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          part={editingPart}
+          onUpdatePart={handleUpdatePart}
+        />
 
-      <DeleteConfirmationDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        partTitle={deletingPart?.title || ""}
-        onConfirm={() => deletingPart && handleDeletePart(deletingPart.id)}
-      />
+        <DeleteConfirmationDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          partTitle={deletingPart?.title || ""}
+          onConfirm={() => deletingPart && handleDeletePart(deletingPart.id)}
+        />
         <ValidationErrorsModal
           open={validationOpen}
           onOpenChange={setValidationOpen}
@@ -1290,7 +1379,7 @@ export default function LessonBuilder() {
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-lg bg-blue-100">
                     <Settings className="w-5 h-5 text-blue-600" />
-    </div>
+                  </div>
                   <div>
                     <div className="text-base font-semibold">
                       Lesson Configuration
@@ -1423,24 +1512,29 @@ export default function LessonBuilder() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex"> 
-                          <div
-                             onClick={() => downloadFile(lessonConfig.answerKey, "answer-key")}
+                          <div className="flex">
+                            <div
+                              onClick={() =>
+                                downloadFile(
+                                  lessonConfig.answerKey,
+                                  "answer-key"
+                                )
+                              }
                               className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                             >
                               <Download className="w-4 h-4" />
                             </div>
-                          <div
-                            onClick={() =>
-                              setLessonConfig((c) => ({
-                                ...c,
-                                answerKey: null,
-                              }))
-                            }
-                            className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </div>
+                            <div
+                              onClick={() =>
+                                setLessonConfig((c) => ({
+                                  ...c,
+                                  answerKey: null,
+                                }))
+                              }
+                              className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -1541,21 +1635,46 @@ export default function LessonBuilder() {
                             </div>
                           </div>
                           <div className="flex">
-                          <div
-                             onClick={() => downloadFile(lessonConfig.videos[0], "lesson-video")}
+                            <div
+                              onClick={() => {
+                                try {
+                                  const v = lessonConfig.videos?.[0];
+                                  if (!v) return;
+                                  if (typeof v === "string") {
+                                    setVideoPreviewUrl(v);
+                                  } else {
+                                    const blob = v instanceof Blob ? v : new Blob([v]);
+                                    const url = URL.createObjectURL(blob);
+                                    videoObjectUrlRef.current = url;
+                                    setVideoPreviewUrl(url);
+                                  }
+                                  setVideoPreviewOpen(true);
+                                } catch (_) {}
+                              }}
+                              className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </div>
+                            <div
+                              onClick={() =>
+                                downloadFile(
+                                  lessonConfig.videos[0],
+                                  "lesson-video"
+                                )
+                              }
                               className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                             >
                               <Download className="w-4 h-4" />
                             </div>
 
-                          <div
-                            onClick={() =>
-                              setLessonConfig((c) => ({ ...c, videos: [] }))
-                            }
-                            className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </div>
+                            <div
+                              onClick={() =>
+                                setLessonConfig((c) => ({ ...c, videos: [] }))
+                              }
+                              className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -1566,7 +1685,7 @@ export default function LessonBuilder() {
                             onChange={(e) => {
                               const f = e.target.files?.[0];
                               if (f)
-                                setLessonConfig((c) => ({ ...c, videos: [f] }));
+                                setLessonConfig((c) => ({ ...c, videos: [f], videoEnabled: true }));
                             }}
                             className="hidden"
                             id="lesson-video-upload"
@@ -1594,11 +1713,248 @@ export default function LessonBuilder() {
             </div>
           </div>
         )}
+        {partConfigOpen && selectedPart && (
+          <div className="fixed inset-0 z-50 pt-[3%] flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/40 border-none"
+              onClick={() => setPartConfigOpen(false)}
+            />
+            <div className="relative bg-white rounded-lg shadow-xl w-[92vw] max-w-3xl max-height-[87vh] max-h-[87vh] overflow-auto">
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <Settings className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold">
+                      Part Configuration
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Configure source document and answer key for this part
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="p-1 rounded hover:bg-gray-100 border-none"
+                  onClick={() => setPartConfigOpen(false)}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-900">
+                        Part Documents
+                      </label>
+                      <p className="text-xs text-gray-500">
+                        Upload source material and answer key for this part
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Source Document
+                      </label>
+                      {selectedPartConfig.sourceDocument ? (
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-blue-200">
+                              <FileText className="w-4 h-4 text-blue-700" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {selectedPartConfig.sourceDocument.name ||
+                                  "Uploaded"}
+                              </span>
+                              <p className="text-xs text-gray-500">
+                                Source document uploaded
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex">
+                            <div
+                              onClick={() =>
+                                downloadFile(
+                                  selectedPartConfig.sourceDocument,
+                                  "source-document.docx"
+                                )
+                              }
+                              className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                            >
+                              <Download className="w-4 h-4" />
+                            </div>
+                            <div
+                              onClick={() =>
+                                setSelectedPartConfig({ sourceDocument: null })
+                              }
+                              className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".doc,.docx"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file)
+                                setSelectedPartConfig({ sourceDocument: file });
+                            }}
+                            className="hidden"
+                            id="part-source-document"
+                          />
+                          <label
+                            htmlFor="part-source-document"
+                            className="cursor-pointer"
+                          >
+                            <div className="p-2 rounded-full bg-gray-100 group-hover:bg-blue-100 w-fit mx-auto mb-2 transition-colors">
+                              <Upload className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
+                              Upload source document
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              DOC, DOCX files supported
+                            </p>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Answer Key
+                      </label>
+                      {selectedPartConfig.answerKey ? (
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-green-200">
+                              <FileText className="w-4 h-4 text-green-700" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {selectedPartConfig.answerKey.name ||
+                                  "Uploaded"}
+                              </span>
+                              <p className="text-xs text-gray-500">
+                                Answer key uploaded
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex">
+                            <div
+                              onClick={() =>
+                                downloadFile(
+                                  selectedPartConfig.answerKey,
+                                  "answer-key"
+                                )
+                              }
+                              className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                            >
+                              <Download className="w-4 h-4" />
+                            </div>
+                            <div
+                              onClick={() =>
+                                setSelectedPartConfig({ answerKey: null })
+                              }
+                              className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-green-400 hover:bg-green-50 transition-all duration-200 cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".doc,.docx"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file)
+                                setSelectedPartConfig({ answerKey: file });
+                            }}
+                            className="hidden"
+                            id="part-answer-key"
+                          />
+                          <label
+                            htmlFor="part-answer-key"
+                            className="cursor-pointer"
+                          >
+                            <div className="p-2 rounded-full bg-gray-100 group-hover:bg-green-100 w-fit mx-auto mb-2 transition-colors">
+                              <Upload className="w-5 h-5 text-gray-400 group-hover:text-green-600" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-700 group-hover:text-green-700">
+                              Upload answer key
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              DOC, DOCX files supported
+                            </p>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <LessonPreviewDialog
           data={lessonConfig}
           open={open}
           setOpen={setOpen}
         />
+        {videoPreviewOpen && (
+          <div className="fixed inset-0 z-50 pt-[5%] flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/50 border-none"
+              onClick={() => {
+                setVideoPreviewOpen(false);
+                if (videoObjectUrlRef.current) {
+                  URL.revokeObjectURL(videoObjectUrlRef.current);
+                  videoObjectUrlRef.current = "";
+                }
+              }}
+            />
+            <div className="relative bg-white rounded-lg shadow-xl w-[92vw] max-w-4xl max-h-[85vh]">
+              <div className="flex items-center justify-between px-4 py-2 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-purple-50">
+                    <Video className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="text-base font-semibold">Preview Video</div>
+                </div>
+                <button
+                  className="p-1 rounded hover:bg-gray-100 border-none"
+                  onClick={() => {
+                    setVideoPreviewOpen(false);
+                    if (videoObjectUrlRef.current) {
+                      URL.revokeObjectURL(videoObjectUrlRef.current);
+                      videoObjectUrlRef.current = "";
+                    }
+                  }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4">
+                <video className="w-full" style={{height:"500px"}} controls>
+                  <source src={videoPreviewUrl || ""} />
+                </video>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </ImagesProvider>

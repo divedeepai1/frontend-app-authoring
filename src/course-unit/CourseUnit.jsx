@@ -102,9 +102,13 @@ const CourseUnit = ({ courseId }) => {
      }
      if(type=="new-lesson"){
       sessionStorage.setItem("Rubric", JSON.stringify(unitData?.rubric));
+      sessionStorage.setItem("unitTitle", unitTitle);
+
      }
      if(type=="new"){
       sessionStorage.removeItem("Rubric");
+      sessionStorage.setItem("unitTitle", unitTitle);
+
       
      }
      navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type=="new"? "new-lesson":type}`);

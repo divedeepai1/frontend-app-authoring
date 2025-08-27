@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 
-export default function EditableBlockName({ block, renameBlock, instructionNo }) {
+export default function EditableBlockName({ block, renameBlock }) {
   const inputRef = useRef(null);
   const [value, setValue] = useState(
     block.name ||
@@ -59,10 +59,8 @@ export default function EditableBlockName({ block, renameBlock, instructionNo })
         className="text-sm font-medium p-2 rounded text-gray-900 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
       />
 
-      {/* Show instruction number only when NOT focused */}
-      {!isFocused && block.type === "instruction" && (
-        <span className="text-sm font-medium">{instructionNo}</span>
-      )}
+    
+     
 
       <div
         type="button"
