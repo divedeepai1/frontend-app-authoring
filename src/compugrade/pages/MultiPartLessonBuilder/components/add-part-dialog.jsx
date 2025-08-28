@@ -117,7 +117,7 @@ export function AddPartDialog({ open, onOpenChange, onAddPart }) {
             <input
               id="weightage"
               type="number"
-              min="1"
+              min="0"
               max="100"
               value={weightage}
               onChange={(e) => setWeightage(Number.parseInt(e.target.value) || 0)}

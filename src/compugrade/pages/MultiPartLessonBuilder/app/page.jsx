@@ -26,11 +26,45 @@ import { ValidationErrorsModal } from "../components/validation-errors-modal";
 import LessonPreviewDialog from "../components/ui/preview";
 import downloadFile from "../utils/downloadFile";
 import ToastContainer from "../components/ui/toast";
+import SaveTimestampsDialog from "../components/ui/ai-video-preview";
+import { set } from "lodash";
 
 export default function LessonBuilder() {
   const { blockId, sequenceId, courseId } = useParams();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [videoData, setVideoData] = useState({timestamps: [], video: ""});
+  
+
+  const handleSaveAll = async (instructions) => {
+    console.log("Saving all instructions:", instructions);
+  
+    try {
+      const response = await fetch(`${base_url}/api/openedx/update_base_items_timestamp`, {
+        method: "PATCH",
+        
+        headers: {
+          "Content-Type": "application/json",
+         
+        },
+        body: JSON.stringify({ items:instructions }),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to save instructions: ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error saving instructions:", error);
+      return { success: false, error };
+    }
+  };
+  
   const [lessonParts, setLessonParts] = useState([
     // {
     //   id: "1",
@@ -75,7 +109,7 @@ export default function LessonBuilder() {
 
   console.log(lessonParts);
 
-  // console.log(lessonConfig)
+  console.log(lessonConfig)
 
   function fromBackendToFrontend(backendData) {
     const lessons = backendData?.lessons?.map((lesson) => {
@@ -114,7 +148,10 @@ export default function LessonBuilder() {
               html: item.natural_text || "",
               attachments: {
                 images: Array.isArray(item.image_name) ? item.image_name : [],
-                videos: Array.isArray(item.video_name) ? item.video_name : [],
+                videos: [
+                  ...(Array.isArray(item.video_name) ? item.video_name : []),
+                  ...(item.video_timestamp ? [item.video_timestamp] : []),
+                ],
               },
             },
           });
@@ -835,6 +872,9 @@ export default function LessonBuilder() {
         message: "Timestamps added successfully.",
         variant: "success",
       });
+      setVideoData(result)
+      setIsVideoOpen(true);
+
       return result;
     } catch (error) {
       console.error("Error :", error);
@@ -847,6 +887,8 @@ export default function LessonBuilder() {
       setAiVideoLoading(false);
     }
   };
+
+
 
   const handleAiInstructionsClick = () => {
     if (aiInstructionsLoading) return;
@@ -951,6 +993,7 @@ export default function LessonBuilder() {
       nextImageId={nextImageId}
       setNextImageId={setNextImageId}
     >
+     
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         {/* Enhanced Header */}
         <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -1113,7 +1156,7 @@ export default function LessonBuilder() {
                       </div>
 
                       <div className="relative group">
-                        <button
+                        <div
                           className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
                             aiVideoLoading
                               ? "bg-blue-400 text-white cursor-not-allowed"
@@ -1153,7 +1196,7 @@ export default function LessonBuilder() {
                             </svg>
                           ) : null}
                           {aiVideoLoading ? "Video splicing..." : "AI Video"}
-                        </button>
+                        </div>
                         {!canRunAiVideo(selectedPart.id) && (
                           <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-gray-900 text-white text-xs px-2 py-1 shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
                             {getAiVideoDisableReason(selectedPart.id)}
@@ -1161,7 +1204,7 @@ export default function LessonBuilder() {
                         )}
                       </div>
                       <div className="relative">
-                        <button
+                        <div
                           className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
                             aiInstructionsLoading
                               ? "bg-blue-400 text-white cursor-not-allowed"
@@ -1199,7 +1242,7 @@ export default function LessonBuilder() {
                           {aiInstructionsLoading
                             ? "Generating..."
                             : "AI Instructions"}
-                        </button>
+                        </div>
                         <input
                           id="ai-instructions-doc"
                           type="file"
@@ -1214,6 +1257,7 @@ export default function LessonBuilder() {
 
                 {/* Content Editing Areas */}
                 <HybridContentEditor
+                  video={lessonConfig?.videos[0]}
                   selectedPart={selectedPart}
                   content={selectedPart.content || { blocks: [] }}
                   onContentChange={handleContentChange}
@@ -1348,6 +1392,13 @@ export default function LessonBuilder() {
           onAddPart={handleAddPart}
         />
 
+<SaveTimestampsDialog
+          isOpen={isVideoOpen}
+          onClose={()=> setIsVideoOpen(false)}
+          data={videoData}
+          onSaveAll={handleSaveAll}
+        />
+
         <EditPartDialog
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
@@ -1389,12 +1440,12 @@ export default function LessonBuilder() {
                     </p>
                   </div>
                 </div>
-                <button
+                <div
                   className="p-1 rounded hover:bg-gray-100 border-none"
                   onClick={() => setLessonConfigOpen(false)}
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </div>
               </div>
 
               <div className="p-4 space-y-4">
@@ -1734,12 +1785,12 @@ export default function LessonBuilder() {
                     </p>
                   </div>
                 </div>
-                <button
+                <div
                   className="p-1 rounded hover:bg-gray-100 border-none"
                   onClick={() => setPartConfigOpen(false)}
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </div>
               </div>
               <div className="p-4 space-y-4">
                 <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
@@ -1934,7 +1985,7 @@ export default function LessonBuilder() {
                   </div>
                   <div className="text-base font-semibold">Preview Video</div>
                 </div>
-                <button
+                <div
                   className="p-1 rounded hover:bg-gray-100 border-none"
                   onClick={() => {
                     setVideoPreviewOpen(false);
@@ -1945,7 +1996,7 @@ export default function LessonBuilder() {
                   }}
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </div>
               </div>
               <div className="p-4">
                 <video className="w-full" style={{height:"500px"}} controls>
@@ -1960,3 +2011,28 @@ export default function LessonBuilder() {
     </ImagesProvider>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Example usage component
+

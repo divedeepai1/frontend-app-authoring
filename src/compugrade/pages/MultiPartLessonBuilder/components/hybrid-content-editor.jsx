@@ -17,13 +17,16 @@ import { ObjectiveEditor } from "./objective-editor";
 import EditableBlockName from "./ui/input-name";
 import { get } from "lodash";
 import downloadFile from "../utils/downloadFile";
+import TimestampModal from "./ui/timestamp";
 
 export function HybridContentEditor({
+  video,
   content,
   onContentChange,
   selectedPart,
 }) {
   const [blocks, setBlocks] = useState(content.blocks || []);
+  const [timestampPreview, setTimestampPreview] = useState({ open: false, timestamp: null });
 
   const [videoEnabled, setVideoEnabled] = useState(
     content.videoEnabled ?? false
@@ -495,40 +498,70 @@ export function HybridContentEditor({
                           )
                         )}
 
-                        {(block.content.attachments?.videos || []).map(
-                          (vid, idx) => (
-                            <div
-                              key={`vid-${idx}`}
-                              className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-purple-200 text-purple-700 text-sm cursor-pointer shadow-sm hover:shadow"
-                              onClick={() =>
-                                setPreviewState({
-                                  open: true,
-                                  url: getUrl(vid),
-                                  type: "video",
-                                  name: "Video Attached " + (idx + 1),
-                                })
-                              }
-                            >
-                              <div className="flex items-center gap-2 pr-6">
-                                <Eye className="w-4 h-4" />
-                                <span className="truncate">{"Video Attached " + (idx + 1)}</span>
-                              </div>
-                              <div
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeInstructionAttachment(
-                                    block,
-                                    "video",
-                                    idx
-                                  );
-                                }}
-                                className="absolute top-1 right-1 p-0.5 rounded-fullborder  text-red-500  cursor-pointer"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </div>
-                            </div>
-                          )
-                        )}
+{(block.content.attachments?.videos || []).map((vid, idx) => {
+
+const isTimestamp = (vid) => {
+  // 1. Explicitly exclude File and Blob objects
+  if (vid instanceof File || vid instanceof Blob) {
+    return false;
+  }
+
+  // 2. Must be a string to be considered timestamp
+  if (typeof vid !== "string") {
+    return false;
+  }
+
+  // 3. Exclude URLs (http/https/blob) and file-like names
+  if (/^(https?:\/\/|blob:)/i.test(vid)) {
+    return false;
+  }
+  if (/\.(mp4|mov|avi|mkv|webm)$/i.test(vid)) {
+    return false;
+  }
+
+  // 4. Only allow "start-end" or "start-None"
+  return /^\d+-(\d+|None)$/i.test(vid);
+};
+
+  return (
+    <div
+
+      key={`vid-${idx}`}
+      className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-purple-200 text-purple-700 text-sm cursor-pointer shadow-sm hover:shadow"
+      onClick={() => {
+
+        if (isTimestamp(vid)) {
+          setTimestampPreview({ open: true, timestamp: vid });
+        } else {
+          setPreviewState({
+            open: true,
+            url: getUrl(vid),
+            type: "video",
+            name: "Video Attached " + (idx + 1),
+          });
+        }
+      }}
+    >
+      <div className="flex items-center gap-2 pr-6">
+        <Eye className="w-4 h-4" />
+        <span className="truncate">
+          {isTimestamp(vid) ? `Timestamp Video` : `Video Attached ${idx + 1}`}
+        </span>
+      </div>
+
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          removeInstructionAttachment(block, "video", idx);
+        }}
+        className="absolute top-1 right-1 p-0.5 rounded-full text-red-500 cursor-pointer"
+      >
+        <X className="w-3.5 h-3.5" />
+      </div>
+    </div>
+  );
+}
+)}
                       </div>
                     </div>
                   </div>
@@ -734,6 +767,13 @@ export function HybridContentEditor({
           Add Document Comparison
         </div>
       </div>
+
+      <TimestampModal
+  open={timestampPreview.open}
+  timestamp={timestampPreview.timestamp}
+  onClose={() => setTimestampPreview({ open: false, timestamp: null })}
+  videoUrl={video}
+/>
 
       {/* Preview Modal */}
       {previewState.open && (
