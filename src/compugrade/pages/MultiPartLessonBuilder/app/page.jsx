@@ -139,7 +139,8 @@ export default function LessonBuilder() {
               html: item.natural_text || "",
             },
           });
-        } else if (item.block_type === "instruction") {
+        } 
+        else if (item.block_type === "instruction") {
           blocks.push({
             id: "instruction-block-" + item.id,
             name: item.block_name,
@@ -464,10 +465,12 @@ export default function LessonBuilder() {
                   natural_text: block.content.html || "",
                 },
               ];
-            } else if (block.type === "instruction") {
+            } 
+            else if (block.type === "instruction") {
               let imagesBase64 = [];
               let videosBase64 = [];
-
+              let timestamp = null; 
+            
               if (Array.isArray(block.content.attachments?.images)) {
                 imagesBase64 = await Promise.all(
                   block.content.attachments.images.map(async (img) =>
@@ -475,15 +478,22 @@ export default function LessonBuilder() {
                   )
                 );
               }
-
+            
               if (Array.isArray(block.content.attachments?.videos)) {
                 videosBase64 = await Promise.all(
-                  block.content.attachments.videos.map(async (vid) =>
-                    isFile(vid) ? await fileToBase64(vid) : vid
-                  )
+                  block.content.attachments.videos.map(async (vid) => {
+                    if (typeof vid === "string" && /^(\d+(\.\d+)?)-(None|\d+(\.\d+)?)$/.test(vid)) {
+                      
+                      timestamp = vid;
+                      return null; 
+                    }
+                    return isFile(vid) ? await fileToBase64(vid) : vid;
+                  })
                 );
+                
+                videosBase64 = videosBase64.filter(Boolean);
               }
-
+            
               return [
                 {
                   id: block.id,
@@ -494,9 +504,12 @@ export default function LessonBuilder() {
                   natural_text: block.content.html || "",
                   images: imagesBase64,
                   videos: videosBase64,
+                  video_timestamp: timestamp, 
                 },
               ];
-            } else if (block.type === "doc-comparison") {
+            }
+            
+             else if (block.type === "doc-comparison") {
               let documentBase64 = "";
 
               if (block.content.document) {
@@ -555,7 +568,7 @@ export default function LessonBuilder() {
         .map((file) => {
           if (!file?.file) return null;
 
-          const uploadUrl = item?.image_url;
+          const uploadUrl = item?.image_url[0];
           if (!uploadUrl) return null;
 
           // console.log("Uploading MAIN image:", file.file.name, "→", uploadUrl);
@@ -632,8 +645,8 @@ export default function LessonBuilder() {
     if (imageObject) {
       files.push({
         file: imageObject?.question?.[0]?.file || null,
-        type: "image/jpeg", // enforce correct MIME
-        option: imageObject?.options || [], // options contain { name, file }
+        type: "image/jpeg", 
+        option: imageObject?.options || [], 
       });
     }
     return files;

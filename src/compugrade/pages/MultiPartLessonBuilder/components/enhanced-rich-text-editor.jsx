@@ -215,12 +215,12 @@ export function EnhancedRichTextEditor({ content, onContentChange, isCollapsed =
                 <ImageIcon className="w-4 h-4" />
               </div>
 
-              <div
+              {/* <div
                 onClick={() => setShowLinkInput(!showLinkInput)}
                 className="h-9 w-9 p-0 hover:bg-blue-100 hover:text-blue-600 rounded transition-colors flex items-center justify-center"
               >
                 <LinkIcon className="w-4 h-4" />
-              </div>
+              </div> */}
             </div>
           </div>
 

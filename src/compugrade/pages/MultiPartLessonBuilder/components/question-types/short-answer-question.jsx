@@ -58,6 +58,7 @@ export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
               onRemove={() => onQuestionChange({ ...question, image_url: "", image_name: "" })}
               label="Attach question image"
               scope={{ questionId: question.id, kind: 'question' }}
+              fileName={question.image_name}
               showPreview={false}
             />
           </div>
