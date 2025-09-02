@@ -338,7 +338,7 @@ export function HybridContentEditor({
                       <div className="flex items-center gap-2 mr-2">
                        
                         <select
-                          defaultValue={"foundation"}
+                          defaultValue="foundation"
                           value={block.content.item_type || "foundation"}
                           className="px-2 py-1 text-xs rounded  text-gray-950 border-green-200 border bg-transparent"
                           onChange={(e) => {

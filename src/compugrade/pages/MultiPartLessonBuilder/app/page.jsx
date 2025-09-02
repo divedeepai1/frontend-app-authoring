@@ -154,7 +154,7 @@ export default function LessonBuilder() {
                   ...(item.video_timestamp ? [item.video_timestamp] : []),
                 ],
               },
-              item_type: item.item_type || "foundation",
+              item_type: item.item_type == "foundation" || item.item_type == "certification" ? item.item_type : "foundation",
             },
           });
         } else if (item.block_type === "doc-comparison") {
