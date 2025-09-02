@@ -26,7 +26,10 @@ export function HybridContentEditor({
   selectedPart,
 }) {
   const [blocks, setBlocks] = useState(content.blocks || []);
-  const [timestampPreview, setTimestampPreview] = useState({ open: false, timestamp: null });
+  const [timestampPreview, setTimestampPreview] = useState({
+    open: false,
+    timestamp: null,
+  });
 
   const [videoEnabled, setVideoEnabled] = useState(
     content.videoEnabled ?? false
@@ -52,11 +55,9 @@ export function HybridContentEditor({
   function getUrl(item) {
     if (item instanceof File || item instanceof Blob) {
       return URL.createObjectURL(item);
-    } 
-    else{
-      return item
+    } else {
+      return item;
     }
-   
   }
 
   const updateContent = (newContent) => {
@@ -95,7 +96,7 @@ export function HybridContentEditor({
   };
 
   const addInstructionBlock = () => {
-    const ins = blocks.filter(b=>b.type==="instruction").length+1
+    const ins = blocks.filter((b) => b.type === "instruction").length + 1;
     const newBlock = {
       id: `instruction-${Date.now()}`,
       type: "instruction",
@@ -174,70 +175,6 @@ export function HybridContentEditor({
     setBlocks(newBlocks);
     updateContent({ ...content, blocks: newBlocks });
   };
-
-  // const handleVideoToggle = (enabled) => {
-  //   setVideoEnabled(enabled);
-  //   updateContent({ ...content, videoEnabled: enabled });
-  // };
-
-  // const handleVideoUpload = (event) => {
-  //   const file = event.target.files?.[0];
-  //   if (file) {
-  //     setUploadedVideo(file);
-  //     updateContent({ ...content, videos: [file] });
-  //   }
-  // };
-
-  // const removeVideo = () => {
-  //   setUploadedVideo(null);
-  //   updateContent({ ...content, videos: [] });
-  // };
-
-  // const handleDocumentComparisonToggle = (enabled) => {
-  //   setDocumentComparisonEnabled(enabled);
-  //   const newDocComparison = {
-  //     enabled,
-  //     mode: enabled ? documentComparisonMode : "comparison-only",
-  //     documents: enabled ? content.documentComparison?.documents || [] : [],
-  //   };
-  //   updateContent({ ...content, documentComparison: newDocComparison });
-  // };
-
-  // const handleComparisonModeChange = (mode) => {
-  //   setDocumentComparisonMode(mode);
-  //   const newDocComparison = {
-  //     enabled: documentComparisonEnabled,
-  //     mode,
-  //     documents: content.documentComparison?.documents || [],
-  //   };
-  //   updateContent({ ...content, documentComparison: newDocComparison });
-  // };
-
-  // const handleSourceDocumentUpload = (event) => {
-  //   const file = event.target.files?.[0];
-  //   if (file) {
-  //     setSourceDocument(file);
-  //     updateContent({ ...content, sourceDocument: file });
-  //   }
-  // };
-
-  // const handleAnswerKeyUpload = (event) => {
-  //   const file = event.target.files?.[0];
-  //   if (file) {
-  //     setAnswerKey(file);
-  //     updateContent({ ...content, answerKey: file });
-  //   }
-  // };
-
-  // const removeSourceDocument = () => {
-  //   setSourceDocument(null);
-  //   updateContent({ ...content, sourceDocument: null });
-  // };
-
-  // const removeAnswerKey = () => {
-  //   setAnswerKey(null);
-  //   updateContent({ ...content, answerKey: null });
-  // };
 
   const handleBlockDragStart = (index) => {
     setDraggedBlockIndex(index);
@@ -323,9 +260,6 @@ export function HybridContentEditor({
 
   return (
     <div className="space-y-4">
-      {/* Part Configuration Section moved to Lesson-level modal in page.jsx */}
-
-      {/* Content Blocks */}
       <div className="space-y-3">
         {blocks.map((block, index) => (
           <div
@@ -355,7 +289,7 @@ export function HybridContentEditor({
                   <FileDiffIcon className="w-5 h-5 text-orange-600" />
                 )}
 
-                <EditableBlockName block={block} renameBlock={renameBlock}  />
+                <EditableBlockName block={block} renameBlock={renameBlock} />
               </div>
 
               <div className="flex items-center gap-2">
@@ -402,6 +336,25 @@ export function HybridContentEditor({
                       </div>
 
                       <div className="flex items-center gap-2 mr-2">
+                       
+                        <select
+                          defaultValue={"foundation"}
+                          value={block.content.item_type || "foundation"}
+                          className="px-2 py-1 text-xs rounded  text-gray-950 border-green-200 border bg-transparent"
+                          onChange={(e) => {
+                            const newType = e.target.value; 
+                            updateBlock(block.id, { 
+                              ...block.content,
+                              item_type: newType,
+                            });
+                          }}
+                        >
+                          <option value="certification">
+                            Certification Skill
+                          </option>
+                          <option value="foundation">Foundation Skill</option>
+                        </select>
+
                         <button
                           onClick={() =>
                             triggerHiddenInput(`instr-img-${block.id}`)
@@ -410,6 +363,7 @@ export function HybridContentEditor({
                         >
                           <ImageIcon className="w-4 h-4" /> Image
                         </button>
+
                         <button
                           onClick={() =>
                             triggerHiddenInput(`instr-vid-${block.id}`)
@@ -431,7 +385,7 @@ export function HybridContentEditor({
                         onToggleCollapse={() => toggleBlockCollapse(block.id)}
                         hideMediaButtons
                       />
-                      {/* Hidden inputs for attachments */}
+
                       <input
                         id={`instr-img-${block.id}`}
                         type="file"
@@ -461,7 +415,6 @@ export function HybridContentEditor({
                         }
                       />
 
-                      {/* Attachment cards */}
                       <div className="mt-2 flex flex-wrap gap-3">
                         {(block.content.attachments?.images || []).map(
                           (img, idx) => (
@@ -479,7 +432,9 @@ export function HybridContentEditor({
                             >
                               <div className="flex items-center gap-2">
                                 <Eye className="w-4 h-4" />
-                                <span className="truncate">{"Image Attached " + (idx + 1)}</span>
+                                <span className="truncate">
+                                  {"Image Attached " + (idx + 1)}
+                                </span>
                               </div>
                               <div
                                 onClick={(e) => {
@@ -498,70 +453,77 @@ export function HybridContentEditor({
                           )
                         )}
 
-{(block.content.attachments?.videos || []).map((vid, idx) => {
+                        {(block.content.attachments?.videos || []).map(
+                          (vid, idx) => {
+                            const isTimestamp = (vid) => {
+                              // 1. Explicitly exclude File and Blob objects
+                              if (vid instanceof File || vid instanceof Blob) {
+                                return false;
+                              }
 
-const isTimestamp = (vid) => {
-  // 1. Explicitly exclude File and Blob objects
-  if (vid instanceof File || vid instanceof Blob) {
-    return false;
-  }
+                              // 2. Must be a string to be considered timestamp
+                              if (typeof vid !== "string") {
+                                return false;
+                              }
 
-  // 2. Must be a string to be considered timestamp
-  if (typeof vid !== "string") {
-    return false;
-  }
+                              // 3. Exclude URLs (http/https/blob) and file-like names
+                              if (/^(https?:\/\/|blob:)/i.test(vid)) {
+                                return false;
+                              }
+                              if (/\.(mp4|mov|avi|mkv|webm)$/i.test(vid)) {
+                                return false;
+                              }
 
-  // 3. Exclude URLs (http/https/blob) and file-like names
-  if (/^(https?:\/\/|blob:)/i.test(vid)) {
-    return false;
-  }
-  if (/\.(mp4|mov|avi|mkv|webm)$/i.test(vid)) {
-    return false;
-  }
+                              // 4. Only allow "start-end" or "start-None"
+                              return /^\d+-(\d+|None)$/i.test(vid);
+                            };
 
-  // 4. Only allow "start-end" or "start-None"
-  return /^\d+-(\d+|None)$/i.test(vid);
-};
+                            return (
+                              <div
+                                key={`vid-${idx}`}
+                                className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-purple-200 text-purple-700 text-sm cursor-pointer shadow-sm hover:shadow"
+                                onClick={() => {
+                                  if (isTimestamp(vid)) {
+                                    setTimestampPreview({
+                                      open: true,
+                                      timestamp: vid,
+                                    });
+                                  } else {
+                                    setPreviewState({
+                                      open: true,
+                                      url: getUrl(vid),
+                                      type: "video",
+                                      name: "Video Attached " + (idx + 1),
+                                    });
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center gap-2 pr-6">
+                                  <Eye className="w-4 h-4" />
+                                  <span className="truncate">
+                                    {isTimestamp(vid)
+                                      ? `Timestamp Video`
+                                      : `Video Attached ${idx + 1}`}
+                                  </span>
+                                </div>
 
-  return (
-    <div
-
-      key={`vid-${idx}`}
-      className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-purple-200 text-purple-700 text-sm cursor-pointer shadow-sm hover:shadow"
-      onClick={() => {
-
-        if (isTimestamp(vid)) {
-          setTimestampPreview({ open: true, timestamp: vid });
-        } else {
-          setPreviewState({
-            open: true,
-            url: getUrl(vid),
-            type: "video",
-            name: "Video Attached " + (idx + 1),
-          });
-        }
-      }}
-    >
-      <div className="flex items-center gap-2 pr-6">
-        <Eye className="w-4 h-4" />
-        <span className="truncate">
-          {isTimestamp(vid) ? `Timestamp Video` : `Video Attached ${idx + 1}`}
-        </span>
-      </div>
-
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          removeInstructionAttachment(block, "video", idx);
-        }}
-        className="absolute top-1 right-1 p-0.5 rounded-full text-red-500 cursor-pointer"
-      >
-        <X className="w-3.5 h-3.5" />
-      </div>
-    </div>
-  );
-}
-)}
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeInstructionAttachment(
+                                      block,
+                                      "video",
+                                      idx
+                                    );
+                                  }}
+                                  className="absolute top-1 right-1 p-0.5 rounded-full text-red-500 cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
                       </div>
                     </div>
                   </div>
@@ -570,7 +532,7 @@ const isTimestamp = (vid) => {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700">
-                        Document Comparison Mode
+                        Document Comparison Mode (NG)
                       </label>
                       <select
                         value={block.content.mode}
@@ -583,10 +545,10 @@ const isTimestamp = (vid) => {
                         className="mt-1 w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                       >
                         <option value="comparison-only">
-                          Document Comparison Only
+                          Document Comparison Only (NG)
                         </option>
                         <option value="state-of-document">
-                          State of the Document
+                          State of the Document (NG)
                         </option>
                         <option value="graded-comparison">
                           Graded Comparison
@@ -624,96 +586,68 @@ const isTimestamp = (vid) => {
                       </p>
                     </div>
 
-                    {/* Legacy multi-document UI - commented but kept */}
-                    {/**
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Relevant Document (DOC/DOCX)</label>
-                      <input
-                        type="file"
-                        accept=".doc,.docx"
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || [])
-                          const docs = files.map((f) => ({ name: f.name, type: 'doc', url: URL.createObjectURL(f) }))
-                          updateBlock(block.id, { ...block.content, documents: [ ...(block.content.documents||[]), ...docs ] })
-                        }}
-                        className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded"
-                      />
-                    </div>
+                    {/* Show upload only when "state-of-document" is selected */}
+                    {block.content.mode === "state-of-document" && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">
+                          Relevant Document (DOC/DOCX)
+                        </label>
+                        {block.content.document ? (
+                          <div className="flex items-center justify-between gap-4 p-2 rounded border border-orange-200 bg-orange-50">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">📄</span>
+                              <div className="text-sm font-medium">
+                                Comparison Document Attached
+                              </div>
+                            </div>
 
-                    <div className="space-y-2">
-                      {(block.content.documents || []).map((document, i) => (
-                        <div key={i} className="flex items-center justify-between gap-4 p-2 rounded">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">📄</span>
-                            <div className="text-sm font-medium">{document.name}</div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button className="px-2 py-1 text-xs border-none bg-red-50 rounded" onClick={() => {
-                              const updated = (block.content.documents||[]).filter((_, idx) => idx !== i)
-                              updateBlock(block.id, { ...block.content, documents: updated })
-                            }}>
-                              <X className="w-4 h-4"  color="red"/>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    */}
-
-                    {/* New single-file UI */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">
-                        Relevant Document (DOC/DOCX)
-                      </label>
-                      {block.content.document ? (
-                        <div className="flex items-center justify-between gap-4 p-2 rounded border border-orange-200 bg-orange-50">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">📄</span>
-                            <div className="text-sm font-medium">
-                              Comparison Document Attached
+                            <div className="flex items-center gap-2">
+                              <div
+                                onClick={() =>
+                                  downloadFile(
+                                    block.content.document,
+                                    "answer-key"
+                                  )
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                              </div>
+                              <button
+                                className="px-2 py-1 text-xs border-none bg-red-50 rounded"
+                                onClick={() =>
+                                  updateBlock(block.id, {
+                                    ...block.content,
+                                    document: null,
+                                  })
+                                }
+                              >
+                                <X className="w-4 h-4" color="red" />
+                              </button>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2">
-                             <div
-                                                         onClick={() => downloadFile(block.content.document, "answer-key")}
-                                                          className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                                                        >
-                                                          <Download className="w-4 h-4" />
-                            </div>
-                            <button
-                              className="px-2 py-1 text-xs border-none bg-red-50 rounded"
-                              onClick={() =>
+                        ) : (
+                          <input
+                            type="file"
+                            accept=".doc,.docx"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
                                 updateBlock(block.id, {
                                   ...block.content,
-                                  document: null,
-                                })
+                                  document: f,
+                                });
+                                e.target.value = "";
                               }
-                            >
-                              <X className="w-4 h-4" color="red" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <input
-                          type="file"
-                          accept=".doc,.docx"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) {
-                              updateBlock(block.id, {
-                                ...block.content,
-                                document: f,
-                              });
-                              e.target.value = "";
-                            }
-                          }}
-                          className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded"
-                        />
-                      )}
-                    </div>
+                            }}
+                            className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded"
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
+
                 {block.type === "objective" && (
                   <ObjectiveEditor
                     content={block.content}
@@ -769,11 +703,11 @@ const isTimestamp = (vid) => {
       </div>
 
       <TimestampModal
-  open={timestampPreview.open}
-  timestamp={timestampPreview.timestamp}
-  onClose={() => setTimestampPreview({ open: false, timestamp: null })}
-  videoUrl={video}
-/>
+        open={timestampPreview.open}
+        timestamp={timestampPreview.timestamp}
+        onClose={() => setTimestampPreview({ open: false, timestamp: null })}
+        videoUrl={video}
+      />
 
       {/* Preview Modal */}
       {previewState.open && (

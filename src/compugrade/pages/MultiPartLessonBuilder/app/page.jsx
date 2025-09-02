@@ -154,6 +154,7 @@ export default function LessonBuilder() {
                   ...(item.video_timestamp ? [item.video_timestamp] : []),
                 ],
               },
+              item_type: item.item_type || "foundation",
             },
           });
         } else if (item.block_type === "doc-comparison") {
@@ -500,7 +501,7 @@ export default function LessonBuilder() {
                   block_name: block.name,
                   instruction_category: "Text",
                   block_type: block.type,
-                  item_type: "u",
+                  item_type: block.content.item_type || "foundation",
                   natural_text: block.content.html || "",
                   images: imagesBase64,
                   videos: videosBase64,

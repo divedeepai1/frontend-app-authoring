@@ -32,7 +32,7 @@ const NewSkills = () => {
 
   useEffect(() => {
     const skills_used = sessionStorage.getItem("skills_used");
-
+  
     const fetchSkills = async () => {
       try {
         const response = await fetch(`${base_url}/api/skills/get_skills`, {
@@ -42,30 +42,40 @@ const NewSkills = () => {
             "ngrok-skip-browser-warning": "69420",
           },
         });
-
+  
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }
+  
         const data = await response.json();
         setSkills(data?.skills);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching skills:", err);
       }
     };
-
-    const parsedSkills = JSON.parse(skills_used);
-    if (parsedSkills) {
-      const preselected = parsedSkills?.map((item, index) => ({
-        id: index + 1,
-        label: item?.customer_facing_name,
-        value: item?.skill_json,
-        color: "orange",
-      }));
-      setSelectedSkills(preselected);
+  
+    // Only try parse if value exists
+    if (skills_used) {
+      try {
+        const parsedSkills = JSON.parse(skills_used);
+  
+        if (Array.isArray(parsedSkills) && parsedSkills.length > 0) {
+          const preselected = parsedSkills.map((item, index) => ({
+            id: index + 1,
+            label: item?.customer_facing_name,
+            value: item?.skill_json,
+            color: "orange",
+          }));
+          setSelectedSkills(preselected);
+        }
+      } catch (err) {
+        console.error("Invalid skills_used JSON in sessionStorage:", err);
+      }
     }
-
+  
     fetchSkills();
-  }, [database,fetched]);
+  }, [database, fetched]);
+  
 
   const AddMoreSkills = async (e) => {
     e.preventDefault();
