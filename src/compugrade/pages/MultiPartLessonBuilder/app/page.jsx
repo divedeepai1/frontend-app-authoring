@@ -371,6 +371,31 @@ export default function LessonBuilder() {
                 errors.push(`${label}: Item text cannot be empty.`);
             }
           });
+        } else if (block.type === "doc-comparison") {
+          const label = `Part ${pIndex + 1} / Block ${bIndex + 1}`;
+          const mode = block.content?.mode || "";
+          const document = block.content?.document;
+          
+          if (!mode.trim()) {
+            errors.push(`${label}: Comparison mode is required.`);
+          }
+          
+          // Check if comparison-only or graded-comparison modes require part-level source and answer key
+          if (mode === "comparison-only" || mode === "graded-comparison") {
+            if (!part.sourceDocument) {
+              errors.push(`${label}: Source document is required in part configuration for ${mode} mode.`);
+            }
+            if (!part.answerKey) {
+              errors.push(`${label}: Answer key is required in part configuration for ${mode} mode.`);
+            }
+          }
+          
+          // Check if state-of-art mode requires document attachment
+          if (mode === "state-of-art") {
+            if (!document) {
+              errors.push(`${label}: Document attachment is required for state-of-art mode.`);
+            }
+          }
         }
       });
     });
