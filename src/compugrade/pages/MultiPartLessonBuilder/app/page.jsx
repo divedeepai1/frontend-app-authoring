@@ -38,7 +38,7 @@ export default function LessonBuilder() {
   
 
   const handleSaveAll = async (instructions) => {
-    console.log("Saving all instructions:", instructions);
+    // console.log("Saving all instructions:", instructions);
   
     try {
       const response = await fetch(`${base_url}/api/openedx/update_base_items_timestamp`, {
@@ -107,9 +107,9 @@ export default function LessonBuilder() {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const videoObjectUrlRef = useRef("");
 
-  console.log(lessonParts);
+  // console.log(lessonParts);
 
-  console.log(lessonConfig)
+  // console.log(lessonConfig)
 
   function fromBackendToFrontend(backendData) {
     const lessons = backendData?.lessons?.map((lesson) => {

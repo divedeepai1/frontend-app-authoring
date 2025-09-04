@@ -9,7 +9,7 @@ const SaveTimestampsDialog = ({
   onSave,
   onSaveAll,
 }) => {
-  console.log(data);
+  // console.log(data);
   const videoRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
