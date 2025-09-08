@@ -338,8 +338,8 @@ export function HybridContentEditor({
                       <div className="flex items-center gap-2 mr-2">
                        
                         <select
-                          defaultValue="foundation"
-                          value={block.content.item_type || "foundation"}
+                          defaultValue="no-skill"
+                          value={block.content.item_type || "no-skill"}
                           className="px-2 py-1 text-xs rounded  text-gray-950 border-green-200 border bg-transparent"
                           onChange={(e) => {
                             const newType = e.target.value; 
@@ -353,6 +353,9 @@ export function HybridContentEditor({
                             Certification Skill
                           </option>
                           <option value="foundation">Foundation Skill</option>
+                          <option value="no-skill">
+                            No Skill
+                          </option>
                         </select>
 
                         <button
