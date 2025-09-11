@@ -33,7 +33,7 @@ export default function QuestionTypeSelector({ selectedType, onTypeChange, quizT
 
   return (
     <>
-    {quizType =="multiple_choice" || quizType=="multi_component" ?
+    {quizType =="multi_component" ?
       <div className="mb-3">
       <Form.Label className="mb-2" style={{ fontSize: "14px", fontWeight: "600" }}>
         Question Type

@@ -4,11 +4,12 @@ import HeaderTop from "../../header";
 import Header from "./../components/header";
 import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../cms-csrftoken";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { X } from "lucide-react";
 
 function McqForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [quizType, setQuizType] = useState("csv");
   const [csvFile, setCsvFile] = useState(null);
   const [csvError, setCsvError] = useState("");
@@ -67,7 +68,8 @@ function McqForm() {
       const token = await fetchCsrfToken();
 
       if (quizType === "multiple_choice") {
-        navigate("/create-multi-quiz", { state: { quizType: "multiple_choice" } });
+        const formValues = location.state?.formValues || {};
+        navigate("/create-multi-quiz", { state: { quizType: "multiple_choice", formValues } });
       } else if (quizType === "csv") {
         if (!csvFile) {
           setCsvError("Please select a CSV file before continuing.");
@@ -96,8 +98,9 @@ function McqForm() {
         }
 
         const responseData = await response.json();
+        const formValues = location.state?.formValues || {};
         navigate("/create-multi-quiz", {
-          state: { quizType: "multiple_choice", data: responseData?.questions },
+          state: { quizType: "multiple_choice", data: responseData?.questions, formValues },
         });
       } else if (quizType === "chapter") {
         const response = await fetch(
@@ -121,8 +124,9 @@ function McqForm() {
         }
 
         const responseData = await response.json();
+        const formValues = location.state?.formValues || {};
         navigate("/create-multi-quiz", {
-          state: { quizType: "multiple_choice", data: responseData?.questions },
+          state: { quizType: "multiple_choice", data: responseData?.questions, formValues },
         });
       }
     } catch (error) {

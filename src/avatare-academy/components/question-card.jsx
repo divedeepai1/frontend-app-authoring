@@ -15,17 +15,17 @@ export default function QuestionCard({ question, questionNumber, onUpdate ,hasVa
     switch (question.type) {
       
       case "true_false":
-        return <TrueFalseQuestion question={question} onUpdate={onUpdate} />
+        return <TrueFalseQuestion question={question} onUpdate={onUpdate} showValidation={hasValidationError} />
       case "multiple_choice":
-        return <MultipleChoiceQuestion question={question} onUpdate={onUpdate} />
+        return <MultipleChoiceQuestion question={question} onUpdate={onUpdate} showValidation={hasValidationError} />
       case "fill_blank":
-        return <FillInBlankQuestion question={question} onUpdate={onUpdate} />
+        return <FillInBlankQuestion question={question} onUpdate={onUpdate} showValidation={hasValidationError} />
       case "short_answer":
-        return <ShortAnswerQuestion question={question} onUpdate={onUpdate} />
+        return <ShortAnswerQuestion question={question} onUpdate={onUpdate} showValidation={hasValidationError} />
       case "long_answer":
-        return <LongAnswerQuestion question={question} onUpdate={onUpdate} />
+        return <LongAnswerQuestion question={question} onUpdate={onUpdate} showValidation={hasValidationError} />
       case "matching":
-          return <MatchingQuestion question={question} onUpdate={onUpdate} />
+          return <MatchingQuestion question={question} onUpdate={onUpdate} showValidation={hasValidationError} />
       default:
         return null
     }

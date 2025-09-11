@@ -2,8 +2,9 @@
 
 import { Form, Button, Row, Col } from "react-bootstrap"
 import { Plus } from "lucide-react"
+import MediaAttachment from "../common/MediaAttachment"
 
-export default function LongAnswerQuestion({ question, onUpdate }) {
+export default function LongAnswerQuestion({ question, onUpdate, showValidation = false }) {
   return (
     <>
       <div className="mb-3">
@@ -16,25 +17,18 @@ export default function LongAnswerQuestion({ question, onUpdate }) {
           value={question.questionText}
           onChange={(e) => onUpdate({ questionText: e.target.value })}
           style={{ resize: "vertical" }}
-          isInvalid={!question.questionText.trim()}
+          isInvalid={showValidation && !question.questionText.trim()}
         />
-          {!question.questionText.trim() && <Form.Control.Feedback type="invalid">Question text is required</Form.Control.Feedback>}
+        {showValidation && !question.questionText.trim() && (
+          <Form.Control.Feedback type="invalid">Question text is required</Form.Control.Feedback>
+        )}
       </div>
 
-      <Row className="mb-3">
-        <Col xs="auto">
-          <Button variant="outline-secondary" size="sm" className="d-flex align-items-center">
-            <Plus size={16} className="me-1" />
-            Add Image
-          </Button>
-        </Col>
-        <Col xs="auto">
-          <Button variant="outline-secondary" size="sm" className="d-flex align-items-center">
-            <Plus size={16} className="me-1" />
-            Add Video
-          </Button>
-        </Col>
-      </Row>
+      <MediaAttachment 
+        questionId={question.id}
+        media={question.media || {}}
+        onMediaChange={(media) => onUpdate({ media })}
+      />
 
       <div className="mb-3">
         <Form.Label className="mb-2" style={{ fontSize: "14px", fontWeight: "600" }}>
@@ -47,9 +41,11 @@ export default function LongAnswerQuestion({ question, onUpdate }) {
           value={question.answer}
           onChange={(e) => onUpdate({ answer: e.target.value })}
           style={{ resize: "vertical" }}
-          isInvalid={!question.answer.trim()}
+          isInvalid={showValidation && !question.answer.trim()}
         />
-          {!question.answer.trim() && <Form.Control.Feedback type="invalid">Correct answer is required</Form.Control.Feedback>}
+        {showValidation && !question.answer.trim() && (
+          <Form.Control.Feedback type="invalid">Correct answer is required</Form.Control.Feedback>
+        )}
       </div>
 
       <div className="mb-3">
@@ -61,9 +57,11 @@ export default function LongAnswerQuestion({ question, onUpdate }) {
           value={question.points}
           onChange={(e) => onUpdate({ points: Number.parseInt(e.target.value) || 0 })}
           style={{ width: "150px" }}
-          isInvalid={!question.points || question.points <= 0}
+          isInvalid={showValidation && (!question.points || question.points <= 0)}
         />
-        {question.points <= 0 &&<Form.Control.Feedback type="invalid">Points must be greater than 0</Form.Control.Feedback>}
+        {showValidation && (!question.points || question.points <= 0) && (
+          <Form.Control.Feedback type="invalid">Points must be greater than 0</Form.Control.Feedback>
+        )}
 
       </div>
     </>

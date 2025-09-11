@@ -1,16 +1,31 @@
 
 
 import { Form, Button, Row, Col } from "react-bootstrap"
-import { Plus } from "lucide-react"
+import { Plus, X } from "lucide-react"
+import MediaAttachment from "../common/MediaAttachment"
 
-export default function MultipleChoiceQuestion({ question, onUpdate }) {
-  const options = question.options || ["", "", "", ""]
+export default function MultipleChoiceQuestion({ question, onUpdate, showValidation = false }) {
+  const options = question.options && question.options.length > 0 ? question.options : ["", ""]
   const filledOptions = options.filter((opt) => opt.trim())
 
   const updateOption = (index, value) => {
     const newOptions = [...options]
     newOptions[index] = value
     onUpdate({ options: newOptions })
+  }
+
+  const addOption = () => {
+    if (options.length < 4) {
+      const newOptions = [...options, ""]
+      onUpdate({ options: newOptions })
+    }
+  }
+
+  const removeOption = (index) => {
+    if (options.length > 2 && index >= 2) {
+      const newOptions = options.filter((_, i) => i !== index)
+      onUpdate({ options: newOptions })
+    }
   }
 
   return (
@@ -25,32 +40,25 @@ export default function MultipleChoiceQuestion({ question, onUpdate }) {
           value={question.questionText}
           onChange={(e) => onUpdate({ questionText: e.target.value })}
           style={{ resize: "vertical" }}
-          isInvalid={!question.questionText.trim()}
-          />
-            {!question.questionText.trim() && <Form.Control.Feedback type="invalid">Question text is required</Form.Control.Feedback>}
+          isInvalid={showValidation && !question.questionText.trim()}
+        />
+        {showValidation && !question.questionText.trim() && (
+          <Form.Control.Feedback type="invalid">Question text is required</Form.Control.Feedback>
+        )}
       </div>
 
-      <Row className="mb-3">
-        <Col xs="auto">
-          <Button variant="outline-secondary" size="sm" className="d-flex align-items-center">
-            <Plus size={16} className="me-1" />
-            Add Image
-          </Button>
-        </Col>
-        <Col xs="auto">
-          <Button variant="outline-secondary" size="sm" className="d-flex align-items-center">
-            <Plus size={16} className="me-1" />
-            Add Video
-          </Button>
-        </Col>
-      </Row>
+      <MediaAttachment 
+        questionId={question.id}
+        media={question.media || {}}
+        onMediaChange={(media) => onUpdate({ media })}
+      />
 
       <div className="mb-3">
         <Form.Label className="mb-2" style={{ fontSize: "14px", fontWeight: "600" }}>
           Answer Options
         </Form.Label>
         {options.map((option, index) => (
-          <div key={index} className="d-flex align-items-center mb-2" style={{width:"20%" ,gap:"6px"}}>
+          <div key={index} className="d-flex align-items-center mb-2" style={{width:"100%" ,gap:"6px"}}>
             <Form.Check
               type="radio"
               id={`option-${index}-${question.id}`}
@@ -65,15 +73,35 @@ export default function MultipleChoiceQuestion({ question, onUpdate }) {
               value={option}
               onChange={(e) => updateOption(index, e.target.value)}
             />
+            {index >= 2 && (
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={() => removeOption(index)}
+                style={{ minWidth: "32px", height: "32px", padding: "0" }}
+              >
+                <X size={16} />
+              </Button>
+            )}
           </div>
         ))}
-         {filledOptions.length < 4 && (
-          <div className="text-danger mt-1" style={{ fontSize: "12px" }}>
-            At least 4 options are required
+        
+        {options.length < 4 && (
+          <div className="mt-2">
+            <Button variant="outline-secondary" size="sm" onClick={addOption}>
+              <Plus size={16} className="me-1" />
+              Add Option
+            </Button>
           </div>
         )}
 
-        {!question.answer  && filledOptions.length >= 2 && (
+        {showValidation && filledOptions.length < 2 && (
+          <div className="text-danger mt-1" style={{ fontSize: "12px" }}>
+            At least 2 options are required
+          </div>
+        )}
+
+        {showValidation && !question.answer && filledOptions.length >= 2 && (
           <div className="text-danger mt-1" style={{ fontSize: "12px" }}>
             Please select the correct answer
           </div>
@@ -89,9 +117,11 @@ export default function MultipleChoiceQuestion({ question, onUpdate }) {
           value={question.points}
           onChange={(e) => onUpdate({ points: Number.parseInt(e.target.value) || 0 })}
           style={{ width: "150px" }}
-          isInvalid={!question.points || question.points <= 0}
+          isInvalid={showValidation && (!question.points || question.points <= 0)}
         />
-        {question.points <= 0 &&<Form.Control.Feedback type="invalid">Points must be greater than 0</Form.Control.Feedback>}
+        {showValidation && (!question.points || question.points <= 0) && (
+          <Form.Control.Feedback type="invalid">Points must be greater than 0</Form.Control.Feedback>
+        )}
 
       </div>
     </>

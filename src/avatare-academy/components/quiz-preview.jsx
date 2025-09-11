@@ -334,12 +334,30 @@ const QuestionRenderer = ({ question }) => {
       case "fill_blank":
         return (
           <div className="mt-3">
-            <Form.Label className="fw-bold mb-3">Answers</Form.Label>
-            {question?.correct_answers?.map((ans, index) => (
-              <div key={index} className="d-flex mb-2">
-                <Form.Control type="text" value={ans.answer_text} disabled style={{ background: "white" }} />
-              </div>
-            ))}
+            <Form.Label className="fw-bold mb-3">Answer Options</Form.Label>
+            {Array.isArray(question?.options) && question.options.length > 0 ? (
+              question.options.map((option, index) => (
+                <Form.Check
+                  key={index}
+                  type="radio"
+                  id={`q${question.id}-fib-${index}`}
+                  name={`question-${question.id}`}
+                  label={option.text}
+                  disabled
+                  value={option.text}
+                  checked={!!option.is_correct}
+                  className="custom-radio"
+                  inline
+                  style={{ display: "flex", gap: "6px" }}
+                />
+              ))
+            ) : (
+              (question?.correct_answers || []).map((ans, index) => (
+                <div key={index} className="d-flex mb-2">
+                  <Form.Control type="text" value={ans.answer_text} disabled style={{ background: "white" }} />
+                </div>
+              ))
+            )}
           </div>
         )
 
@@ -351,7 +369,7 @@ const QuestionRenderer = ({ question }) => {
               as="textarea"
               rows={3}
               disabled
-              value={question?.correct_answers[0].answer_text || ""}
+              value={question?.correct_answers[0]?.answer_text || ""}
               style={{ resize: "vertical", background: "white" }}
             />
           </div>
@@ -428,6 +446,7 @@ const QuestionRenderer = ({ question }) => {
 export default function QuizPreview({ isPublish }) {
   const [quizData, setQuizData] = useState(null)
   const [answers, setAnswers] = useState({})
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -463,6 +482,7 @@ export default function QuizPreview({ isPublish }) {
   const handlePublish = async (e) => {
     const quizId = sessionStorage.getItem("quizId")
     const token = await fetchCsrfToken()
+    setLoading(true)
     try {
       const response = await fetch(`${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/publish/`, {
         method: "POST",
@@ -482,6 +502,8 @@ export default function QuizPreview({ isPublish }) {
       navigate("/quiz-dashboard")
     } catch (error) {
       console.error("Error:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -497,11 +519,23 @@ export default function QuizPreview({ isPublish }) {
             <Button
               variant="primary"
               style={{ height: "40px" }}
+              disabled={loading}
               onClick={(e) => (isPublish ? navigate("/quiz-dashboard") : handlePublish(e))}
-              className="primary-button px-2"
+              className="primary-button px-2 d-flex align-items-center justify-content-center"
               size="sm"
             >
-              Publish & Proceed
+              {loading ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2 mr-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Processing...
+                </>
+              ) : (
+                "Publish & Proceed"
+              )}
             </Button>
           </Col>
         </Row>

@@ -1,19 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Container, Row, Col, Form, Button, Card } from "react-bootstrap";
 
 import HeaderTop from "../../header";
 import Header from "./../components/header";
 import { getConfig } from "@edx/frontend-platform";
-import { useEffect } from "react";
 import { fetchCsrfToken } from "../../cms-csrftoken";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function QuizForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [quizTitle, setQuizTitle] = useState("");
   const [quizDescription, setQuizDescription] = useState("");
   const [quizType, setQuizType] = useState("multi_component");
   const [quizInstructions, setQuizInstructions] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Handle preserved values from back button
+  useEffect(() => {
+    if (location.state?.preservedValues) {
+      const { quizTitle, quizDescription, quizType, quizInstructions } = location.state.preservedValues;
+      if (quizTitle) setQuizTitle(quizTitle);
+      if (quizDescription) setQuizDescription(quizDescription);
+      if (quizType) setQuizType(quizType);
+      if (quizInstructions) setQuizInstructions(quizInstructions);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
@@ -24,6 +36,7 @@ function QuizForm() {
       return;
     }
   
+    setLoading(true);
     const token = await fetchCsrfToken();
   
     const data = JSON.stringify({
@@ -55,14 +68,25 @@ function QuizForm() {
       }
       const responseData = await response.json();
       sessionStorage.setItem("quizId", responseData.id);
+      
+      // Prepare form values to preserve
+      const formValues = {
+        quizTitle,
+        quizDescription,
+        quizType,
+        quizInstructions
+      };
+      
       if(quizType==="multiple_choice"){
-      navigate("/mcq-quiz");
+      navigate("/mcq-quiz", { state: { formValues } });
       }
       else{
-      navigate("/create-multi-quiz", { state: { quizType } });
+      navigate("/create-multi-quiz", { state: { quizType, formValues } });
       }
     } catch (error) {
       console.error("Error:", error.message);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -336,7 +360,8 @@ function QuizForm() {
                 </Button>
                 <button
                   type="submit"
-                  className="primary-button px-3"
+                  disabled={loading}
+                  className="primary-button px-3 d-flex align-items-center justify-content-center"
                   style={{
                     padding: "10px 24px",
                     fontSize: "0.95rem",
@@ -345,7 +370,18 @@ function QuizForm() {
                     marginLeft: "10px",
                   }}
                 >
-                  Continue to Add Questions
+                  {loading ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2 mr-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Processing...
+                    </>
+                  ) : (
+                    "Continue to Add Questions"
+                  )}
                 </button>
               </div>
             </form>

@@ -11,6 +11,7 @@ const Main = () => {
   const navigate= useNavigate();
   const [dashboardData, setDashboardData] = useState(null);
   const [refresh,setRefresh]=useState(false);
+  const [deleteLoading, setDeleteLoading] = useState({});
 
   useEffect(() => {
     const PostCategory = async () => {
@@ -49,6 +50,7 @@ const Main = () => {
     const confirmed = window.confirm("Are you sure you want to delete this quiz?");
     if (!confirmed) return;
 
+    setDeleteLoading(prev => ({ ...prev, [quizId]: true }));
     try {
       const response = await fetch(
         `${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/`,
@@ -74,6 +76,8 @@ const Main = () => {
       setRefresh(!refresh)
     } catch (error) {
       console.error("Error deleting quiz:", error.message);
+    } finally {
+      setDeleteLoading(prev => ({ ...prev, [quizId]: false }));
     }
   };
 
@@ -167,9 +171,10 @@ const Main = () => {
                       position: "absolute",
                       top: "16px",
                       right: "16px",
-                      cursor: "pointer",
+                      cursor: deleteLoading[quiz.id] ? "not-allowed" : "pointer",
+                      opacity: deleteLoading[quiz.id] ? 0.6 : 1,
                     }}
-                    onClick={() => handleDeleteQuiz(quiz.id)}
+                    onClick={() => !deleteLoading[quiz.id] && handleDeleteQuiz(quiz.id)}
                   />
 
                   <h6 className="fw-semibold mb-3" style={{ fontSize: "16px", color: "#1a1a1a" }}>

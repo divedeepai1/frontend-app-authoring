@@ -3,31 +3,38 @@ import { Container, Row, Col, Button, Alert } from "react-bootstrap"
 import QuestionCard from "./question-card"
 import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../cms-csrftoken"
-import { useNavigate } from "react-router"
+import { useNavigate, useLocation } from "react-router"
+import { ArrowLeft } from "lucide-react"
 
 export default function QuizBuilder({ quizType, quizId, status, data }) {
   const [validationErrors, setValidationErrors] = useState([])
   const [isPublish,setIsPublish]=useState(false);
   const [showValidation, setShowValidation] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [backLoading, setBackLoading] = useState(false)
   const [questions, setQuestions] = useState([
-    { id: 1, type: quizType === "multiple_choice" ? "multiple_choice" : quizType ==="matching" ? "matching" : "", questionText: "", options: ["", "", "", ""], answer: "", points: 0, blanks: [], pairs: [],connections: [], },
+    { id: 1, type: quizType === "multiple_choice" ? "multiple_choice" : quizType ==="matching" ? "matching" : "", questionText: "", options: ["", ""], answer: "", points: 0, blanks: ["", ""], pairs: [],connections: [], media: { images: [], videos: [] } },
   ])
   const navigate = useNavigate()
+  const location = useLocation()
 
   const addQuestion = () => {
     const newQuestion = {
       id: Date.now(),
       type: quizType === "multiple_choice" ? "multiple_choice" : "",
       questionText: "",
-      options: ["", "", "", ""],
+      options: ["", ""],
       answer: "",
       points: 0,
-      blanks: [],
+      blanks: ["", ""],
       pairs: [],
       connections: [],
+      media: { images: [], videos: [] }
     }
     setQuestions([...questions, newQuestion])
   }
+
+  console.log(questions)
 
   const parseQuestions = (questionsData) => {
     return questionsData.map((q) => {
@@ -40,7 +47,8 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
         options: [],
         blanks: [],
         pairs: [],
-        connections: []
+        connections: [],
+        media: { images: [], videos: [] }
       }
 
       if (q.question_type === "true_false") {
@@ -58,7 +66,12 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
       }
 
       if (q.question_type === "fill_blank") {
-        return { ...base, blanks: q.correct_answers.map((a) => a.answer_text) }
+        const correctIndex = q.options.findIndex((opt) => opt.is_correct)
+        return {
+          ...base,
+          blanks: q.options.map((o) => o.text),
+          answer: correctIndex >= 0 ? correctIndex.toString() : ""
+        }
       }
 
       if (q.question_type === "short_answer" || q.question_type === "long_answer") {
@@ -194,11 +207,13 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
           break
         case "multiple_choice":
           const filledOptions = (question.options || []).filter((opt) => opt.trim())
-          if (filledOptions.length < 4) questionErrors.push("At least 4 answer options are required")
+          if (filledOptions.length < 2) questionErrors.push("At least 2 answer options are required")
           if (!question.answer && question.answer !== "0") questionErrors.push("Select the correct answer")
           break
         case "fill_blank":
-          if (!question.blanks.length) questionErrors.push("Add at least one correct blank answer")
+          const filledBlanks = (question.blanks || []).filter((blank) => blank?.trim())
+          if (filledBlanks.length < 1) questionErrors.push("Add at least one blank answer")
+          if (!question.answer) questionErrors.push("Select the correct answer")
           break
         case "short_answer":
         case "long_answer":
@@ -232,9 +247,26 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
       window.scrollTo({ top: 0, behavior: "smooth" })
       return
     }
+    setLoading(true)
     const id = sessionStorage.getItem("quizId");
-    const data = convertQuestionsToBackendFormat(id, questions)
+    
     try {
+      // Collect all media files from all questions
+      const allMediaFiles = []
+      questions.forEach(question => {
+        if (question.media) {
+          if (question.media.images) {
+            allMediaFiles.push(...question.media.images.map(img => ({ ...img, questionId: question.id, questionType: question.type, mediaType: 'image' })))
+          }
+          if (question.media.videos) {
+            allMediaFiles.push(...question.media.videos.map(vid => ({ ...vid, questionId: question.id, questionType: question.type, mediaType: 'video' })))
+          }
+        }
+      })
+
+     
+      const data = convertQuestionsToBackendFormat(id, questions, allMediaFiles)
+      
       const token = await fetchCsrfToken()
       const response = await fetch(
         `${getConfig().STUDIO_BASE_URL}/quizplugin/api/questions/bulk-add/`,
@@ -250,6 +282,44 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
       )
       if (!response.ok) throw new Error(`Failed to save quiz: ${response.status}`)
       const responseData = await response.json()
+      if (responseData.questions && allMediaFiles.length > 0) {
+        const uploadPromises = []
+        responseData.questions.forEach(question => {
+          const questionMedia = allMediaFiles.filter(media => media.questionType == question.question_type)
+
+          
+          
+          questionMedia.forEach(media => {
+            let presignedUrl = null
+            
+            if (media.mediaType === 'image' && question.image_s3_url) {
+              presignedUrl = question.image_s3_url
+            } else if (media.mediaType === 'video' && question.video_s3_url) {
+              presignedUrl = question.video_s3_url
+            }
+            
+            if (presignedUrl) {
+            
+              uploadPromises.push(
+                uploadFileToS3(media.file, presignedUrl).then(success => ({
+                  questionId: media.questionId,
+                  questionType: media.questionType,
+                  mediaType: media.mediaType,
+                  filename: media.name,
+                  uploadSuccess: success
+                }))
+              )
+            }
+          })
+        })
+
+        if (uploadPromises.length > 0) {
+          const uploadResults = await Promise.all(uploadPromises)
+          const successfulUploads = uploadResults.filter(result => result.uploadSuccess)
+          console.log('Media upload results:', successfulUploads)
+        }
+      }
+
       if(isPublish){
       navigate("/publish-quiz" , { state: { isPublish : isPublish } })
       }
@@ -258,22 +328,78 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
       }
     } catch (err) {
       console.error("Error saving quiz:", err)
+    } finally {
+      setLoading(false)
     }
   }
   
-  function convertQuestionsToBackendFormat(id, questionsList) {
-    console.log(questionsList)
+  // Helper function to upload files to S3
+  const uploadFileToS3 = async (file, presignedUrl) => {
+    try {
+      const response = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error uploading file to S3:', error);
+      return false;
+    }
+  };
+
+  // Helper function to get presigned URLs for media files
+  // Note: Presigned URLs will now come from bulk-add response
+  // const getPresignedUrls = async (mediaFiles) => {
+  //   if (!mediaFiles || mediaFiles.length === 0) return [];
+  //   
+  //   const token = await fetchCsrfToken();
+  //   const response = await fetch(`${getConfig().STUDIO_BASE_URL}/quizplugin/api/media/presigned-urls/`, {
+  //     method: 'POST',
+  //     credentials: 'include',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'X-CSRFToken': token,
+  //     },
+  //     body: JSON.stringify({
+  //       files: mediaFiles.map(file => ({
+  //         filename: file.name,
+  //         content_type: file.type,
+  //         size: file.size
+  //       }))
+  //     }),
+  //   });
+
+  //   if (!response.ok) {
+  //     throw new Error(`Failed to get presigned URLs: ${response.status}`);
+  //   }
+
+  //   return await response.json();
+  // };
+
+  function convertQuestionsToBackendFormat(id, questionsList, allMediaFiles = []) {
+    
     return {
       quiz_id: id,
       auto_order: true,
       starting_order: 1,
       questions: questionsList.map((question, index) => {
+        // Get media files for this question (not uploaded yet)
+        const questionMedia = allMediaFiles.filter(media => media.questionId === question.id)
+        const images = questionMedia.filter(media => media.mediaType === 'image')
+        const videos = questionMedia.filter(media => media.mediaType === 'video')
+
         const base = {
           quiz: id,
           difficulty:"medium",
           question_type: question.type,
           text: question.questionText,
           points: question.points || 0,
+          // Send media filenames for presigned URL generation
+          // image: images.length > 0 ? images[0].name : null,
+          // video_url: videos.length > 0 ? videos[0].name : null
         }
         if (question.id && typeof question.id === "string") base.id = question.id
         if (question.type === "true_false") {
@@ -295,7 +421,17 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
             })),
           }
         }
-        if (["fill_blank", "short_answer", "long_answer"].includes(question.type)) {
+        if (question.type === "fill_blank") {
+          return {
+            ...base,
+            options: question.blanks.map((blank, i) => ({
+              text: blank,
+              is_correct: String(i) === question.answer,
+              order: i + 1,
+            })),
+          }
+        }
+        if (["short_answer", "long_answer"].includes(question.type)) {
           const answers = (question.blanks.length ? question.blanks : [question.answer]).filter(
             (ans) => ans && ans.trim() !== ""
           )
@@ -397,6 +533,70 @@ if (question.type === "matching") {
 
   }
 
+  const handleBack = async () => {
+    setBackLoading(true)
+    try {
+      // Check if we're in edit mode (existing quiz) or create mode (new quiz)
+      const isEditMode = quizId && !location.state?.formValues
+      
+      if (isEditMode) {
+        // Edit mode: Navigate back to quiz dashboard without deleting
+        navigate("/quiz-dashboard")
+      } else {
+        // Create mode: Delete the quiz that was created and go back to form
+        if (quizId) {
+          const token = await fetchCsrfToken()
+          const response = await fetch(
+            `${getConfig().STUDIO_BASE_URL}/quizplugin/api/quizzes/${quizId}/`,
+            {
+              method: "DELETE",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": token,
+              },
+            }
+          )
+
+          if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`Failed to delete quiz: ${response.status} ${errorText}`)
+          }
+        }
+
+        // Clear the quizId from session storage
+        sessionStorage.removeItem("quizId")
+
+        // Navigate back to new-quiz with preserved form values
+        const formValues = location.state?.formValues || {}
+        navigate("/create-new-quiz", { 
+          state: { 
+            preservedValues: formValues,
+            quizType: quizType 
+          } 
+        })
+      }
+    } catch (error) {
+      console.error("Error going back:", error.message)
+      // Still navigate back even if delete fails
+      const isEditMode = quizId && !location.state?.formValues
+      if (!isEditMode) {
+        sessionStorage.removeItem("quizId")
+        const formValues = location.state?.formValues || {}
+        navigate("/create-new-quiz", { 
+          state: { 
+            preservedValues: formValues,
+            quizType: quizType 
+          } 
+        })
+      } else {
+        navigate("/quiz-dashboard")
+      }
+    } finally {
+      setBackLoading(false)
+    }
+  }
+
   return (
     <Container className="py-4">
       <Row>
@@ -444,19 +644,52 @@ if (question.type === "matching") {
           </div>}
 
           <div className="mt-4" style={{ display:"flex",  gap: "0.5rem" }}>
-            {/* <button  onClick={handleSave} className="px-4 py-2 secondary-button">
-              Save
-            </button> */}
             <button
-              disabled={questions?.length ==0}
-              onClick={handleGenerateQuiz}
-              className="px-4 py-4 primary-button"
+              disabled={backLoading}
+              onClick={handleBack}
+              className="px-4 py-4 secondary-button d-flex align-items-center justify-content-center"
               style={{
                 fontWeight: "500",
                 height: "50px",
               }}
             >
-              {quizId ? "Update" :" Generate"} Quiz
+              {backLoading ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2 mr-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Going Back...
+                </>
+              ) : (
+                <>
+                  <ArrowLeft size={16} className="me-2" />
+                  Back
+                </>
+              )}
+            </button>
+            <button
+              disabled={questions?.length ==0 || loading}
+              onClick={handleGenerateQuiz}
+              className="px-4 py-4 primary-button d-flex align-items-center justify-content-center"
+              style={{
+                fontWeight: "500",
+                height: "50px",
+              }}
+            >
+              {loading ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm me-2 mr-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Processing...
+                </>
+              ) : (
+                `${quizId ? "Update" :" Generate"} Quiz`
+              )}
             </button>
           </div>
         </Col>

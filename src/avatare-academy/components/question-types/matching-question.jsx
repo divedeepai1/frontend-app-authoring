@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Form, Button, Row, Col, Card, Nav } from "react-bootstrap";
 import { Plus, Upload } from "lucide-react";
+// import MediaAttachment from "../common/MediaAttachment";
 
-export default function MatchingQuestion({ question, onUpdate }) {
+export default function MatchingQuestion({ question, onUpdate, showValidation = false }) {
   const [activeTab, setActiveTab] = useState("text");
   const [pairs, setPairs] = useState(
-    question.pairs || [
+    question.pairs && question.pairs.length > 0 ? question.pairs : [
       { columnA: "", columnB: "", columnAImage: null, columnBImage: null },
     ]
   );
@@ -207,12 +208,20 @@ export default function MatchingQuestion({ question, onUpdate }) {
           value={question.questionText}
           onChange={(e) => onUpdate({ questionText: e.target.value })}
           style={{ resize: "vertical" }}
-          isInvalid={!question.questionText.trim()}
+          isInvalid={showValidation && !question.questionText.trim()}
         />
-        <Form.Control.Feedback type="invalid">
-          Question text is required
-        </Form.Control.Feedback> */}
+        {showValidation && !question.questionText.trim() && (
+          <Form.Control.Feedback type="invalid">
+            Question text is required
+          </Form.Control.Feedback>
+        )} */}
       </div>
+
+      {/* <MediaAttachment 
+        questionId={question.id}
+        media={question.media || {}}
+        onMediaChange={(media) => onUpdate({ media })}
+      /> */}
 
       <div className="mb-4">
         {/* <Nav variant="tabs" className="mb-3">
@@ -467,11 +476,11 @@ export default function MatchingQuestion({ question, onUpdate }) {
         <div className="mt-3">
           <Button variant="outline-secondary" size="sm" onClick={addMorePair}>
             <Plus size={16} className="me-1" />
-            Add More Pair
+            Add Pair
           </Button>
         </div>
 
-        {validPairs.length < 2 && (
+        {showValidation && validPairs.length < 2 && (
           <div className="text-danger mt-2" style={{ fontSize: "12px" }}>
             At least 2 matching pairs are required
           </div>
@@ -492,9 +501,9 @@ export default function MatchingQuestion({ question, onUpdate }) {
             onUpdate({ points: Number.parseInt(e.target.value) || 0 })
           }
           style={{ width: "150px" }}
-          isInvalid={!question.points || question.points <= 0}
+          isInvalid={showValidation && (!question.points || question.points <= 0)}
         />
-        {question.points <= 0 && (
+        {showValidation && (!question.points || question.points <= 0) && (
           <Form.Control.Feedback type="invalid">
             Points must be greater than 0
           </Form.Control.Feedback>
