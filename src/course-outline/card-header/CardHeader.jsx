@@ -30,6 +30,7 @@ const CardHeader = ({
   title,
   status,
   cardId,
+  fromUnitCard,
   index,
   subsectionIndex,
   hasChanges,
@@ -124,7 +125,7 @@ const CardHeader = ({
         ref={cardHeaderRef}
       >
         {isFormOpen ? (
-          <Form.Group className="m-0 w-75" isInvalid={!extractParts(titleValue).stringPart.trim()}>
+         fromUnitCard ?  <Form.Group className="m-0 w-75" isInvalid={!extractParts(titleValue).stringPart.trim()}>
           <Form.Control
             ref={(e) => e && e.focus()}
             value={extractParts(titleValue).stringPart}
@@ -155,7 +156,33 @@ const CardHeader = ({
               This field is required.
             </Form.Control.Feedback>
           )}
+        </Form.Group>:  
+        <Form.Group className="m-0 w-75" isInvalid={!titleValue.trim()}>
+          <Form.Control
+            ref={(e) => e && e.focus()}
+            value={titleValue}
+            name="name"
+            onChange={(e) => setTitleValue(e.target.value)}
+            aria-label={"edit field"}
+            onBlur={() => { 
+              if (!titleValue.trim()) 
+                return; 
+              onEditSubmit(titleValue); 
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (!titleValue.trim()) return;
+                onEditSubmit(titleValue);
+              }
+            }}
+          />
+          {!titleValue.trim() && (
+            <Form.Control.Feedback type="invalid">
+              This field is required.
+            </Form.Control.Feedback>
+          )}
         </Form.Group>
+
         ) : (
           <>
             {/* <span

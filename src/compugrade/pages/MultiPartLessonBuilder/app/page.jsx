@@ -485,7 +485,7 @@ export default function LessonBuilder() {
                 {
                   id: block.id,
                   block_name: block.name,
-                  instruction_category: "Text",
+                  instruction_category: "text",
                   block_type: block.type,
                   item_type: "u",
                   natural_text: block.content.html || "",
@@ -524,7 +524,7 @@ export default function LessonBuilder() {
                 {
                   id: block.id,
                   block_name: block.name,
-                  instruction_category: "Text",
+                  instruction_category: "text",
                   block_type: block.type,
                   item_type: block.content.item_type || "no-skill",
                   natural_text: block.content.html || "",
@@ -550,7 +550,7 @@ export default function LessonBuilder() {
                 {
                   id: block.id,
                   block_name: block.name,
-                  instruction_category: "OB",
+                  instruction_category: "text",
                   block_type: block.type,
                   item_type: "g",
                   comparison_mode: block.content.mode,

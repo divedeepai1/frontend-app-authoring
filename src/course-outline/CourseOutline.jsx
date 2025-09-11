@@ -242,7 +242,7 @@ const CourseOutline = ({ courseId }) => {
    * @returns {void}
    */
   const updateUnitOrderByIndex = (section, moveDetails) => {
-    console.log("hello",section)
+  
     const {
       fn, args, sectionId, subsectionId,
     } = moveDetails;
@@ -436,6 +436,7 @@ const CourseOutline = ({ courseId }) => {
                                                 key={unit.id}
                                                 skills={skills}
                                                 unit={unit}
+                                                fromUnitCard={true}
                                                 subsection={subsection}
                                                 section={section}
                                                 isSelfPaced={statusBarData.isSelfPaced}

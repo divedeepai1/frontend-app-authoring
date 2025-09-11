@@ -22,6 +22,7 @@ import { getItemStatus, getItemStatusBorder, scrollToElement } from "../utils";
 const UnitCard = ({
   skills,
   unit,
+  fromUnitCard,
   subsection,
   section,
   isSelfPaced,
@@ -213,6 +214,7 @@ const UnitCard = ({
         <CardHeader
          
           title={displayName}
+          fromUnitCard={fromUnitCard}
           index={index}
           subsectionIndex={subsectionIndex}
           status={unitStatus}
