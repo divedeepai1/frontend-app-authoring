@@ -192,22 +192,28 @@ export default function LessonBuilder() {
     };
   }
 
-  useEffect(() => {
+  const loadRubricFromSessionToState = () => {
     const savedData = sessionStorage.getItem("Rubric");
-
-    if (savedData) {
+    if (!savedData) return;
+    try {
       const parsedData = JSON.parse(savedData);
       const frontendData = fromBackendToFrontend(parsedData);
       setLessonParts(frontendData?.lessonParts);
       setLessonConfig(frontendData);
-      // Auto-enable video toggle if a video is present
-      if ((frontendData?.videos && frontendData.videos.length > 0) && !frontendData.videoEnabled) {
+      if (
+        (frontendData?.videos && frontendData.videos.length > 0) &&
+        !frontendData.videoEnabled
+      ) {
         setLessonConfig((c) => ({ ...c, videoEnabled: true }));
       }
       if (frontendData.lessonParts.length > 0) {
         setSelectedPartId(frontendData.lessonParts[0].id);
       }
-    }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    loadRubricFromSessionToState();
   }, []);
 
   const addToast = ({ title, message, variant = "info", duration = 3500 }) => {
@@ -246,11 +252,43 @@ export default function LessonBuilder() {
       promises.push(handleUploadToS3(mergedResult?.items));
 
       await Promise.all(promises);
-      navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
+
+      // After successful draft save, fetch latest rubric and update session + state
+      await fetchAndStoreRubric(blockId);
+      loadRubricFromSessionToState();
+      addToast({ title: "Draft Saved", message: "Lesson draft saved.", variant: "success" });
     } catch (error) {
       console.error("Error during saving draft:", error);
+      addToast({ title: "Save Draft Error", message: error.message || "Request failed.", variant: "error" });
     } finally {
       setSaveDraftLoading(false);
+    }
+  };
+
+  const fetchAndStoreRubric = async (openedxBasedId) => {
+    try {
+      const encodedBlockId = encodeURIComponent(openedxBasedId);
+      const response = await fetch(
+        `${base_url}/api/openedx/get_rubric?openedx_based_id=${encodedBlockId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Hello" }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch rubric: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      if (result?.rubric) {
+        sessionStorage.setItem("Rubric", JSON.stringify(result.rubric));
+      }
+      return result;
+    } catch (err) {
+      console.log(err);
+      throw err;
     }
   };
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 
 export default function EditableBlockName({ block, renameBlock }) {
@@ -14,6 +14,21 @@ export default function EditableBlockName({ block, renameBlock }) {
         : "Add Objective Question")
   );
   const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    // Keep input value in sync with external name updates (e.g., renumbering)
+    const next =
+      block.name ||
+      (block.type === "text"
+        ? "Add Text Block"
+        : block.type === "instruction"
+        ? "Instruction"
+        : block.type === "doc-comparison"
+        ? "Document Comparison"
+        : "Add Objective Question");
+    setValue(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [block.name]);
 
   const defaultText =
     block.type === "text"

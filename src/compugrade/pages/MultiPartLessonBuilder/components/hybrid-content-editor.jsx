@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor";
 import { FileDiffIcon, Image as ImageIcon, Video, Label } from "lucide-react";
 import { ObjectiveEditor } from "./objective-editor";
@@ -30,6 +31,7 @@ export function HybridContentEditor({
     open: false,
     timestamp: null,
   });
+  // Collapse/Expand All is computed from current part's instruction blocks
 
   const [videoEnabled, setVideoEnabled] = useState(
     content.videoEnabled ?? false
@@ -39,6 +41,7 @@ export function HybridContentEditor({
   );
   const [uploadedVideo, setUploadedVideo] = useState(null);
   const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
+  const [preDragCollapsed, setPreDragCollapsed] = useState(null);
   const [sourceDocument, setSourceDocument] = useState(null);
   const [answerKey, setAnswerKey] = useState(null);
   const [documentComparisonMode, setDocumentComparisonMode] = useState(
@@ -51,6 +54,17 @@ export function HybridContentEditor({
     type: null,
     name: "",
   });
+
+  const collapseAllInstructions = () => {
+    const shouldCollapse = blocks.some(
+      (b) => b.type === "instruction" && !b.isCollapsed
+    );
+    const newBlocks = blocks.map((b) =>
+      b.type === "instruction" ? { ...b, isCollapsed: shouldCollapse } : b
+    );
+    setBlocks(newBlocks);
+    updateContent({ ...content, blocks: newBlocks });
+  };
 
   function getUrl(item) {
     if (item instanceof File || item instanceof Blob) {
@@ -171,13 +185,22 @@ export function HybridContentEditor({
   };
 
   const deleteBlock = (blockId) => {
-    const newBlocks = blocks.filter((block) => block.id !== blockId);
+    const filtered = blocks.filter((block) => block.id !== blockId);
+    const newBlocks = renumberInstructionNames(filtered);
     setBlocks(newBlocks);
     updateContent({ ...content, blocks: newBlocks });
   };
 
   const handleBlockDragStart = (index) => {
     setDraggedBlockIndex(index);
+    // Capture current collapse state per block and collapse all to create space
+    const stateById = blocks.reduce((acc, b) => {
+      acc[b.id] = !!b.isCollapsed;
+      return acc;
+    }, {});
+    setPreDragCollapsed(stateById);
+    const collapsedBlocks = blocks.map((b) => ({ ...b, isCollapsed: true }));
+    setBlocks(collapsedBlocks);
   };
 
   const handleBlockDrop = (dropIndex) => {
@@ -190,10 +213,63 @@ export function HybridContentEditor({
         draggedBlockIndex < dropIndex ? dropIndex - 1 : dropIndex;
       newBlocks.splice(insertIndex, 0, draggedBlock);
 
-      setBlocks(newBlocks);
-      updateContent({ ...content, blocks: newBlocks });
+      // Restore pre-drag collapsed state by id if available
+      const restored = preDragCollapsed
+        ? newBlocks.map((b) => ({
+            ...b,
+            isCollapsed:
+              Object.prototype.hasOwnProperty.call(preDragCollapsed, b.id)
+                ? preDragCollapsed[b.id]
+                : b.isCollapsed,
+          }))
+        : newBlocks;
+
+      const renumbered = renumberInstructionNames(restored);
+      setBlocks(renumbered);
+      updateContent({ ...content, blocks: renumbered });
     }
     setDraggedBlockIndex(null);
+    setPreDragCollapsed(null);
+  };
+
+  const handleBlockDragEnd = () => {
+    if (preDragCollapsed) {
+      const restored = blocks.map((b) => ({
+        ...b,
+        isCollapsed: Object.prototype.hasOwnProperty.call(preDragCollapsed, b.id)
+          ? preDragCollapsed[b.id]
+          : b.isCollapsed,
+      }));
+      setBlocks(restored);
+      updateContent({ ...content, blocks: restored });
+    }
+    setDraggedBlockIndex(null);
+    setPreDragCollapsed(null);
+  };
+
+  const moveBlock = (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
+    const newBlocks = [...blocks];
+    const [moved] = newBlocks.splice(fromIndex, 1);
+    newBlocks.splice(toIndex, 0, moved);
+    const renumbered = renumberInstructionNames(newBlocks);
+    setBlocks(renumbered);
+    updateContent({ ...content, blocks: renumbered });
+  };
+
+  const renumberInstructionNames = (list) => {
+    let instructionCounter = 0;
+    const defaultPattern = /^Instruction\s+\d+$/i;
+    return list.map((block) => {
+      if (block.type === "instruction") {
+        instructionCounter += 1;
+        const shouldOverride = !block.name || defaultPattern.test(block.name);
+        if (shouldOverride) {
+          return { ...block, name: `Instruction ${instructionCounter}` };
+        }
+      }
+      return block;
+    });
   };
 
   const getInstructionNumber = (blockId) => {
@@ -260,7 +336,18 @@ export function HybridContentEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
+      <div className="space-y-3"> 
+        <div className="flex justify-end mb-2"> 
+          <div
+            onClick={() => collapseAllInstructions()}
+            className="px-3 py-2 text-sm font-medium text-white cursor-pointer bg-blue-600 rounded hover:bg-blue-700"
+            onDragEnd={handleBlockDragEnd}
+          >
+            {blocks.some((b) => b.type === "instruction" && !b.isCollapsed)
+              ? "Collapse"
+              : "Expand"} All
+          </div>
+        </div>
         {blocks.map((block, index) => (
           <div
             key={block.id}
@@ -293,6 +380,27 @@ export function HybridContentEditor({
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Move Up/Down controls */}
+                <div
+                  onClick={() => moveBlock(index, index - 1)}
+                  className={`p-1 rounded transition-colors ${
+                    index === 0
+                      ? "opacity-30 cursor-not-allowed"
+                      : "cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                  }`}
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </div>
+                <div
+                  onClick={() => moveBlock(index, index + 1)}
+                  className={`p-1 rounded transition-colors ${
+                    index === blocks.length - 1
+                      ? "opacity-30 cursor-not-allowed"
+                      : "cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                  }`}
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </div>
                 <div
                   onClick={() => toggleBlockCollapse(block.id)}
                   className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
@@ -336,14 +444,13 @@ export function HybridContentEditor({
                       </div>
 
                       <div className="flex items-center gap-2 mr-2">
-                       
                         <select
                           defaultValue="no-skill"
                           value={block.content.item_type || "no-skill"}
                           className="px-2 py-1 text-xs rounded  text-gray-950 border-green-200 border bg-transparent"
                           onChange={(e) => {
-                            const newType = e.target.value; 
-                            updateBlock(block.id, { 
+                            const newType = e.target.value;
+                            updateBlock(block.id, {
                               ...block.content,
                               item_type: newType,
                             });
@@ -353,9 +460,7 @@ export function HybridContentEditor({
                             Certification Skill
                           </option>
                           <option value="foundation">Foundation Skill</option>
-                          <option value="no-skill">
-                            No Skill
-                          </option>
+                          <option value="no-skill">No Skill</option>
                         </select>
 
                         <button

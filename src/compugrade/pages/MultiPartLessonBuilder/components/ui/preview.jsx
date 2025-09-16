@@ -1,5 +1,7 @@
 import { X, BookOpenText, FileText, Target, Layers } from "lucide-react";
 import { useState } from "react";
+import AnswerKeyDialog from "./AnswerKeyDialog";
+import AnswerKeyPill from "./AnswerKeyPill";
 
 export default function LessonPreviewDialog({ data, open, setOpen }) {
   if (!open) return null;
@@ -7,6 +9,8 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
   const [currentPartIndex, setCurrentPartIndex] = useState(0);
   const lessonParts = data.lessonParts || [];
   const currentPart = lessonParts[currentPartIndex];
+  console.log(currentPart)
+  const [answerOpen, setAnswerOpen] = useState(false);
 
   const renderBlockPreview = (block) => {
     if (block.type === "instruction") {
@@ -18,9 +22,13 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 mb-1">
             <BookOpenText size={18} className="text-blue-600" /> {block.name} 
           </div>
-          <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm leading-relaxed">
-            
-          </div>
+          
+          <pre className="whitespace-pre-wrap font-normal text-gray-700 text-sm leading-relaxed">
+            {block.content?.html || "No instruction content"}
+          </pre>
+         {/* <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm leading-relaxed">
+             
+          </div> */}
         </div>
       );
     }
@@ -90,9 +98,15 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
 
         {currentPart ? (
           <div>
-            <h3 className="text-lg font-semibold mb-3">
-              Part : {currentPart.title}
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">
+                Part : {currentPart.title}
+              </h3>
+              <AnswerKeyPill
+                onClick={() => setAnswerOpen(true)}
+                disabled={!currentPart?.answerKey}
+              />
+            </div>
             <div className="space-y-3 overflow-y-auto max-h-[52vh]">
               {currentPart.content?.blocks?.map((block) =>
                 renderBlockPreview(block)
@@ -120,6 +134,12 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
           ))}
         </div>
       </div>
+      <AnswerKeyDialog
+        open={answerOpen}
+        onClose={() => setAnswerOpen(false)}
+        title={`Answer Key — ${currentPart?.title || "Part"}`}
+        answerKey={currentPart?.answerKey}
+      />
     </div>
   );
 }

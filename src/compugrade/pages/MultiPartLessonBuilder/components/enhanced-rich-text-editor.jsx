@@ -686,16 +686,7 @@ const applyBlockFormat = (tag) => {
     return () => document.removeEventListener("keydown", handleGlobalKeyDown)
   }, [])
 
-  // Focus editor when undo/redo buttons are clicked
-  const handleUndoClick = () => {
-    editorRef.current?.focus()
-    undo()
-  }
 
-  const handleRedoClick = () => {
-    editorRef.current?.focus()
-    redo()
-  }
 
   if (isCollapsed) {
     return (
@@ -705,6 +696,7 @@ const applyBlockFormat = (tag) => {
             {content?.html
               ? content.html.replace(/<[^>]*>/g, "").substring(0, 100) + "..."
               : "Empty text content"}
+              hello
           </div>
           <div
             onClick={onToggleCollapse}
