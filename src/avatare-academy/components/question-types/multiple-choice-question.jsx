@@ -49,8 +49,12 @@ export default function MultipleChoiceQuestion({ question, onUpdate, showValidat
 
       <MediaAttachment 
         questionId={question.id}
+        questionType={question.type}
+        questionText={question.questionText}
         media={question.media || {}}
         onMediaChange={(media) => onUpdate({ media })}
+        serverImageUrl={question.imageUrl}
+        serverVideoUrl={question.videoUrl}
       />
 
       <div className="mb-3">

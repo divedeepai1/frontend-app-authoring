@@ -37,6 +37,7 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
   console.log(questions)
 
   const parseQuestions = (questionsData) => {
+    console.log("Parsing questions data:", questionsData)
     return questionsData.map((q) => {
       const base = {
         id: q.id,
@@ -48,7 +49,9 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
         blanks: [],
         pairs: [],
         connections: [],
-        media: { images: [], videos: [] }
+        media: { images: [], videos: [] },
+        imageUrl: q.image_s3_url || null,
+        videoUrl: q.video_s3_url || null
       }
 
       if (q.question_type === "true_false") {
@@ -285,17 +288,18 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
       if (responseData.questions && allMediaFiles.length > 0) {
         const uploadPromises = []
         responseData.questions.forEach(question => {
-          const questionMedia = allMediaFiles.filter(media => media.questionType == question.question_type)
+          const questionMedia = allMediaFiles.filter(media => media.questionText == question.text)
 
           
           
           questionMedia.forEach(media => {
             let presignedUrl = null
             
-            if (media.mediaType === 'image' && question.image_s3_url) {
-              presignedUrl = question.image_s3_url
-            } else if (media.mediaType === 'video' && question.video_s3_url) {
-              presignedUrl = question.video_s3_url
+            if (media.mediaType === 'image' && question.image_upload_url) {
+              presignedUrl = question.image_upload_url
+            } else if (media.mediaType === 'video' && question.video_upload_url) {
+              presignedUrl = question.video_upload_url
+
             }
             
             if (presignedUrl) {
@@ -350,34 +354,7 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
     }
   };
 
-  // Helper function to get presigned URLs for media files
-  // Note: Presigned URLs will now come from bulk-add response
-  // const getPresignedUrls = async (mediaFiles) => {
-  //   if (!mediaFiles || mediaFiles.length === 0) return [];
-  //   
-  //   const token = await fetchCsrfToken();
-  //   const response = await fetch(`${getConfig().STUDIO_BASE_URL}/quizplugin/api/media/presigned-urls/`, {
-  //     method: 'POST',
-  //     credentials: 'include',
-  //     headers: {
-  //       'Content-Type': 'application/json',
-  //       'X-CSRFToken': token,
-  //     },
-  //     body: JSON.stringify({
-  //       files: mediaFiles.map(file => ({
-  //         filename: file.name,
-  //         content_type: file.type,
-  //         size: file.size
-  //       }))
-  //     }),
-  //   });
 
-  //   if (!response.ok) {
-  //     throw new Error(`Failed to get presigned URLs: ${response.status}`);
-  //   }
-
-  //   return await response.json();
-  // };
 
   function convertQuestionsToBackendFormat(id, questionsList, allMediaFiles = []) {
     
@@ -397,9 +374,8 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
           question_type: question.type,
           text: question.questionText,
           points: question.points || 0,
-          // Send media filenames for presigned URL generation
-          // image: images.length > 0 ? images[0].name : null,
-          // video_url: videos.length > 0 ? videos[0].name : null
+          image: images.length > 0 ? images[0].name : "",
+          video_url: videos.length > 0 ? videos[0].name : ""
         }
         if (question.id && typeof question.id === "string") base.id = question.id
         if (question.type === "true_false") {

@@ -1,63 +1,106 @@
-import { useState, useRef } from "react"
-import { Button, Modal, Row, Col, Badge } from "react-bootstrap"
-import { Plus, X, Image as ImageIcon, Video, Eye } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Button, Row, Col } from "react-bootstrap"
+import { Plus, X, Eye } from "lucide-react"
 
-export default function MediaAttachment({ 
-  questionId, 
-  media, 
-  onMediaChange, 
-  disabled = false 
+export default function MediaAttachment({
+  questionId,
+  questionType,
+  questionText,
+  media,
+  onMediaChange,
+  disabled = false,
+  serverImageUrl = null,
+  serverVideoUrl = null,
 }) {
   const [showModal, setShowModal] = useState(false)
-  const [modalContent, setModalContent] = useState({ type: '', url: '', name: '' })
+  const [modalContent, setModalContent] = useState({ type: "", url: "", name: "" })
+  const [ignoreServerImage, setIgnoreServerImage] = useState(false)
+  const [ignoreServerVideo, setIgnoreServerVideo] = useState(false)
   const fileInputRef = useRef(null)
+
+  // merge server + local into unified media state
+  const unifiedMedia = {
+    images: media?.images?.length
+      ? media.images
+      : !ignoreServerImage && serverImageUrl
+      ? [
+          {
+            id: "server-image",
+            type: "image",
+            url: serverImageUrl,
+            name: "Server Image",
+          },
+        ]
+      : [],
+    videos: media?.videos?.length
+      ? media.videos
+      : !ignoreServerVideo && serverVideoUrl
+      ? [
+          {
+            id: "server-video",
+            type: "video",
+            url: serverVideoUrl,
+            name: "Server Video",
+          },
+        ]
+      : [],
+  }
+
+  // Close modal on ESC
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setShowModal(false)
+    }
+    if (showModal) document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [showModal])
 
   const handleFileSelect = (type) => {
     if (disabled) return
-    // Set the accept attribute based on type
     if (fileInputRef.current) {
-      fileInputRef.current.accept = type === 'image' ? 'image/*' : 'video/*'
+      fileInputRef.current.accept = type === "image" ? "image/*" : "video/*"
     }
     fileInputRef.current.click()
   }
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files)
-    const newMedia = { ...media }
+    const newMedia = { ...unifiedMedia }
 
-    files.forEach(file => {
-      const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    files.forEach((file) => {
       const fileObj = {
-        id: fileId,
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: file.name,
-        file: file,
-        type: file.type.startsWith('image/') ? 'image' : 'video',
-        url: URL.createObjectURL(file)
+        file,
+        type: file.type.startsWith("image/") ? "image" : "video",
+        url: URL.createObjectURL(file),
+        questionId,
+        questionType,
+        questionText,
       }
 
-      if (fileObj.type === 'image') {
-        // Replace existing image instead of adding
-        newMedia.images = [fileObj]
+      if (fileObj.type === "image") {
+        newMedia.images = [fileObj] // only keep 1
+        setIgnoreServerImage(true) // replace server media
       } else {
-        // Replace existing video instead of adding
         newMedia.videos = [fileObj]
+        setIgnoreServerVideo(true) // replace server media
       }
     })
 
     onMediaChange(newMedia)
-    e.target.value = '' // Reset file input
+    e.target.value = ""
   }
 
-  const removeMedia = (type, id) => {
-    if (disabled) return
+  const removeMedia = (type) => {
     const newMedia = { ...media }
-    
-    if (type === 'image') {
+    if (type === "image") {
       newMedia.images = []
+      setIgnoreServerImage(true)
     } else {
       newMedia.videos = []
+      setIgnoreServerVideo(true)
     }
-    
     onMediaChange(newMedia)
   }
 
@@ -65,65 +108,56 @@ export default function MediaAttachment({
     setModalContent({
       type: item.type,
       url: item.url,
-      name: item.name
+      name: item.name,
     })
     setShowModal(true)
   }
 
   const renderMediaChips = (items, type) => {
-    if (!items || items.length === 0) return null
-
-    return items.map(item => (
+    if (!items?.length) return null
+    return items.map((item) => (
       <div
         key={item.id}
-        className="d-inline-flex align-items-center"
+        className="d-inline-flex align-items-center py-1.5 px-2.5"
         style={{
-          backgroundColor: type === 'image' ? '#e3f2fd' : '#f3e5f5',
-          border: `1px solid ${type === 'image' ? '#2196f3' : '#9c27b0'}`,
-          borderRadius: '20px',
-          padding: '6px 12px',
-          fontSize: '12px',
-          fontWeight: '500',
-          color: type === 'image' ? '#1976d2' : '#7b1fa2',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.backgroundColor = type === 'image' ? '#bbdefb' : '#e1bee7'
-          e.target.style.transform = 'translateY(-1px)'
-          e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)'
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.backgroundColor = type === 'image' ? '#e3f2fd' : '#f3e5f5'
-          e.target.style.transform = 'translateY(0)'
-          e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'
+          backgroundColor: type === "image" ? "#e3f2fd" : "#f3e5f5",
+          border: `1px solid ${type === "image" ? "#2196f3" : "#9c27b0"}`,
+          borderRadius: "20px",
+          fontSize: "14px",
+          fontWeight: "500",
+          color: type === "image" ? "#1976d2" : "#7b1fa2",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
         }}
         onClick={() => openModal(item)}
       >
-        <Eye size={14} className="me-2" />
-        <span className="me-2" style={{ textTransform: 'capitalize' }}>
+        <Eye size={16} className="me-2" />
+        <span
+          className="me-2 ml-1"
+          style={{ textTransform: "capitalize", fontSize: "13px" }}
+        >
           {type}
         </span>
-        {!disabled && (
-          <Button
-            variant="link"
-            size="sm"
-            className="p-0"
-            onClick={(e) => {
-              e.stopPropagation()
-              removeMedia(type, item.id)
-            }}
-            style={{ 
-              color: type === 'image' ? '#1976d2' : '#7b1fa2', 
-              padding: '0', 
-              minWidth: 'auto',
-              textDecoration: 'none'
-            }}
-          >
-            <X size={16} />
-          </Button>
-        )}
+
+        <Button
+          variant="link"
+          size="sm"
+          className="p-0 ml-2"
+          onClick={(e) => {
+            e.stopPropagation()
+            removeMedia(type)
+          }}
+          style={{
+            color: type === "image" ? "#1976d2" : "#7b1fa2",
+            padding: "0",
+            minWidth: "auto",
+
+            textDecoration: "none",
+          }}
+        >
+          <X size={16} />
+        </Button>
       </div>
     ))
   }
@@ -132,11 +166,11 @@ export default function MediaAttachment({
     <>
       <Row className="mb-3">
         <Col xs="auto">
-          <Button 
-            variant="outline-secondary" 
-            size="sm" 
+          <Button
+            variant="outline-secondary"
+            size="sm"
             className="d-flex align-items-center"
-            // onClick={() => handleFileSelect('image')}
+            onClick={() => handleFileSelect("image")}
             disabled={disabled}
           >
             <Plus size={16} className="me-1" />
@@ -144,11 +178,11 @@ export default function MediaAttachment({
           </Button>
         </Col>
         <Col xs="auto">
-          <Button 
-            variant="outline-secondary" 
-            size="sm" 
+          <Button
+            variant="outline-secondary"
+            size="sm"
             className="d-flex align-items-center"
-            // onClick={() => handleFileSelect('video')}
+            onClick={() => handleFileSelect("video")}
             disabled={disabled}
           >
             <Plus size={16} className="me-1" />
@@ -162,86 +196,118 @@ export default function MediaAttachment({
         type="file"
         multiple
         onChange={handleFileChange}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
 
-      {/* Media Chips Display */}
-      {(media?.images?.length > 0 || media?.videos?.length > 0) && (
+      {(unifiedMedia.images.length > 0 || unifiedMedia.videos.length > 0) && (
         <div className="mb-3">
-          <div className="mb-2" style={{ fontSize: '14px', fontWeight: '600' }}>
+          <div className="mb-2" style={{ fontSize: "14px", fontWeight: "600" }}>
             Attached Media
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {renderMediaChips(media?.images, 'image')}
-            {renderMediaChips(media?.videos, 'video')}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {renderMediaChips(unifiedMedia.images, "image")}
+            {renderMediaChips(unifiedMedia.videos, "video")}
           </div>
         </div>
       )}
 
-      {/* Preview Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
-        <Modal.Header closeButton style={{ backgroundColor: '#f8f9fa', borderBottom: '1px solid #dee2e6' }}>
-          <Modal.Title style={{ fontSize: '18px', fontWeight: '600', color: '#495057', textTransform: 'capitalize' }}>
-            {modalContent.type} Preview
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body 
-          className="text-center" 
-          style={{ 
-            padding: '20px',
-            backgroundColor: '#f8f9fa',
-            minHeight: '300px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+      {showModal && (
+        <div
+          onClick={() => setShowModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 1050,
           }}
         >
-          {modalContent.type === 'image' ? (
-            <img 
-              src={modalContent.url} 
-              alt={modalContent.name}
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '70vh', 
-                objectFit: 'contain',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-              }}
-              onError={(e) => {
-                e.target.style.display = 'none'
-                e.target.nextSibling.style.display = 'block'
-              }}
-            />
-          ) : (
-            <video 
-              src={modalContent.url} 
-              controls 
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '70vh',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-              }}
-              onError={(e) => {
-                e.target.style.display = 'none'
-                e.target.nextSibling.style.display = 'block'
-              }}
-            >
-              Your browser does not support the video tag.
-            </video>
-          )}
-          <div 
-            style={{ 
-              display: 'none',
-              color: '#6c757d',
-              fontSize: '14px',
-              fontStyle: 'italic'
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "#f8f9fa",
+              borderRadius: 8,
+              width: "min(90vw, 900px)",
+              maxHeight: "80vh",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            Unable to load media file
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 16px",
+                borderBottom: "1px solid #dee2e6",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: "#495057",
+                  textTransform: "capitalize",
+                }}
+              >
+                {modalContent.type} Preview
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                aria-label="Close"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#6c757d",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div
+              style={{
+                padding: 20,
+                backgroundColor: "#f8f9fa",
+                minHeight: 300,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {modalContent.type === "image" ? (
+                <img
+                  src={modalContent.url}
+                  alt={modalContent.name}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "70vh",
+                    objectFit: "contain",
+                    borderRadius: 8,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  }}
+                />
+              ) : (
+                <video
+                  src={modalContent.url}
+                  controls
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "70vh",
+                    borderRadius: 8,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  }}
+                />
+              )}
+            </div>
           </div>
-        </Modal.Body>
-      </Modal>
+        </div>
+      )}
     </>
   )
 }
