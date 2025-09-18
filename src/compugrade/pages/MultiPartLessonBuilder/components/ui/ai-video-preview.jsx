@@ -34,6 +34,7 @@ const SaveTimestampsDialog = ({
             : Number.isFinite(parseFloat(e))
             ? parseFloat(e)
             : 0,
+        removed: false,
       };
     }
     setInstructionTimes(initial);
@@ -121,9 +122,9 @@ const SaveTimestampsDialog = ({
     try {
       if (onSaveAll) {
         const payload = Object.entries(instructionTimes).map(
-          ([item_id, { start, end }]) => ({
+          ([item_id, { start, end, removed }]) => ({
             item_id: parseInt(item_id, 10),
-            timestamp: `${Math.floor(start)}-${end == null ? "None" : Math.floor(end)}`,
+            timestamp: removed ? null : `${Math.floor(start)}-${end == null ? "None" : Math.floor(end)}`,
           })
         );
         await onSaveAll(payload);
@@ -162,7 +163,7 @@ const SaveTimestampsDialog = ({
             </h3>
 
             <div className="space-y-3 max-h-[50vh] overflow-y-auto">
-              {Object.entries(instructionTimes).map(([item_id, { instruction, start, end }]) => {
+              {Object.entries(instructionTimes).map(([item_id, { instruction, start, end, removed }]) => {
                 const startInt = Math.max(0, Math.floor(start));
                 const endInt = end == null ? null : Math.max(0, Math.floor(end));
                 const effectiveEnd = endInt == null ? Math.floor(videoDuration) : endInt;
@@ -191,7 +192,9 @@ const SaveTimestampsDialog = ({
                   <div
                     key={item_id}
                     className={`p-4 rounded-lg border transition-all ${
-                      isSaved
+                      removed
+                        ? "bg-red-50 border-red-300"
+                        : isSaved
                         ? "bg-green-50 border-green-300 shadow-sm"
                         : active
                         ? "bg-blue-50 border-blue-300 shadow-sm"
@@ -202,7 +205,13 @@ const SaveTimestampsDialog = ({
                       <div className="flex-1">
                         <p
                           className={`text-sm font-medium mb-2 ${
-                            isSaved ? "text-green-800" : active ? "text-blue-800" : "text-gray-800"
+                            removed
+                              ? "text-red-800"
+                              : isSaved
+                              ? "text-green-800"
+                              : active
+                              ? "text-blue-800"
+                              : "text-gray-800"
                           }`}
                         >
                           {instruction}
@@ -214,6 +223,7 @@ const SaveTimestampsDialog = ({
                           <select
                             className="text-xs bg-white border border-gray-300 rounded px-2 py-1"
                             value={startInt}
+                            disabled={removed}
                             onChange={(e) => {
                               const newStart = parseInt(e.target.value, 10);
                               setInstructionTimes((prev) => {
@@ -247,6 +257,7 @@ const SaveTimestampsDialog = ({
                           <select
                             className="text-xs bg-white border border-gray-300 rounded px-2 py-1"
                             value={endInt == null ? "__NONE__" : String(endInt)}
+                            disabled={removed}
                             onChange={(e) => {
                               const val = e.target.value;
                               setInstructionTimes((prev) => {
@@ -274,14 +285,16 @@ const SaveTimestampsDialog = ({
 
                           <span
                             className={`text-xs px-2 py-1 rounded-full ${
-                              isSaved
+                              removed
+                                ? "bg-red-200 text-red-800"
+                                : isSaved
                                 ? "bg-green-200 text-green-800"
                                 : active
                                 ? "bg-blue-200 text-blue-800"
                                 : "bg-gray-200 text-gray-600"
                             }`}
                           >
-                            {formatTime(startInt)} - {endInt == null ? "End" : formatTime(effectiveEnd)}
+                            {removed ? "No timestamp" : `${formatTime(startInt)} - ${endInt == null ? "End" : formatTime(effectiveEnd)}`}
                           </span>
                         </div>
                       </div>
@@ -297,6 +310,21 @@ const SaveTimestampsDialog = ({
                         title={isPlaying ? "Pause this range" : "Play this range"}
                       >
                         {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                      </div>
+
+                      {/* Remove timestamp */}
+                      <div
+                        className="p-2 rounded-full text-red-600 hover:bg-red-100 cursor-pointer transition-colors ml-1"
+                        title="Remove timestamp for this instruction"
+                        onClick={() => {
+                          setInstructionTimes((prev) => ({
+                            ...prev,
+                            [item_id]: { ...prev[item_id], removed: true },
+                          }));
+                          markUnsaved(parseInt(item_id, 10));
+                        }}
+                      >
+                        <X size={14} />
                       </div>
                     </div>
                   </div>

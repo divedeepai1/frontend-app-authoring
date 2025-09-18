@@ -696,7 +696,7 @@ const applyBlockFormat = (tag) => {
             {content?.html
               ? content.html.replace(/<[^>]*>/g, "").substring(0, 100) + "..."
               : "Empty text content"}
-              hello
+              
           </div>
           <div
             onClick={onToggleCollapse}

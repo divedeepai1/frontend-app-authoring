@@ -19,6 +19,7 @@ import EditableBlockName from "./ui/input-name";
 import { get } from "lodash";
 import downloadFile from "../utils/downloadFile";
 import TimestampModal from "./ui/timestamp";
+import DocumentPreviewDialog from "./ui/DocumentPreviewDialog";
 
 export function HybridContentEditor({
   video,
@@ -54,14 +55,11 @@ export function HybridContentEditor({
     type: null,
     name: "",
   });
+  const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
 
-  const collapseAllInstructions = () => {
-    const shouldCollapse = blocks.some(
-      (b) => b.type === "instruction" && !b.isCollapsed
-    );
-    const newBlocks = blocks.map((b) =>
-      b.type === "instruction" ? { ...b, isCollapsed: shouldCollapse } : b
-    );
+  const collapseOrExpandAll = () => {
+    const shouldCollapse = blocks.some((b) => !b.isCollapsed);
+    const newBlocks = blocks.map((b) => ({ ...b, isCollapsed: shouldCollapse }));
     setBlocks(newBlocks);
     updateContent({ ...content, blocks: newBlocks });
   };
@@ -339,13 +337,11 @@ export function HybridContentEditor({
       <div className="space-y-3"> 
         <div className="flex justify-end mb-2"> 
           <div
-            onClick={() => collapseAllInstructions()}
+            onClick={() => collapseOrExpandAll()}
             className="px-3 py-2 text-sm font-medium text-white cursor-pointer bg-blue-600 rounded hover:bg-blue-700"
             onDragEnd={handleBlockDragEnd}
           >
-            {blocks.some((b) => b.type === "instruction" && !b.isCollapsed)
-              ? "Collapse"
-              : "Expand"} All
+            {blocks.some((b) => !b.isCollapsed) ? "Collapse" : "Expand"} All
           </div>
         </div>
         {blocks.map((block, index) => (
@@ -712,6 +708,18 @@ export function HybridContentEditor({
                             <div className="flex items-center gap-2">
                               <div
                                 onClick={() =>
+                                  setDocPreview({
+                                    open: true,
+                                    title: "Comparison Document",
+                                    src: block.content.document,
+                                  })
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors cursor-pointer"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </div>
+                              <div
+                                onClick={() =>
                                   downloadFile(
                                     block.content.document,
                                     "answer-key"
@@ -876,6 +884,26 @@ export function HybridContentEditor({
           </div>
         </div>
       )}
+      <DocumentPreviewDialog
+        open={docPreview.open}
+        onClose={() => setDocPreview({ open: false, title: "", src: null })}
+        title={docPreview.title}
+        source={docPreview.src}
+        mimeHint={(() => {
+          const s = docPreview.src;
+          if (!s) return "";
+          if (typeof s === "string") {
+            if (/^data:/i.test(s)) return "";
+            if (!/^https?:\/\//i.test(s)) {
+              return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            }
+          } else if (s && !s.type) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+          }
+          return "";
+        })()}
+        nameHint="document.docx"
+      />
     </div>
   );
 }

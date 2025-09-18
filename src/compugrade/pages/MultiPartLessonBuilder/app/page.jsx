@@ -28,6 +28,8 @@ import downloadFile from "../utils/downloadFile";
 import ToastContainer from "../components/ui/toast";
 import SaveTimestampsDialog from "../components/ui/ai-video-preview";
 import { set } from "lodash";
+import LessonVideoPopup from "../components/ui/lesson-video-popup";
+import DocumentPreviewDialog from "../components/ui/DocumentPreviewDialog";
 
 export default function LessonBuilder() {
   const { blockId, sequenceId, courseId } = useParams();
@@ -106,10 +108,11 @@ export default function LessonBuilder() {
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const videoObjectUrlRef = useRef("");
+  const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
 
-  // console.log(lessonParts);
+  console.log(lessonParts);
 
-  // console.log(lessonConfig)
+  console.log(lessonConfig)
 
   function fromBackendToFrontend(backendData) {
     const lessons = backendData?.lessons?.map((lesson) => {
@@ -1563,17 +1566,29 @@ export default function LessonBuilder() {
                             </div>
                           </div>
                           <div className="flex">
-                            <div
-                              onClick={() =>
-                                downloadFile(
-                                  lessonConfig.sourceDocument,
-                                  "source-document.docx"
-                                )
-                              }
-                              className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                            </div>
+                              <div
+                                onClick={() =>
+                                  setDocPreview({
+                                    open: true,
+                                    title: "Lesson Source Document",
+                                    src: lessonConfig.sourceDocument,
+                                  })
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </div>
+                              <div
+                                onClick={() =>
+                                  downloadFile(
+                                    lessonConfig.sourceDocument,
+                                    "source-document.docx"
+                                  )
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                              </div>
                             <div
                               onClick={() =>
                                 setLessonConfig((c) => ({
@@ -1642,16 +1657,28 @@ export default function LessonBuilder() {
                           </div>
                           <div className="flex">
                             <div
-                              onClick={() =>
-                                downloadFile(
-                                  lessonConfig.answerKey,
-                                  "answer-key"
-                                )
-                              }
-                              className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                            </div>
+                                onClick={() =>
+                                  setDocPreview({
+                                    open: true,
+                                    title: "Lesson Answer Key",
+                                    src: lessonConfig.answerKey,
+                                  })
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </div>
+                              <div
+                                onClick={() =>
+                                  downloadFile(
+                                    lessonConfig.answerKey,
+                                    "answer-key"
+                                  )
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                              </div>
                             <div
                               onClick={() =>
                                 setLessonConfig((c) => ({
@@ -1908,16 +1935,28 @@ export default function LessonBuilder() {
                           </div>
                           <div className="flex">
                             <div
-                              onClick={() =>
-                                downloadFile(
-                                  selectedPartConfig.sourceDocument,
-                                  "source-document.docx"
-                                )
-                              }
-                              className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                            </div>
+                                onClick={() =>
+                                  setDocPreview({
+                                    open: true,
+                                    title: `Part Source Document — ${selectedPart?.title || "Part"}`,
+                                    src: selectedPartConfig.sourceDocument,
+                                  })
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </div>
+                              <div
+                                onClick={() =>
+                                  downloadFile(
+                                    selectedPartConfig.sourceDocument,
+                                    "source-document.docx"
+                                  )
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                              </div>
                             <div
                               onClick={() =>
                                 setSelectedPartConfig({ sourceDocument: null })
@@ -1981,16 +2020,28 @@ export default function LessonBuilder() {
                           </div>
                           <div className="flex">
                             <div
-                              onClick={() =>
-                                downloadFile(
-                                  selectedPartConfig.answerKey,
-                                  "answer-key"
-                                )
-                              }
-                              className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                            </div>
+                                onClick={() =>
+                                  setDocPreview({
+                                    open: true,
+                                    title: `Part Answer Key — ${selectedPart?.title || "Part"}`,
+                                    src: selectedPartConfig.answerKey,
+                                  })
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </div>
+                              <div
+                                onClick={() =>
+                                  downloadFile(
+                                    selectedPartConfig.answerKey,
+                                    "answer-key"
+                                  )
+                                }
+                                className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                              </div>
                             <div
                               onClick={() =>
                                 setSelectedPartConfig({ answerKey: null })
@@ -2042,48 +2093,41 @@ export default function LessonBuilder() {
           open={open}
           setOpen={setOpen}
         />
-        {videoPreviewOpen && (
-          <div className="fixed inset-0 z-50 pt-[5%] flex items-center justify-center">
-            <div
-              className="absolute inset-0 bg-black/50 border-none"
-              onClick={() => {
-                setVideoPreviewOpen(false);
-                if (videoObjectUrlRef.current) {
-                  URL.revokeObjectURL(videoObjectUrlRef.current);
-                  videoObjectUrlRef.current = "";
-                }
-              }}
-            />
-            <div className="relative bg-white rounded-lg shadow-xl w-[92vw] max-w-4xl max-h-[85vh]">
-              <div className="flex items-center justify-between px-4 py-2 border-b">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-purple-50">
-                    <Video className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div className="text-base font-semibold">Preview Video</div>
-                </div>
-                <div
-                  className="p-1 rounded hover:bg-gray-100 border-none"
-                  onClick={() => {
-                    setVideoPreviewOpen(false);
-                    if (videoObjectUrlRef.current) {
-                      URL.revokeObjectURL(videoObjectUrlRef.current);
-                      videoObjectUrlRef.current = "";
-                    }
-                  }}
-                >
-                  <X className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="p-4">
-                <video className="w-full" style={{height:"500px"}} controls>
-                  <source src={videoPreviewUrl || ""} />
-                </video>
-              </div>
-            </div>
-          </div>
-        )}
+        <LessonVideoPopup
+        videoPreviewOpen={videoPreviewOpen}
+        rubric_id={blockId}
+        setVideoPreviewOpen={setVideoPreviewOpen}
+        videoPreviewUrl={videoPreviewUrl}
+        onVideoUrlUpdate={(newUrl)=>{
+          setLessonConfig((c)=>({
+            ...c,
+            videos: [newUrl],
+            videoEnabled: true,
+          }));
+        }}
+      />
       </div>
+        <DocumentPreviewDialog
+          open={docPreview.open}
+          onClose={() => setDocPreview({ open: false, title: "", src: null })}
+          title={docPreview.title}
+          source={docPreview.src}
+          mimeHint={(() => {
+            const s = docPreview.src;
+            if (!s) return "";
+            if (typeof s === "string") {
+              if (/^data:/i.test(s)) return ""; // already contains mime
+              // Hint DOCX for base64 strings without data: prefix
+              if (!/^https?:\/\//i.test(s)) {
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+              }
+            } else if (s && !s.type) {
+              return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            }
+            return "";
+          })()}
+          nameHint="document.docx"
+        />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </ImagesProvider>
   );

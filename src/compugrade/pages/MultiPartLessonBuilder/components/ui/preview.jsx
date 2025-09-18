@@ -102,10 +102,10 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
               <h3 className="text-lg font-semibold">
                 Part : {currentPart.title}
               </h3>
-              <AnswerKeyPill
+              {/* <AnswerKeyPill
                 onClick={() => setAnswerOpen(true)}
                 disabled={!currentPart?.answerKey}
-              />
+              /> */}
             </div>
             <div className="space-y-3 overflow-y-auto max-h-[52vh]">
               {currentPart.content?.blocks?.map((block) =>
