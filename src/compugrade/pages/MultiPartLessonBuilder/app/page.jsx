@@ -110,9 +110,9 @@ export default function LessonBuilder() {
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
 
-  console.log(lessonParts);
+  // console.log(lessonParts);
 
-  console.log(lessonConfig)
+  // console.log(lessonConfig)
 
   function fromBackendToFrontend(backendData) {
     const lessons = backendData?.lessons?.map((lesson) => {
