@@ -1470,6 +1470,8 @@ export default function LessonBuilder() {
           open={showAddDialog}
           onOpenChange={setShowAddDialog}
           onAddPart={handleAddPart}
+          remainingWeight={Math.max(0, 100 - lessonParts.reduce((sum, p) => sum + (p.weightage || 0), 0))}
+          isFirst={(lessonParts?.length || 0) === 0}
         />
 
 <SaveTimestampsDialog

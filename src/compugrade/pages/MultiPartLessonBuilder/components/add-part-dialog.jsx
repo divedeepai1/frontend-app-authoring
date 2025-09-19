@@ -1,9 +1,9 @@
 
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { X, FileText, Target, Layers } from "lucide-react"
 
-export function AddPartDialog({ open, onOpenChange, onAddPart }) {
+export function AddPartDialog({ open, onOpenChange, onAddPart, remainingWeight = 100, isFirst = false }) {
   const [title, setTitle] = useState("")
   const [type, setType] = useState("text")
   const [weightage, setWeightage] = useState(10)
@@ -32,10 +32,25 @@ export function AddPartDialog({ open, onOpenChange, onAddPart }) {
     },
   ]
 
+  // Auto-populate weightage with remaining when not first part
+  useEffect(() => {
+    if (!open) return
+    if (!isFirst) {
+      const rem = Number.isFinite(remainingWeight) ? Math.max(0, Math.min(100, remainingWeight)) : 0
+      setWeightage(rem)
+    } else {
+      // Keep existing or reset to 10 for first part if not set
+      setWeightage((prev) => (Number.isFinite(prev) ? prev : 10))
+    }
+  }, [open, isFirst, remainingWeight])
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (title.trim()) {
-      onAddPart({ title: title.trim(), weightage })
+      const rem = Number.isFinite(remainingWeight) ? Math.max(0, Math.min(100, remainingWeight)) : 0
+      const maxAllowed = isFirst ? 100 : rem
+      const sanitized = Number.isFinite(weightage) ? Math.max(0, Math.min(maxAllowed, weightage)) : 0
+      onAddPart({ title: title.trim(), weightage: sanitized })
       setTitle("")
       setType("text")
       setWeightage(10)
@@ -118,9 +133,12 @@ export function AddPartDialog({ open, onOpenChange, onAddPart }) {
               id="weightage"
               type="number"
               min="0"
-              max="100"
+              max={isFirst ? 100 : Math.max(0, Math.min(100, remainingWeight))}
               value={weightage}
-              onChange={(e) => setWeightage(Number.parseInt(e.target.value))}
+              onChange={(e) => {
+                const v = Number.parseInt(e.target.value)
+                setWeightage(Number.isFinite(v) ? v : 0)
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />

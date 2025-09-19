@@ -124,7 +124,7 @@ export default function DocumentPreviewDialog({
             ) : (
               <div
                 ref={containerRef}
-                className="docx-preview w-full h-[70vh] overflow-auto bg-white p-4 rounded"
+                className="docx-preview !p-0 !bg-none w-full h-[70vh] overflow-auto bg-white rounded"
               />
             )
           ) : resolved.url ? (

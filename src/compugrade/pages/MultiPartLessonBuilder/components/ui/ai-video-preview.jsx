@@ -18,6 +18,7 @@ const SaveTimestampsDialog = ({
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [instructionTimes, setInstructionTimes] = useState({});
   const [playingRange, setPlayingRange] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
 
   // Initialize editable times from props
   useEffect(() => {
@@ -93,28 +94,7 @@ const SaveTimestampsDialog = ({
     });
   };
 
-  // Save one (kept for reference; not used in UI)
-  const handleSave = async (item_id) => {
-    setSavingItems((prev) => new Set([...prev, item_id]));
-    try {
-      if (onSave) {
-        const { start, end } = instructionTimes[item_id];
-        await onSave({
-          item_id,
-          timestamp: `${Math.floor(start)}-${end == null ? "None" : Math.floor(end)}`,
-        });
-      }
-      setSavedItems((prev) => new Set([...prev, item_id]));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSavingItems((prev) => {
-        const u = new Set(prev);
-        u.delete(item_id);
-        return u;
-      });
-    }
-  };
+
 
   // Save all
   const handleSaveAll = async () => {
@@ -163,174 +143,188 @@ const SaveTimestampsDialog = ({
             </h3>
 
             <div className="space-y-3 max-h-[50vh] overflow-y-auto">
-              {Object.entries(instructionTimes).map(([item_id, { instruction, start, end, removed }]) => {
-                const startInt = Math.max(0, Math.floor(start));
-                const endInt = end == null ? null : Math.max(0, Math.floor(end));
-                const effectiveEnd = endInt == null ? Math.floor(videoDuration) : endInt;
-                const active =
-                  endInt == null
-                    ? currentTime >= startInt
-                    : currentTime >= startInt && currentTime <= effectiveEnd;
+      {Object.entries(instructionTimes).map(
+        ([item_id, { instruction, start, end, removed }]) => {
+          const startInt = Math.max(0, Math.floor(start));
+          const endInt = end == null ? null : Math.max(0, Math.floor(end));
+          const effectiveEnd =
+            endInt == null ? Math.floor(videoDuration) : endInt;
 
-                // is this exact instruction currently playing?
-                const isPlaying =
-                  playingRange &&
-                  playingRange.start === startInt &&
-                  playingRange.end === effectiveEnd;
+          const active = parseInt(item_id, 10) === selectedId;
 
-                // Options for dropdowns
-                const startOptions = Array.from({ length: effectiveEnd + 1 }, (_, i) => i);
-                const endOptions = Array.from(
-                  { length: Math.max(0, Math.floor(videoDuration) - startInt) + 1 },
-                  (_, i) => startInt + i
-                );
+          const isPlaying =
+          parseInt(item_id, 10) === selectedId &&
+          playingRange &&
+          playingRange.start === startInt &&
+          playingRange.end === effectiveEnd;
+        
 
-                const isSaved = savedItems.has(parseInt(item_id, 10));
-                const isSaving = savingItems.has(parseInt(item_id, 10));
+          const startOptions = Array.from(
+            { length: effectiveEnd + 1 },
+            (_, i) => i
+          );
+          const endOptions = Array.from(
+            { length: Math.max(0, Math.floor(videoDuration) - startInt) + 1 },
+            (_, i) => startInt + i
+          );
 
-                return (
-                  <div
-                    key={item_id}
-                    className={`p-4 rounded-lg border transition-all ${
+          const isSaved = savedItems.has(parseInt(item_id, 10));
+          const isSaving = savingItems.has(parseInt(item_id, 10));
+
+          return (
+            <div
+              key={item_id}
+              className={`p-4 rounded-lg border transition-all ${
+                removed
+                  ? "bg-red-50 border-red-300"
+                  : isSaved
+                  ? "bg-green-50 border-green-300 shadow-sm"
+                  : active
+                  ? "bg-blue-50 border-blue-300 shadow-sm"
+                  : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-medium mb-2 ${
                       removed
-                        ? "bg-red-50 border-red-300"
+                        ? "text-red-800"
                         : isSaved
-                        ? "bg-green-50 border-green-300 shadow-sm"
+                        ? "text-green-800"
                         : active
-                        ? "bg-blue-50 border-blue-300 shadow-sm"
-                        : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                        ? "text-blue-800"
+                        : "text-gray-800"
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p
-                          className={`text-sm font-medium mb-2 ${
-                            removed
-                              ? "text-red-800"
-                              : isSaved
-                              ? "text-green-800"
-                              : active
-                              ? "text-blue-800"
-                              : "text-gray-800"
-                          }`}
-                        >
-                          {instruction}
-                        </p>
+                    {instruction}
+                  </p>
 
-                        <div className="flex items-center flex-wrap gap-2">
-                          {/* Start dropdown */}
-                          <label className="text-xs text-gray-500">Start</label>
-                          <select
-                            className="text-xs bg-white border border-gray-300 rounded px-2 py-1"
-                            value={startInt}
-                            disabled={removed}
-                            onChange={(e) => {
-                              const newStart = parseInt(e.target.value, 10);
-                              setInstructionTimes((prev) => {
-                                const prevEnd = prev[item_id].end;
-                                return {
-                                  ...prev,
-                                  [item_id]: {
-                                    ...prev[item_id],
-                                    start: newStart,
-                                    end:
-                                      prevEnd == null
-                                        ? null
-                                        : Math.max(newStart, prevEnd),
-                                  },
-                                };
-                              });
-                              markUnsaved(parseInt(item_id, 10));
-                            }}
-                          >
-                            {startOptions.map((t) => (
-                              <option key={t} value={t}>
-                                {formatTime(t)}
-                              </option>
-                            ))}
-                          </select>
-
-                          <span className="text-xs text-gray-400">→</span>
-
-                          {/* End dropdown (includes "End of video") */}
-                          <label className="text-xs text-gray-500">End</label>
-                          <select
-                            className="text-xs bg-white border border-gray-300 rounded px-2 py-1"
-                            value={endInt == null ? "__NONE__" : String(endInt)}
-                            disabled={removed}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setInstructionTimes((prev) => {
-                                const newEnd =
-                                  val === "__NONE__" ? null : parseInt(val, 10);
-                                return {
-                                  ...prev,
-                                  [item_id]: {
-                                    ...prev[item_id],
-                                    start: Math.min(prev[item_id].start, newEnd ?? Math.floor(videoDuration)),
-                                    end: newEnd,
-                                  },
-                                };
-                              });
-                              markUnsaved(parseInt(item_id, 10));
-                            }}
-                          >
-                            <option value="__NONE__">End of video</option>
-                            {endOptions.map((t) => (
-                              <option key={t} value={t}>
-                                {formatTime(t)}
-                              </option>
-                            ))}
-                          </select>
-
-                          <span
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              removed
-                                ? "bg-red-200 text-red-800"
-                                : isSaved
-                                ? "bg-green-200 text-green-800"
-                                : active
-                                ? "bg-blue-200 text-blue-800"
-                                : "bg-gray-200 text-gray-600"
-                            }`}
-                          >
-                            {removed ? "No timestamp" : `${formatTime(startInt)} - ${endInt == null ? "End" : formatTime(effectiveEnd)}`}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Play / Pause toggle */}
-                      <div
-                        className={`p-2 rounded-full text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors ml-3`}
-                        onClick={() =>
-                          isPlaying
-                            ? pauseInstruction()
-                            : playInstruction(startInt, endInt)
-                        }
-                        title={isPlaying ? "Pause this range" : "Play this range"}
-                      >
-                        {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                      </div>
-
-                      {/* Remove timestamp */}
-                      <div
-                        className="p-2 rounded-full text-red-600 hover:bg-red-100 cursor-pointer transition-colors ml-1"
-                        title="Remove timestamp for this instruction"
-                        onClick={() => {
-                          setInstructionTimes((prev) => ({
+                  <div className="flex items-center flex-wrap gap-2">
+                    <label className="text-xs text-gray-500">Start</label>
+                    <select
+                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1"
+                      value={startInt}
+                      disabled={removed}
+                      onChange={(e) => {
+                        const newStart = parseInt(e.target.value, 10);
+                        setInstructionTimes((prev) => {
+                          const prevEnd = prev[item_id].end;
+                          return {
                             ...prev,
-                            [item_id]: { ...prev[item_id], removed: true },
-                          }));
-                          markUnsaved(parseInt(item_id, 10));
-                        }}
-                      >
-                        <X size={14} />
-                      </div>
-                    </div>
+                            [item_id]: {
+                              ...prev[item_id],
+                              start: newStart,
+                              end:
+                                prevEnd == null
+                                  ? null
+                                  : Math.max(newStart, prevEnd),
+                            },
+                          };
+                        });
+                        markUnsaved(parseInt(item_id, 10));
+                      }}
+                    >
+                      {startOptions.map((t) => (
+                        <option key={t} value={t}>
+                          {formatTime(t)}
+                        </option>
+                      ))}
+                    </select>
+
+                    <span className="text-xs text-gray-400">→</span>
+
+                    <label className="text-xs text-gray-500">End</label>
+                    <select
+                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1"
+                      value={endInt == null ? "__NONE__" : String(endInt)}
+                      disabled={removed}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setInstructionTimes((prev) => {
+                          const newEnd =
+                            val === "__NONE__" ? null : parseInt(val, 10);
+                          return {
+                            ...prev,
+                            [item_id]: {
+                              ...prev[item_id],
+                              start: Math.min(
+                                prev[item_id].start,
+                                newEnd ?? Math.floor(videoDuration)
+                              ),
+                              end: newEnd,
+                            },
+                          };
+                        });
+                        markUnsaved(parseInt(item_id, 10));
+                      }}
+                    >
+                      <option value="__NONE__">End of video</option>
+                      {endOptions.map((t) => (
+                        <option key={t} value={t}>
+                          {formatTime(t)}
+                        </option>
+                      ))}
+                    </select>
+
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        removed
+                          ? "bg-red-200 text-red-800"
+                          : isSaved
+                          ? "bg-green-200 text-green-800"
+                          : active
+                          ? "bg-blue-200 text-blue-800"
+                          : "bg-gray-200 text-gray-600"
+                      }`}
+                    >
+                      {removed
+                        ? "No timestamp"
+                        : `${formatTime(startInt)} - ${
+                            endInt == null ? "End" : formatTime(effectiveEnd)
+                          }`}
+                    </span>
                   </div>
-                );
-              })}
+                </div>
+
+                <div
+                  className={`p-2 rounded-full text-blue-600 hover:bg-blue-100 cursor-pointer transition-colors ml-3`}
+                  onClick={() => {
+                    setSelectedId(
+                      isPlaying ? null : parseInt(item_id, 10)
+                    );
+                    if (isPlaying) {
+                      pauseInstruction();
+                    } else {
+                      playInstruction(startInt, endInt);
+                    }
+                  }}
+                  title={
+                    isPlaying ? "Pause this range" : "Play this range"
+                  }
+                >
+                  {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                </div>
+
+                <div
+                  className="p-2 rounded-full text-red-600 hover:bg-red-100 cursor-pointer transition-colors ml-1"
+                  title="Remove timestamp for this instruction"
+                  onClick={() => {
+                    setInstructionTimes((prev) => ({
+                      ...prev,
+                      [item_id]: { ...prev[item_id], removed: true },
+                    }));
+                    markUnsaved(parseInt(item_id, 10));
+                  }}
+                >
+                  <X size={14} />
+                </div>
+              </div>
             </div>
+          );
+        }
+      )}
+    </div>
 
             
 

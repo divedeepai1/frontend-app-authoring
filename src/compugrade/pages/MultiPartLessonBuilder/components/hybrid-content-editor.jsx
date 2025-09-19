@@ -204,11 +204,28 @@ export function HybridContentEditor({
   const handleBlockDrop = (dropIndex) => {
     if (draggedBlockIndex !== null && draggedBlockIndex !== dropIndex) {
       const newBlocks = [...blocks];
-      const draggedBlock = newBlocks[draggedBlockIndex];
+      const originalDraggedIndex = draggedBlockIndex;
+      const originalDropIndex = dropIndex;
+      const draggedBlock = newBlocks[originalDraggedIndex];
 
-      newBlocks.splice(draggedBlockIndex, 1);
-      const insertIndex =
-        draggedBlockIndex < dropIndex ? dropIndex - 1 : dropIndex;
+      // Remove dragged item first
+      newBlocks.splice(originalDraggedIndex, 1);
+
+      // Compute insertion index with special handling for last item and tail drop
+      let insertIndex;
+      const droppedOnContainerEnd = originalDropIndex === blocks.length;
+      const droppedOnLastBlock = originalDropIndex === blocks.length - 1;
+
+      if (droppedOnContainerEnd || droppedOnLastBlock) {
+        // Always append to the very end
+        insertIndex = newBlocks.length;
+      } else {
+        insertIndex =
+          originalDraggedIndex < originalDropIndex
+            ? originalDropIndex - 1
+            : originalDropIndex;
+      }
+
       newBlocks.splice(insertIndex, 0, draggedBlock);
 
       // Restore pre-drag collapsed state by id if available
@@ -334,16 +351,22 @@ export function HybridContentEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3"> 
-        <div className="flex justify-end mb-2"> 
-          <div
-            onClick={() => collapseOrExpandAll()}
-            className="px-3 py-2 text-sm font-medium text-white cursor-pointer bg-blue-600 rounded hover:bg-blue-700"
-            onDragEnd={handleBlockDragEnd}
-          >
-            {blocks.some((b) => !b.isCollapsed) ? "Collapse" : "Expand"} All
+      <div
+        className="space-y-3"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => handleBlockDrop(blocks.length)}
+      > 
+        {blocks.length > 0 && (
+          <div className="flex justify-end mb-2"> 
+            <div
+              onClick={() => collapseOrExpandAll()}
+              className="px-3 py-2 text-sm font-medium text-white cursor-pointer bg-blue-600 rounded hover:bg-blue-700"
+              onDragEnd={handleBlockDragEnd}
+            >
+              {blocks.some((b) => !b.isCollapsed) ? "Collapse" : "Expand"} All
+            </div>
           </div>
-        </div>
+        )}
         {blocks.map((block, index) => (
           <div
             key={block.id}
@@ -351,7 +374,10 @@ export function HybridContentEditor({
             draggable
             onDragStart={() => handleBlockDragStart(index)}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleBlockDrop(index)}
+            onDrop={(e) => {
+              e.stopPropagation();
+              handleBlockDrop(index);
+            }}
           >
             {/* Block Header */}
             <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-gray-50 to-blue-50">
@@ -778,6 +804,8 @@ export function HybridContentEditor({
             )}
           </div>
         ))}
+
+        
       </div>
 
       {/* Add Block divs */}
