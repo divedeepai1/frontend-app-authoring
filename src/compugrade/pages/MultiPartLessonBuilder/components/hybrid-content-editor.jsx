@@ -748,7 +748,7 @@ export function HybridContentEditor({
                                 onClick={() =>
                                   downloadFile(
                                     block.content.document,
-                                    "answer-key"
+                                    "answer-key.docx"
                                   )
                                 }
                                 className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"

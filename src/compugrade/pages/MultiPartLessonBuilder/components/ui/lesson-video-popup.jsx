@@ -33,7 +33,6 @@ const LessonVideoPopup = ({
 
   useEffect(() => {
     if (!videoPreviewOpen) return;
-
     fetch(`${base_url}/api/openedx/get_elevenlabs_voices_with_sample`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -111,7 +110,7 @@ const LessonVideoPopup = ({
               </video>
             </div>
 
-            <div className="p-4 border-t">
+            {(videoUrlState || (videoPreviewUrl && videoPreviewUrl?.startsWith("https://"))) && <div className="p-4 border-t"> 
               <div className="relative">
                 <select
                   className="w-full p-2 border-blue-600 border-2 rounded-md appearance-none bg-white relative z-10"
@@ -204,7 +203,7 @@ const LessonVideoPopup = ({
                   </div>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         </div>
       )}
