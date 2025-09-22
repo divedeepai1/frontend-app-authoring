@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, Save, Upload, Layers, BookOpen, Users, Clock, Settings, FileText, Video, Eye, X, Download, } from "lucide-react";
+import { Layers, BookOpen,  Settings} from "lucide-react";
 import { AddPartDialog } from "../components/add-part-dialog";
 import { EditPartDialog } from "../components/edit-part-dialog";
 import { DeleteConfirmationDialog } from "../components/delete-confirmation-dialog";
-import { DraggablePartCard } from "../components/draggable-part-card";
 import { HybridContentEditor } from "../components/hybrid-content-editor";
 import { base_url } from "../../../../compugrade-constants";
 import { useNavigate, useParams } from "react-router";
@@ -13,7 +12,6 @@ import LessonPreviewDialog from "../components/ui/preview";
 import downloadFile from "../utils/downloadFile";
 import ToastContainer from "../components/ui/toast";
 import SaveTimestampsDialog from "../components/ui/ai-video-preview";
-import { set } from "lodash";
 import LessonVideoPopup from "../components/ui/lesson-video-popup";
 import DocumentPreviewDialog from "../components/ui/DocumentPreviewDialog";
 import PageHeader from "../components/PageHeader";
@@ -27,18 +25,46 @@ export default function LessonBuilder() {
   const navigate = useNavigate();
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [videoData, setVideoData] = useState({timestamps: [], video: ""});
+  const [lessonParts, setLessonParts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedPartId, setSelectedPartId] = useState("1");
+  const [draggedPartIndex, setDraggedPartIndex] = useState(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editingPart, setEditingPart] = useState(null);
+  const [deletingPart, setDeletingPart] = useState(null);
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [toasts, setToasts] = useState([]);
+  const [aiVideoLoading, setAiVideoLoading] = useState(false);
+  const [aiInstructionsLoading, setAiInstructionsLoading] = useState(false);
+  const [saveDraftLoading, setSaveDraftLoading] = useState(false);
+  const [partConfigOpen, setPartConfigOpen] = useState(false);
+  const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
+  const [lessonConfig, setLessonConfig] = useState({
+    sourceDocument: null,
+    answerKey: null,
+    videoEnabled: false,
+    videos: [],
+    lessonParts: [],
+  });
+  const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
+  const videoObjectUrlRef = useRef("");
+  const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
+
+   // console.log(lessonParts);
+  // console.log(lessonConfig)
   
 
   const handleSaveAll = async (instructions) => {
-    // console.log("Saving all instructions:", instructions);
-  
     try {
       const response = await fetch(`${base_url}/api/openedx/update_base_items_timestamp`, {
         method: "PATCH",
         
         headers: {
           "Content-Type": "application/json",
-         
         },
         body: JSON.stringify({ items:instructions }),
       });
@@ -57,52 +83,6 @@ export default function LessonBuilder() {
     }
   };
   
-  const [lessonParts, setLessonParts] = useState([
-    // {
-    //   id: "1",
-    //   title: "Introduction",
-    //   weightage: 100,
-    //   content: {
-    //     blocks: [],
-    //     videoEnabled: false,
-    //     documentComparison: { enabled: false, documents: [] },
-    //   },
-    // },
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [selectedPartId, setSelectedPartId] = useState("1");
-  const [draggedPartIndex, setDraggedPartIndex] = useState(null);
-
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editingPart, setEditingPart] = useState(null);
-  const [deletingPart, setDeletingPart] = useState(null);
-  const [validationOpen, setValidationOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState([]);
-  const [toasts, setToasts] = useState([]);
-  const [aiVideoLoading, setAiVideoLoading] = useState(false);
-  const [aiInstructionsLoading, setAiInstructionsLoading] = useState(false);
-  const [saveDraftLoading, setSaveDraftLoading] = useState(false);
-  const [partConfigOpen, setPartConfigOpen] = useState(false);
-
-  // Lesson-level configuration (moved from part configuration)
-  const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
-  const [lessonConfig, setLessonConfig] = useState({
-    sourceDocument: null,
-    answerKey: null,
-    videoEnabled: false,
-    videos: [],
-    lessonParts: [],
-  });
-  const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
-  const videoObjectUrlRef = useRef("");
-  const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
-
-  // console.log(lessonParts);
-
-  // console.log(lessonConfig)
 
   function fromBackendToFrontend(backendData) {
     const lessons = backendData?.lessons?.map((lesson) => {
@@ -245,8 +225,6 @@ export default function LessonBuilder() {
       promises.push(handleUploadToS3(mergedResult?.items));
 
       await Promise.all(promises);
-
-      // After successful draft save, fetch latest rubric and update session + state
       await fetchAndStoreRubric(blockId);
       loadRubricFromSessionToState();
       addToast({ title: "Draft Saved", message: "Lesson draft saved.", variant: "success" });
@@ -287,16 +265,12 @@ export default function LessonBuilder() {
 
   const removeToast = (id) =>
     setToasts((prev) => prev.filter((t) => t.id !== id));
-
-  // keep nested lessonParts in sync with root lessonParts for now
   useEffect(() => {
     setLessonConfig((cfg) => ({ ...cfg, lessonParts }));
   }, [lessonParts]);
 
   const [images, setImages] = useState([]);
   const [nextImageId, setNextImageId] = useState(1);
-
-  // console.log(images);
 
   const validateLesson = (parts) => {
     const errors = [];
@@ -411,7 +385,6 @@ export default function LessonBuilder() {
             errors.push(`${label}: Comparison mode is required.`);
           }
           
-          // Check if comparison-only or graded-comparison modes require part-level source and answer key
           if (mode === "comparison-only" || mode === "graded-comparison") {
             if (!part.sourceDocument) {
               errors.push(`${label}: Source document is required in part configuration for ${mode} mode.`);
@@ -421,7 +394,6 @@ export default function LessonBuilder() {
             }
           }
           
-          // Check if state-of-art mode requires document attachment
           if (mode === "state-of-art") {
             if (!document) {
               errors.push(`${label}: Document attachment is required for state-of-art mode.`);
@@ -619,17 +591,12 @@ export default function LessonBuilder() {
 
       const files = getFilesByItemId(item.temporary_item_id);
       if (!files || files.length === 0) return [];
-
-      // Upload main question image
       const mainFileUploads = files
         .map((file) => {
           if (!file?.file) return null;
 
           const uploadUrl = item?.image_url[0];
           if (!uploadUrl) return null;
-
-          // console.log("Uploading MAIN image:", file.file.name, "→", uploadUrl);
-
           return fetch(uploadUrl, {
             method: "PUT",
             body: file.file,
@@ -637,8 +604,6 @@ export default function LessonBuilder() {
           });
         })
         .filter(Boolean);
-
-      // Upload option images
       const optionFileUploads = files.flatMap((file) => {
         if (
           !file?.option ||
@@ -646,22 +611,16 @@ export default function LessonBuilder() {
           file.option.length === 0
         )
           return [];
-        // console.log(item?.objective_image_urls,"length of urls")
         if (item?.objective_image_urls.length > 0) {
           return file.option
             .map((option, index) => {
-              // console.log(option, "option in file")
               if (!option?.file.name || !option?.file) return null;
 
-              // Match by name
               const matchedImage = item?.objective_image_urls?.[index];
 
               if (!matchedImage?.image_url) {
-                // console.warn("No upload URL found for option:", option.name);
                 return null;
               }
-
-              // console.log("Uploading OPTION image:", option.file.name, "→", matchedImage.image_url);
 
               return fetch(matchedImage.image_url, {
                 method: "PUT",
@@ -677,8 +636,6 @@ export default function LessonBuilder() {
     });
 
     await Promise.all(uploadPromises);
-
-    // Save uploaded S3 paths to DB
     const res = await fetch(
       base_url + "/api/openedx/save_s3_image_path_to_db",
       {
@@ -694,7 +651,6 @@ export default function LessonBuilder() {
     if (!res.ok) throw new Error("Failed to save S3 paths");
   };
 
-  // Utility to get uploaded files by itemId
   const getFilesByItemId = (itemId) => {
     const files = [];
     const imageObject = images?.find((img) => img.questionId == itemId);
@@ -721,7 +677,6 @@ export default function LessonBuilder() {
     const backendPayload = await frontendToBackend(lessonConfig, blockId);
     try {
       backendPayload.publish_flag = true;
-      // console.log(JSON.stringify(backendPayload, null, 2));
       const response = await fetch(
         base_url + "/api/openedx/create_base_lesson_from_scratch",
         {
@@ -808,18 +763,14 @@ export default function LessonBuilder() {
   };
 
   const handlePartDragOver = (index) => {
-    // Visual feedback is handled by the DraggablePartCard component
+
   };
 
   const handlePartDrop = (dropIndex) => {
     if (draggedPartIndex !== null && draggedPartIndex !== dropIndex) {
       const newParts = [...lessonParts];
       const draggedPart = newParts[draggedPartIndex];
-
-      // Remove the dragged part
       newParts.splice(draggedPartIndex, 1);
-
-      // Insert at the new position
       const insertIndex =
         draggedPartIndex < dropIndex ? dropIndex - 1 : dropIndex;
       newParts.splice(insertIndex, 0, draggedPart);
@@ -1265,7 +1216,7 @@ export default function LessonBuilder() {
           isFirst={(lessonParts?.length || 0) === 0}
         />
 
-<SaveTimestampsDialog
+        <SaveTimestampsDialog
           isOpen={isVideoOpen}
           onClose={()=> setIsVideoOpen(false)}
           data={videoData}
@@ -1355,28 +1306,4 @@ export default function LessonBuilder() {
     </ImagesProvider>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Example usage component
 
