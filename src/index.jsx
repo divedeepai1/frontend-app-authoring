@@ -41,6 +41,7 @@ import Main from './avatare-academy/pages/main';
 import MultiQuiz from './avatare-academy/pages/multi-quiz';
 import PublishQuiz from './avatare-academy/pages/publish-quiz';
 import McqForm from './avatare-academy/pages/mcq-quiz';
+import SomeShadowDomComponent from './avatare-academy/pages/shadow-dom';
 
 
 
@@ -74,6 +75,8 @@ const App = () => {
         <Route path="/quiz-dashboard" element={<Main />} />
         <Route path="/create-new-quiz" element={<QuizForm />} />
         <Route path="/mcq-quiz" element={<McqForm />} />
+        <Route path="/shadow-dom" element={<SomeShadowDomComponent />} />
+        
 
         <Route path="/publish-quiz" element={<PublishQuiz />} />
         <Route path="/create-multi-quiz" element={<MultiQuiz/>} />

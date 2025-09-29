@@ -124,6 +124,13 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock }) => {
             type={"text"}
           />
         </li>
+        {/* <li>
+          <AddComponentButton
+            onClick={() => navigate("/shadow-dom")}
+            displayName={"Shadow DOM"}
+            type={"text"}
+          />
+        </li> */}
       </ul>
     </div>
   );

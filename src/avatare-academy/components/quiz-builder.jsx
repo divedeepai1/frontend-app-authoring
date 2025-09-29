@@ -188,16 +188,20 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
   }, [quizId, data])
 
   const updateQuestion = (id, updatedQuestion) => {
-    setQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, ...updatedQuestion } : q)))
-    if (showValidation) {
-      setShowValidation(false)
-      setValidationErrors([])
-    }
+    setQuestions((qs) => {
+      const newQuestions = qs.map((q) => (q.id === id ? { ...q, ...updatedQuestion } : q))
+      if (showValidation) {
+        const newErrors = validateQuestions(newQuestions)
+        setValidationErrors(newErrors)
+        setShowValidation(newErrors.length > 0)
+      }
+      return newQuestions
+    })
   }
 
-  const validateQuestions = () => {
+  const validateQuestions = (list = questions) => {
     const errors = []
-    questions.forEach((question, index) => {
+    list.forEach((question, index) => {
       const questionNumber = index + 1
       const questionErrors = []
       if (!question.type) questionErrors.push("Question type is required")
