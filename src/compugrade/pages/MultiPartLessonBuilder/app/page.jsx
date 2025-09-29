@@ -386,9 +386,9 @@ export default function LessonBuilder() {
           }
           
           if (mode === "comparison-only" || mode === "graded-comparison") {
-            if (!part.sourceDocument) {
-              errors.push(`${label}: Source document is required in part configuration for ${mode} mode.`);
-            }
+            // if (!part.sourceDocument) {
+            //   errors.push(`${label}: Source document is required in part configuration for ${mode} mode.`);
+            // }
             if (!part.answerKey) {
               errors.push(`${label}: Answer key is required in part configuration for ${mode} mode.`);
             }
