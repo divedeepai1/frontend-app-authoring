@@ -1,4 +1,4 @@
-import { X, BookOpenText, FileText, Target, Layers } from "lucide-react";
+import { X, BookOpenText, FileText, Target, Layers, FileDiffIcon } from "lucide-react";
 import { useState } from "react";
 import AnswerKeyDialog from "./AnswerKeyDialog";
 import AnswerKeyPill from "./AnswerKeyPill";
@@ -9,7 +9,6 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
   const [currentPartIndex, setCurrentPartIndex] = useState(0);
   const lessonParts = data.lessonParts || [];
   const currentPart = lessonParts[currentPartIndex];
-  console.log(currentPart)
   const [answerOpen, setAnswerOpen] = useState(false);
 
   const renderBlockPreview = (block) => {
@@ -71,9 +70,41 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
           <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 mb-1">
             <FileText size={18} className="text-purple-600" /> {block.name}
           </div>
-          <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm leading-relaxed">
-            
+          <pre className="whitespace-pre-wrap font-normal text-gray-700 text-sm leading-relaxed">
+            {block.content?.html || "No text content"}
+          </pre>
+        </div>
+      );
+    }
+
+    if (block.type === "doc-comparison") {
+      const isGradedComparison = block.content?.mode === "graded-comparison";
+      const isLoading = block.content?.isLoading || false;
+      const buttonClassName = `border-none w-full py-2 text-sm mt-3 rounded-md transition-colors ${
+        isLoading
+          ? "bg-gray-400 cursor-not-allowed"
+          : isGradedComparison
+          ? "bg-green-700 hover:bg-green-800"
+          : "bg-[#FCAF40] hover:bg-[#FCAF40]/90"
+      } text-white`;
+      const buttonText = isGradedComparison ? "Compare for Grading" : "Compare and Check";
+      const containerBgClass = isLoading
+        ? "bg-gray-50"
+        : isGradedComparison
+        ? "bg-green-50"
+        : "bg-yellow-50";
+
+      return (
+        <div
+          key={block.id}
+          className={`border rounded-lg p-3 mb-3 hover:shadow-md transition ${containerBgClass}`}
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold text-yellow-700 mb-1">
+            <FileDiffIcon size={18} className="text-yellow-600" /> {block.name}
           </div>
+          <button className={buttonClassName}>
+            {buttonText}
+          </button>
         </div>
       );
     }
