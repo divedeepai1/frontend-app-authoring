@@ -1,7 +1,6 @@
 import { X, BookOpenText, FileText, Target, Layers, FileDiffIcon } from "lucide-react";
 import { useState } from "react";
-import AnswerKeyDialog from "./AnswerKeyDialog";
-import AnswerKeyPill from "./AnswerKeyPill";
+
 
 export default function LessonPreviewDialog({ data, open, setOpen }) {
   if (!open) return null;
@@ -165,12 +164,7 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
           ))}
         </div>
       </div>
-      <AnswerKeyDialog
-        open={answerOpen}
-        onClose={() => setAnswerOpen(false)}
-        title={`Answer Key — ${currentPart?.title || "Part"}`}
-        answerKey={currentPart?.answerKey}
-      />
+     
     </div>
   );
 }
