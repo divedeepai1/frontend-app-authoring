@@ -335,7 +335,7 @@ const ReportsDashboard = () => {
       </div>
       <div className="py-4" >
         <div
-          className="mx-20"
+          className="mx-4"
           fluid
           style={{
             backgroundColor: "#f8f9fa",

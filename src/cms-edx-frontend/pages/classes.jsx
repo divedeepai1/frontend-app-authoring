@@ -1,7 +1,7 @@
 
 import HeaderTop from '../../header';
 import { Header } from '../components/header';
-import ClassesaTable from '../components/classes/classes-table';
+import ClassesTable from '../components/classes/classes-table';
 import { ManagementSection } from "../components/management-section"
 
 import { Container} from "react-bootstrap"
@@ -58,7 +58,7 @@ const Classes = () => {
             <button className="outline-black-button py-2 px-3 ml-3">Print Completion certificate</button>
             <button className="outline-black-button py-2 px-3 ml-3">Print Parent Letter </button>
           </div>
-          <ClassesaTable  classes={classes} setClasses={setClasses}/>
+          <ClassesTable  classes={classes} setClasses={setClasses}/>
 
           </Container>
         </section>

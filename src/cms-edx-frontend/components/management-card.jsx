@@ -9,7 +9,7 @@ export function ManagementCard({ title }) {
     "Manage Classes & Students": "/classes",
     "Manage Courses & Curriculum": "/curriculum",
     "Reports": "/reports",
-    "Resources": "/resources", 
+    "Additional Resources": "/resources", 
   };
 
   const route = routeMap[title];

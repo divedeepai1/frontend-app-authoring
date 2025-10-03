@@ -54,6 +54,7 @@ import ManageClasses from "./cms-edx-frontend/pages/manage-classes";
 import Reports from "./cms-edx-frontend/pages/reports";
 import { fetchCsrfToken } from "./cms-csrftoken";
 import StudentsGrades from "./cms-edx-frontend/pages/students-grades";
+import Resources from "./cms-edx-frontend/pages/resources";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +121,8 @@ const App = () => {
         <Route path="/classes/:classId/:studentId" element={<StudentsGrades />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/curriculum" element={<Courses />} />
+        <Route path="/resources" element={<Resources />} />
+
         <Route path="/manage-classes/:step" element={<ManageClasses />} />
       </>
     ) : (
