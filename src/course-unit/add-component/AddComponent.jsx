@@ -124,13 +124,13 @@ const AddComponent = ({ blockId, handleCreateNewCourseXBlock }) => {
             type={"text"}
           />
         </li>
-        {/* <li>
+        <li>
           <AddComponentButton
-            onClick={() => navigate("/shadow-dom")}
+            onClick={() => { navigate("/shadow-dom"); sessionStorage.setItem("lesson_id", blockId); }}
             displayName={"Shadow DOM"}
             type={"text"}
           />
-        </li> */}
+        </li>
       </ul>
     </div>
   );

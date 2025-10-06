@@ -1,203 +1,283 @@
 import { useState, useEffect, useRef } from "react";
+import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
+import { getConfig } from "@edx/frontend-platform";
+import { fetchCsrfToken } from "../../cms-csrftoken";
 
-function ShadowDomPreview({ htmlString }) {
+function ShadowDomPreview({ htmlString, setLessonId }) {
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    const lesson_id = sessionStorage.getItem("lesson_id");
+    if (lesson_id) setLessonId(lesson_id);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     let shadow = containerRef.current.shadowRoot;
-    if (!shadow) {
-      shadow = containerRef.current.attachShadow({ mode: "open" });
-    }
+    if (!shadow) shadow = containerRef.current.attachShadow({ mode: "open" });
 
     shadow.innerHTML = "";
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, "text/html");
 
-    // ✅ inject styles
-    doc.querySelectorAll("style").forEach((style) => {
-      shadow.appendChild(style.cloneNode(true));
+    // Remove all <script> tags
+    doc.querySelectorAll("script").forEach((s) => s.remove());
+
+    // Clone styles safely (disable animations)
+    doc.querySelectorAll("style").forEach((styleEl) => {
+      const safeStyle = document.createElement("style");
+      let cssText = styleEl.textContent;
+      cssText = cssText
+        .replace(/animation[^;{]+;?/gi, "")
+        .replace(/transition[^;{]+;?/gi, "")
+        .replace(/@keyframes[\s\S]*?{[\s\S]*?}/gi, "");
+      safeStyle.textContent = cssText;
+      shadow.appendChild(safeStyle);
     });
 
-    // ✅ inject body content
+    // Clone body content and remove inline event handlers
     if (doc.body) {
-      shadow.appendChild(doc.body.cloneNode(true));
-    }
-
-    // ✅ process scripts
-    doc.querySelectorAll("script").forEach((oldScript) => {
-      const newScript = document.createElement("script");
-
-      // copy attributes
-      [...oldScript.attributes].forEach((attr) => {
-        newScript.setAttribute(attr.name, attr.value);
+      const clonedBody = doc.body.cloneNode(true);
+      clonedBody.querySelectorAll("*").forEach((el) => {
+        [...el.attributes].forEach((attr) => {
+          if (attr.name.startsWith("on")) el.removeAttribute(attr.name);
+        });
       });
-
-      if (oldScript.src) {
-        // external script
-        newScript.src = oldScript.src;
-      } else if (oldScript.textContent) {
-        const code = oldScript.textContent;
-
-        // wrap with sandboxed environment
-        newScript.textContent = `
-          (function(shadowRoot){
-            try {
-              // shadow-aware document shim
-              const shadowDoc = {
-                createElement: (...args) => document.createElement(...args),
-                getElementById: (...args) => shadowRoot.getElementById(...args),
-                querySelector: (...args) => shadowRoot.querySelector(...args),
-                querySelectorAll: (...args) => shadowRoot.querySelectorAll(...args),
-                body: shadowRoot
-              };
-
-              // patch appendChild for body-like usage
-              shadowDoc.body.appendChild = (...args) => shadowRoot.appendChild(...args);
-
-              // sandboxed timers
-              const timers = new Set();
-              const setInterval = (fn, ms, ...a) => {
-                const id = window.setInterval(fn, ms, ...a);
-                timers.add(id);
-                return id;
-              };
-              const setTimeout = (fn, ms, ...a) => {
-                const id = window.setTimeout(fn, ms, ...a);
-                timers.add(id);
-                return id;
-              };
-              const clearInterval = (id) => { timers.delete(id); window.clearInterval(id); };
-              const clearTimeout = (id) => { timers.delete(id); window.clearTimeout(id); };
-
-              // expose patched APIs
-              const document = shadowDoc;
-              const window = globalThis;
-
-              ${code}
-            } catch(e) {
-              console.error("Shadow DOM script error:", e);
-            }
-          })(window.__shadowDomPreviewRoot);
-        `;
-      }
-
-      shadow.appendChild(newScript);
-    });
-
-    // ✅ global handle for later scripts
-    window.__shadowDomPreviewRoot = shadow;
-
-    return () => {
-      // cleanup: clear timers if component unmounts
-      // (injected code already tracks them in "timers" set)
-    };
+      shadow.appendChild(clonedBody);
+    }
   }, [htmlString]);
 
   return <div ref={containerRef} style={{ width: "100%", minHeight: "100vh" }} />;
 }
+
 export default function SomeShadowDomComponent() {
+  const [lessonId, setLessonId] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [htmlCode, setHtmlCode] = useState(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NeuralFlow AI</title>
+  <title>Safe Shadow DOM Example</title>
   <style>
     body { margin: 0; font-family: Arial, sans-serif; background: #f9f9f9; }
     h1 { color: #6c2bd9; text-align: center; margin-top: 40px; }
     p { text-align: center; font-size: 18px; color: #444; }
-    button { display: block; margin: 20px auto; padding: 10px 20px; background: #6c2bd9; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    button { display: block; margin: 20px auto; padding: 10px 20px;
+      background: #6c2bd9; color: white; border: none; border-radius: 6px;
+      cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>🚀 NeuralFlow AI</h1>
-  <p>The Future of Intelligence</p>
-  <button onclick="alert('Hello from inside the iframe!')">Click Me</button>
+  <h1>Shadow DOM Example</h1>
+  <button onclick="alert('Hello!')">Click Me</button>
 </body>
 </html>`);
 
   const textAreaRef = useRef(null);
   const lineNumberRef = useRef(null);
 
-  // keep textarea and line numbers in sync
   const syncScroll = () => {
-    if (textAreaRef.current && lineNumberRef.current) {
+    if (textAreaRef.current && lineNumberRef.current)
       lineNumberRef.current.scrollTop = textAreaRef.current.scrollTop;
-    }
   };
 
   const lines = htmlCode.split("\n").length;
 
-  return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      {/* Left side editor */}
-      <div
-        style={{
-          flex: 1,
-          padding: "1rem",
-          borderRight: "1px solid #ccc",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <h2 style={{ marginBottom: "0.5rem" }}>Insert HTML</h2>
+  // ✅ Fetch existing HTML on page load (with CSRF)
+  useEffect(() => {
+    const lesson_id = sessionStorage.getItem("lesson_id");
+    if (!lesson_id) {
+      setLoading(false);
+      return;
+    }
 
+    setLessonId(lesson_id);
+
+    const fetchLesson = async () => {
+      setLoading(true);
+      try {
+        const token = await fetchCsrfToken();
+
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/quizplugin/api/lesson-content/${lesson_id}/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+
+        if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+        const result = await response.json();
+
+        if (result?.data?.html_content) {
+          setHtmlCode(result.data.html_content);
+        }
+
+      } catch (err) {
+        console.error("Fetch lesson failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLesson();
+  }, []);
+
+  // ✅ Save handler
+  const handleSave = async () => {
+    if (!lessonId) {
+      console.error("No lessonId found!");
+      return;
+    }
+
+    try {
+      const token = await fetchCsrfToken();
+      const data = { html_content: htmlCode };
+
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/quizplugin/api/lesson-content/${lessonId}/`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      if (!response.ok) throw new Error(`Failed to save quiz: ${response.status}`);
+      await response.json();
+      window.history.back();
+    } catch (error) {
+      console.error("Save failed:", error);
+    }
+  };
+
+  const handleCancel = () => window.history.back();
+
+  // ✅ Loader
+  if (loading) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ height: "100vh" }}
+      >
+        <Spinner animation="border" variant="primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "92vh",
+        position: "relative",
+      }}
+    >
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        {/* Left side editor */}
         <div
           style={{
-            display: "flex",
             flex: 1,
-            border: "1px solid #ddd",
-            borderRadius: "6px",
-            fontFamily: "monospace",
-            fontSize: "14px",
-            overflow: "hidden",
+            padding: "1rem",
+            borderRight: "1px solid #ccc",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          {/* Line Numbers */}
+          <h2 style={{ marginBottom: "0.5rem" }}>Insert HTML Here</h2>
+
           <div
-            ref={lineNumberRef}
             style={{
-              background: "#f4f4f4",
-              padding: "10px 5px",
-              textAlign: "right",
-              userSelect: "none",
-              color: "#888",
+              display: "flex",
+              flex: 1,
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              fontFamily: "monospace",
+              fontSize: "14px",
               overflow: "hidden",
             }}
           >
-            {Array.from({ length: lines }, (_, i) => (
-              <div key={i}>{i + 1}</div>
-            ))}
-          </div>
+            {/* Line Numbers */}
+            <div
+              ref={lineNumberRef}
+              style={{
+                background: "#f4f4f4",
+                padding: "10px 5px",
+                textAlign: "right",
+                userSelect: "none",
+                color: "#888",
+                overflow: "hidden",
+                overflowY: "auto",
+              }}
+            >
+              {Array.from({ length: lines }, (_, i) => (
+                <div key={i}>{i + 1}</div>
+              ))}
+            </div>
 
-          {/* Textarea */}
-          <textarea
-            ref={textAreaRef}
-            value={htmlCode}
-            onChange={(e) => setHtmlCode(e.target.value)}
-            onScroll={syncScroll}
-            style={{
-              flex: 1,
-              border: "none",
-              outline: "none",
-              padding: "10px",
-              resize: "none",
-              lineHeight: "1.4em",
-              whiteSpace: "pre",
-              fontFamily: "monospace",
-              fontSize: "14px",
-              overflow: "auto",
-            }}
-          />
+            {/* Textarea */}
+            <textarea
+              ref={textAreaRef}
+              value={htmlCode}
+              onChange={(e) => setHtmlCode(e.target.value)}
+              onScroll={syncScroll}
+              style={{
+                flex: 1,
+                border: "none",
+                outline: "none",
+                padding: "10px",
+                resize: "none",
+                lineHeight: "1.4em",
+                whiteSpace: "pre",
+                fontFamily: "monospace",
+                fontSize: "14px",
+                overflow:"auto"
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Right side live preview */}
+        <div style={{ flex: 1, overflow: "auto" }}>
+          <ShadowDomPreview htmlString={htmlCode} setLessonId={setLessonId} />
         </div>
       </div>
 
-      {/* Right side live preview */}
-      <div style={{ flex: 1 , overflow: "auto" }}>
-        <ShadowDomPreview htmlString={htmlCode} />
+      {/* Footer buttons */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          right: 0,
+          left: 0,
+          background: "white",
+          borderTop: "1px solid #ddd",
+          padding: "0.75rem 1.5rem",
+          zIndex: 999,
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "10px",
+        }}
+      >
+        <Button variant="secondary" onClick={handleCancel}>
+          Cancel
+        </Button>
+        <Button variant="primary" onClick={handleSave}>
+          Save
+        </Button>
       </div>
     </div>
   );

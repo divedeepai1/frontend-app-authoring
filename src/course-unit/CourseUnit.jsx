@@ -175,6 +175,7 @@ const CourseUnit = ({ courseId }) => {
                         userPartitionInfo={userPartitionInfo}
                       />
                     ))}
+                    
                   </SortableContext>
                 </DraggableList>
               </Stack>
