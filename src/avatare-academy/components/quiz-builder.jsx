@@ -34,10 +34,10 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
     setQuestions([...questions, newQuestion])
   }
 
-  console.log(questions)
+  // console.log(questions)
 
   const parseQuestions = (questionsData) => {
-    console.log("Parsing questions data:", questionsData)
+    // console.log("Parsing questions data:", questionsData)
     return questionsData.map((q) => {
       const base = {
         id: q.id,
@@ -412,9 +412,10 @@ export default function QuizBuilder({ quizType, quizId, status, data }) {
           }
         }
         if (["short_answer", "long_answer"].includes(question.type)) {
-          const answers = (question.blanks.length ? question.blanks : [question.answer]).filter(
+          const answers = [question.answer].filter(
             (ans) => ans && ans.trim() !== ""
           )
+        
           return {
             ...base,
             correct_answers: answers.map((ans, i) => ({
