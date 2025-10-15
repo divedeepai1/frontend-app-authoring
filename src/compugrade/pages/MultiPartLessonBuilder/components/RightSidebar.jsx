@@ -33,7 +33,7 @@ export default function RightSidebar({
               <div className="text-sm font-semibold text-gray-900 mt-1">
                 Lesson Configuration
               </div>
-              <p className="text-xs text-gray-500">Manage documents, videos, and settings</p>
+              <p className="text-xs text-gray-500">Manage lesson skills, videos, and settings</p>
             </div>
           </div>
         </div>

@@ -55,7 +55,7 @@ export default function LessonBuilder() {
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
 
    // console.log(lessonParts);
-  // console.log(lessonConfig)
+  //console.log(lessonConfig)
   
 
   const handleSaveAll = async (instructions) => {
@@ -160,6 +160,7 @@ export default function LessonBuilder() {
       sourceDocument: backendData.source_document || null,
       answerKey: backendData.answer_key || null,
       videos: backendData.video ? [backendData.video] : [],
+      skills: backendData.skills || [],
       videoEnabled: !!backendData.video,
       lessonParts: lessons || [],
     };
@@ -578,6 +579,7 @@ export default function LessonBuilder() {
 
     return {
       rubric_id: rubricId,
+      skills: currentLessonConfig.skills,
       source_document: sourceDocBase64,
       answer_key: answerKeyBase64,
       video: videoBase64,
