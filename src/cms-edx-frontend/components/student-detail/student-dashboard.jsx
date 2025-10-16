@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Dropdown, Table } from "react-bootstrap";
+import { fetchCsrfToken } from "../../../cms-csrftoken"
+
+import { getConfig } from "@edx/frontend-platform"
+
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useParams } from "react-router";
 import { base_url } from "../../../compugrade-constants";
@@ -15,12 +19,49 @@ const StudentDashboard = ({ classData, studentName }) => {
     course: 0,
     average: 0,
   });
+  const [courseIntegrationData, setCourseIntegrationData] = useState(null);
 
   const getProgressColor = (value) => {
     if (value < 50) return "#dc3545";
     if (value <= 70) return "#fd7e14";
     return "#28a745";
   };
+
+  const fetchCourseIntegration = async (courseKey) => {
+    if (!courseKey) return null;
+     const token = await fetchCsrfToken();
+    
+    try {
+      const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/course-integration/?course_key=${encodeURIComponent(courseKey)}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": token,
+        },
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Failed to get course integration: ${res.status} ${t}`);
+      }
+      const data = await res.json();
+      return data;
+    } catch (e) {
+      console.error("course-integration error", e);
+      return null;
+    }
+  };
+
+  const handleSelectCourse = (course) => {
+    setSelectedCourseId(course.id);
+    setSelectedCourseName(course.display_name);
+  };
+
+  useEffect(() => {
+    if (!selectedCourseId && classData?.courses?.length) {
+      handleSelectCourse(classData.courses[0]);
+    }
+  }, [classData, selectedCourseId]);
 
   useEffect(() => {
     if (!selectedCourseId || !studentId) return;
@@ -29,16 +70,30 @@ const StudentDashboard = ({ classData, studentName }) => {
       setExpandedSections({})
       setLessonsFromAPI([]);
       setLoadingProgress({ course: 0, average: 0 });
-      const courseId = encodeURIComponent(selectedCourseId);
+      
       try {
+        // First fetch course integration data
+        const integrationData = await fetchCourseIntegration(selectedCourseId);
+        setCourseIntegrationData(integrationData);
+
+        // Then fetch course progress with integration data in body
         const res = await fetch(
-          `${base_url}/api/grading/get_course_progress_for_user?course_id=${courseId}&user_id=${studentId}`,
+          `${base_url}/api/grading/get_course_progress_for_user`,
           {
             method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              course_id: selectedCourseId,
+              user_id: studentId,
+              content_data: integrationData
+            })
           }
         );
 
         const result = await res.json();
+        console.log("Course Progress Result:", result);
         const { overall_progress, overall_score, subsections } = result.data;
 
         setLoadingProgress({
@@ -65,6 +120,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                 })
               : "",
             letterGrade: rubric.score >= 50 ? "Pass" : "--",
+            subrubrics: rubric.subrubrics || []
           })),
         }));
 
@@ -97,6 +153,7 @@ const StudentDashboard = ({ classData, studentName }) => {
     label,
     size = 100,
     strokeWidth = 8,
+    labelColor = "#333",
   }) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
@@ -140,10 +197,10 @@ const StudentDashboard = ({ classData, studentName }) => {
               transform: "translate(-50%, -50%)",
               fontSize: "14px",
               fontWeight: "bold",
-              color: "#333",
+              color: labelColor,
             }}
           >
-            {Math.round(percentage)}%
+            {Number.isFinite(percentage) ? percentage.toFixed(2) : "0.00"}%
           </div>
         </div>
         {label && (
@@ -162,10 +219,11 @@ const StudentDashboard = ({ classData, studentName }) => {
     );
   };
 
-  const handleSelectCourse = (course) => {
-    setSelectedCourseId(course.id);
-    setSelectedCourseName(course.display_name);
-  };
+  useEffect(() => {
+    if (!selectedCourseId && classData?.courses?.length) {
+      handleSelectCourse(classData.courses[0]);
+    }
+  }, [classData, selectedCourseId]);
 
   return (
     <div className="h-auto mb-4" style={{ borderRadius: "5px", border: "0.5px solid rgba(0, 0, 0, 0.30)", padding: "16px" }}>
@@ -182,7 +240,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                 Select Course :
               </span>
               <Dropdown>
-                <Dropdown.Toggle variant="outline-secondary" size="sm" style={{ minWidth: "100px", textAlign: "left", fontSize: "13px" }}>
+                <Dropdown.Toggle className="outline-none" variant="outline-secondary" size="sm" style={{ minWidth: "100px", textAlign: "left", fontSize: "13px" }}>
                   {selectedCourseName || "Select Course"}
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
@@ -207,10 +265,10 @@ const StudentDashboard = ({ classData, studentName }) => {
                 <h6 style={{ fontSize: "13px", color: "#495057", marginBottom: "16px" }}>
                   {studentName} has completed{" "}
                   <span style={{ color: getProgressColor(loadingProgress.course), fontWeight: "600" }}>
-                    {loadingProgress.course}%{" "}
+                    {Number.isFinite(loadingProgress.course) ? loadingProgress.course.toFixed(2) : "0.00"}%{" "}
                   </span>{" "}
                   of the {selectedCourseName} with average grade{" "}
-                  <span style={{ fontWeight: "600" }}>{loadingProgress.average}%</span>
+                  <span style={{ fontWeight: "600" }}>{Number.isFinite(loadingProgress.average) ? loadingProgress.average.toFixed(2) : "0.00"}%</span>
                 </h6>
                 <button className="primary-button px-3 py-2">Send Message</button>
               </Col>
@@ -247,7 +305,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {lessonsFromAPI?.map((section, sectionIndex) => (
+                  {lessonsFromAPI.length > 0 && lessonsFromAPI?.map((section, sectionIndex) => (
                     <React.Fragment key={sectionIndex}>
                       <tr>
                         <td onClick={() => toggleSection(section.sectionKey)} style={{ cursor: "pointer", fontWeight: "600", textDecoration: "underline" }}>
@@ -258,35 +316,58 @@ const StudentDashboard = ({ classData, studentName }) => {
                           <AnimatedCircularProgress
                             color={getProgressColor(section.targetProgress)}
                             percentage={section.targetProgress}
-                            size={48}
+                            size={64}
                           />
                         </td>
                         <td className="text-center">--</td>
-                        <td className="text-center">{section.targetProgress}%</td>
+                        <td className="text-center">{Number.isFinite(section.targetProgress) ? section.targetProgress.toFixed(2) : "0.00"}%</td>
                         <td className="text-center"></td>
                         <td className="text-center">{section.targetProgress >= 50 ? "Pass" : "--"}</td>
                       </tr>
 
                       {expandedSections[section.sectionKey] &&
                         section.items.map((item, itemIndex) => (
-                          <tr key={itemIndex}>
-                            <td style={{ paddingLeft: "30px", textDecoration: "underline" }}>{item.name}</td>
-                            <td className="text-center">
-                              <AnimatedCircularProgress
-                                color={getProgressColor(item.targetProgress)}
-                                percentage={item.targetProgress}
-                                size={48}
-                              />
-                            </td>
-                            <td className="text-center">{item.lastAttempt}</td>
-                            <td className="text-center">{item.grade}</td>
-                            <td className="text-center" style={{ color: item.dueDate.includes("Oct 30") ? "#dc3545" : "#6c757d" }}>
-                              {item.dueDate}
-                            </td>
-                            <td className="text-center" style={{ color: item.letterGrade === "Pass" ? "#28a745" : "#6c757d" }}>
-                              {item.letterGrade}
-                            </td>
-                          </tr>
+                          <React.Fragment key={itemIndex}>
+                            <tr>
+                              <td style={{ paddingLeft: "30px", textDecoration: "underline" }}>{item.name}</td>
+                              <td className="text-center">
+                                <AnimatedCircularProgress
+                                  color={getProgressColor(item.targetProgress)}
+                                  percentage={item.targetProgress}
+                                  size={64}
+                                />
+                              </td>
+                              <td className="text-center">{item.lastAttempt}</td>
+                              <td className="text-center">{Number.isFinite(item.targetProgress) ? item.targetProgress.toFixed(2) : "0.00"}%</td>
+                              <td className="text-center" style={{ color: item.dueDate.includes("Oct 30") ? "#dc3545" : "#6c757d" }}>
+                                {item.dueDate}
+                              </td>
+                              <td className="text-center" style={{ color: item.letterGrade === "Pass" ? "#28a745" : "#6c757d" }}>
+                                {item.letterGrade}
+                              </td>
+                            </tr>
+                            {/* Subrubrics */}
+                            {item.subrubrics && item.subrubrics.map((subrubric, subIndex) => (
+                              <tr key={`${itemIndex}-${subIndex}`}>
+                                <td style={{ paddingLeft: "40px", textDecoration: "underline" }}>
+                                  {subrubric.subrubric_title}
+                                </td>
+                                <td className="text-center">
+                                  <AnimatedCircularProgress
+                                    color={getProgressColor(subrubric.progress)}
+                                    percentage={subrubric.progress}
+                                    size={64}
+                                  />
+                                </td>
+                                <td className="text-center">--</td>
+                                <td className="text-center">{Number.isFinite(subrubric.score) ? subrubric.score.toFixed(2) : "0.00"}%</td>
+                                <td className="text-center">--</td>
+                                <td className="text-center" style={{ color: subrubric.score >= 50 ? "#28a745" : "#6c757d" }}>
+                                  {subrubric.score >= 50 ? "Pass" : "--"}
+                                </td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
                         ))}
                     </React.Fragment>
                   ))}
@@ -297,12 +378,13 @@ const StudentDashboard = ({ classData, studentName }) => {
                       <AnimatedCircularProgress
                         color={getProgressColor(loadingProgress.average)}
                         percentage={loadingProgress.average}
-                        size={48}
+                        size={64}
+                        labelColor="#fff"
                       />
                     </td>
                     <td></td>
                     <td className="text-center" style={{ fontWeight: "600" }}>
-                      {loadingProgress.average}%
+                      {Number.isFinite(loadingProgress.average) ? loadingProgress.average.toFixed(2) : "0.00"}%
                     </td>
                     <td></td>
                     <td className="text-center" style={{ fontWeight: "600" }}>

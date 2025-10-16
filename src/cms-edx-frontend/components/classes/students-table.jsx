@@ -95,7 +95,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                {fromTeachers && <button
                   className="btn btn-link p-1 me-2"
                   onClick={() =>{ navigate(`/classes/${classId}/${student.id}`)
-                  sessionStorage.setItem("student-name", student.first_name + " " + student.last_name)
+                  sessionStorage.setItem("student-name", student.username)
                }
                 }
                   style={{ border: "none", background: "none" }}

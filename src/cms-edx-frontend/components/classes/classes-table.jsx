@@ -146,7 +146,8 @@ const ActivityFeed = ({ classes ,setClasses}) => {
               <td>{cls.grade}</td>
               <td>{cls.period}</td>
               <td>{cls?.students?.length}</td>
-              <td>{cls?.courses?.[0]?.display_name}</td>
+              <td> {cls?.courses?.map(course => course.display_name).join(", ")}</td>
+
               <td>
                 {cls.status == "active" ? (
                   <button className="primary-button py-2 px-3">Active</button>
