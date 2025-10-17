@@ -4,7 +4,7 @@ import { fetchCsrfToken } from "../../../cms-csrftoken"
 
 import { getConfig } from "@edx/frontend-platform"
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { useParams } from "react-router";
 import { base_url } from "../../../compugrade-constants";
 
@@ -20,6 +20,7 @@ const StudentDashboard = ({ classData, studentName }) => {
     average: 0,
   });
   const [courseIntegrationData, setCourseIntegrationData] = useState(null);
+  const [reportPopup, setReportPopup] = useState({ open: false, imageUrl: "", title: "" });
 
   const getProgressColor = (value) => {
     if (value < 50) return "#dc3545";
@@ -147,6 +148,14 @@ const StudentDashboard = ({ classData, studentName }) => {
     }));
   };
 
+  const openReportPopup = (imageUrl, title) => {
+    setReportPopup({ open: true, imageUrl, title });
+  };
+
+  const closeReportPopup = () => {
+    setReportPopup({ open: false, imageUrl: "", title: "" });
+  };
+
   const AnimatedCircularProgress = ({
     percentage,
     color,
@@ -267,7 +276,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                   <span style={{ color: getProgressColor(loadingProgress.course), fontWeight: "600" }}>
                     {Number.isFinite(loadingProgress.course) ? loadingProgress.course.toFixed(2) : "0.00"}%{" "}
                   </span>{" "}
-                  of the {selectedCourseName} with average grade{" "}
+                  of the { } with average grade{" "}
                   <span style={{ fontWeight: "600" }}>{Number.isFinite(loadingProgress.average) ? loadingProgress.average.toFixed(2) : "0.00"}%</span>
                 </h6>
                 <button className="primary-button px-3 py-2">Send Message</button>
@@ -302,6 +311,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                     <th className="text-center">Grade(%)</th>
                     <th className="text-center">Due Date</th>
                     <th className="text-center">Letter Grade</th>
+                    <th className="text-center">Report</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -316,13 +326,14 @@ const StudentDashboard = ({ classData, studentName }) => {
                           <AnimatedCircularProgress
                             color={getProgressColor(section.targetProgress)}
                             percentage={section.targetProgress}
-                            size={64}
+                            size={72}
                           />
                         </td>
                         <td className="text-center">--</td>
                         <td className="text-center">{Number.isFinite(section.targetProgress) ? section.targetProgress.toFixed(2) : "0.00"}%</td>
-                        <td className="text-center"></td>
-                        <td className="text-center">{section.targetProgress >= 50 ? "Pass" : "--"}</td>
+                        <td className="text-center">--</td>
+                        <td className="text-center" style={{ color: section.targetProgress >= 50 ? "#28a745" : "#6c757d" }}>{section.targetProgress >= 50 ? "Pass" : "--"}</td>
+                        <td className="text-center">--</td> 
                       </tr>
 
                       {expandedSections[section.sectionKey] &&
@@ -334,17 +345,18 @@ const StudentDashboard = ({ classData, studentName }) => {
                                 <AnimatedCircularProgress
                                   color={getProgressColor(item.targetProgress)}
                                   percentage={item.targetProgress}
-                                  size={64}
+                                  size={72}
                                 />
                               </td>
                               <td className="text-center">{item.lastAttempt}</td>
                               <td className="text-center">{Number.isFinite(item.targetProgress) ? item.targetProgress.toFixed(2) : "0.00"}%</td>
                               <td className="text-center" style={{ color: item.dueDate.includes("Oct 30") ? "#dc3545" : "#6c757d" }}>
-                                {item.dueDate}
+                                {item.dueDate || "--"}
                               </td>
                               <td className="text-center" style={{ color: item.letterGrade === "Pass" ? "#28a745" : "#6c757d" }}>
                                 {item.letterGrade}
                               </td>
+                              <td className="text-center">--</td>
                             </tr>
                             {/* Subrubrics */}
                             {item.subrubrics && item.subrubrics.map((subrubric, subIndex) => (
@@ -352,18 +364,32 @@ const StudentDashboard = ({ classData, studentName }) => {
                                 <td style={{ paddingLeft: "40px", textDecoration: "underline" }}>
                                   {subrubric.subrubric_title}
                                 </td>
-                                <td className="text-center">
+                                <td className="text-center">--</td>
+
+                                {/* <td className="text-center">
                                   <AnimatedCircularProgress
-                                    color={getProgressColor(subrubric.progress)}
-                                    percentage={subrubric.progress}
+                                    color={getProgressColor(subrubric.item_score)}
+                                    percentage={subrubric.item_score}
                                     size={64}
                                   />
+                                </td> */}
+                                <td className="text-center">--</td>
+                                <td className="text-center">{Number.isFinite(subrubric.subrubric_score) ? subrubric.subrubric_score.toFixed(2) : "0.00"}%</td>
+                                <td className="text-center">--</td>
+                                <td className="text-center" style={{ color: subrubric.subrubric_score >= 50 ? "#28a745" : "#6c757d" }}>
+                                  {subrubric.subrubric_score >= 50 ? "Pass" : "--"}
                                 </td>
-                                <td className="text-center">--</td>
-                                <td className="text-center">{Number.isFinite(subrubric.score) ? subrubric.score.toFixed(2) : "0.00"}%</td>
-                                <td className="text-center">--</td>
-                                <td className="text-center" style={{ color: subrubric.score >= 50 ? "#28a745" : "#6c757d" }}>
-                                  {subrubric.score >= 50 ? "Pass" : "--"}
+                                <td className="text-center">
+                                  {subrubric.images && Object.keys(subrubric.images).length > 0 ? (
+                                    <button 
+                                      className="primary-button px-3 py-2"
+                                      onClick={() => openReportPopup(subrubric.images.teacher_image_url, subrubric.subrubric_title)}
+                                    >
+                                      View Report
+                                    </button>
+                                  ) : (
+                                    "--"
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -378,7 +404,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                       <AnimatedCircularProgress
                         color={getProgressColor(loadingProgress.average)}
                         percentage={loadingProgress.average}
-                        size={64}
+                        size={72}
                         labelColor="#fff"
                       />
                     </td>
@@ -390,6 +416,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                     <td className="text-center" style={{ fontWeight: "600" }}>
                       {loadingProgress.average >= 50 ? "Pass" : "--"}
                     </td>
+                    <td></td>
                   </tr>
                 </tbody>
               </Table>
@@ -397,6 +424,32 @@ const StudentDashboard = ({ classData, studentName }) => {
           </>
         )}
       </Container>
+      
+      {/* Custom Report Popup */}
+      {reportPopup.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] w-[90vw] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Student Attempt - {reportPopup.title}</h3>
+              <div
+                onClick={closeReportPopup}
+                className="p-2 hover:bg-gray-100 rounded-full cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
+              <div className="w-full h-[60vh] overflow-auto border border-gray-200 rounded-lg">
+                <img
+                  src={reportPopup.imageUrl}
+                  alt="Student Attempt"
+                  className="w-full h-auto min-h-full object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
