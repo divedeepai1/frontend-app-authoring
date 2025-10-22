@@ -145,6 +145,17 @@ const CourseUnit = ({ courseId }) => {
       }
     };
 
+   
+
+    blockId && fetchData();
+    
+  }, [blockId, courseId]);
+
+  useEffect(() => {
+    document.title = getPageHeadTitle("", unitTitle);
+  }, [unitTitle]);
+
+  useEffect(() => {
     const fetchCourseType = async () => {
       const token = await fetchCsrfToken();
       try {
@@ -163,7 +174,7 @@ const CourseUnit = ({ courseId }) => {
         if (response.ok) {
           const courses = await response.json();
           // Filter course by courseId
-          const currentCourse = courses.find(course => course.id === courseId);
+          const currentCourse = courses.find(course => course.id == courseId);
           
           if (currentCourse && currentCourse.course_type) {
             // Map course_type values to match our session storage format
@@ -196,14 +207,10 @@ const CourseUnit = ({ courseId }) => {
         sessionStorage.setItem('courseType', 'ms-word');
       }
     };
+    fetchCourseType();
+  }, []);
 
-    blockId && fetchData();
-    courseId && fetchCourseType();
-  }, [blockId, courseId]);
 
-  useEffect(() => {
-    document.title = getPageHeadTitle("", unitTitle);
-  }, [unitTitle]);
 
   useEffect(() => {
     setUnitXBlocks(courseVerticalChildren.children);
