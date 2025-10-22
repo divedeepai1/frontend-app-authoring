@@ -580,6 +580,7 @@ export default function LessonBuilder() {
     return {
       rubric_id: rubricId,
       skills: currentLessonConfig.skills,
+      app_name: sessionStorage.getItem('courseType') == 'ms_word' ? "word" : sessionStorage.getItem('courseType') =="ms_powerpoint" ? "powerpoint" : "excel",
       source_document: sourceDocBase64,
       answer_key: answerKeyBase64,
       video: videoBase64,

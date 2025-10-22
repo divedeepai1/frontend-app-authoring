@@ -14,6 +14,18 @@ export default function DocumentPreviewDialog({
   const containerRef = useRef(null);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Helper function to get the actual filename
+  const getActualFilename = () => {
+    if (source instanceof File) {
+      return source.name;
+    }
+    if (typeof source === "string" && source.includes(",")) {
+      // This might be a base64 string, try to extract filename from nameHint
+      return nameHint;
+    }
+    return nameHint;
+  };
+
   const resolved = useMemo(() => {
     if (!source) return { type: "none", url: "" };
 
@@ -44,6 +56,13 @@ export default function DocumentPreviewDialog({
 
   useEffect(() => {
     if (!open || resolved.type !== "doc") return;
+    
+    // Don't try to render DOCX if the file is actually Excel or PowerPoint
+    const filename = getActualFilename();
+    if (filename && (/\.(xlsx?|pptx?)$/i.test(filename))) {
+      setErrorMsg(""); // Clear any existing error message
+      return;
+    }
 
     const renderDocx = async () => {
       try {
@@ -77,12 +96,22 @@ export default function DocumentPreviewDialog({
         }
       } catch (e) {
         console.error(e);
-        setErrorMsg("Unable to render DOCX preview.");
+        setErrorMsg("Unable to preview file.");
       }
     };
 
     renderDocx();
   }, [open, resolved.type, source]);
+
+  // Clear error message for Excel and PowerPoint files
+  useEffect(() => {
+    if (open) {
+      const filename = getActualFilename();
+      if (filename && (/\.(xlsx?|pptx?)$/i.test(filename))) {
+        setErrorMsg("");
+      }
+    }
+  }, [open, source, nameHint]);
 
   if (!open) return null;
 
@@ -119,14 +148,95 @@ export default function DocumentPreviewDialog({
               className="w-full h-[70vh] rounded bg-white"
             />
           ) : resolved.type === "doc" ? (
-            errorMsg ? (
-              <div className="text-red-600">{errorMsg}</div>
+            // Check if this is actually an Excel file that was misclassified
+            (getActualFilename() && /\.(xlsx?)$/i.test(getActualFilename())) ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <div className="p-4 rounded-full bg-green-100 mb-4">
+                  <FileText className="w-12 h-12 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Excel Preview</h3>
+                <p className="text-gray-600 mb-4">Excel files cannot be previewed in the browser.</p>
+                <a
+                  href={resolved.url}
+                  download={getActualFilename() || "spreadsheet.xlsx"}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Download to View
+                </a>
+              </div>
+            ) : // Check if this is actually a PowerPoint file that was misclassified
+            (getActualFilename() && /\.(pptx?)$/i.test(getActualFilename())) ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <div className="p-4 rounded-full bg-orange-100 mb-4">
+                  <FileText className="w-12 h-12 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">PowerPoint Preview</h3>
+                <p className="text-gray-600 mb-4">PowerPoint files cannot be previewed in the browser.</p>
+                <a
+                  href={resolved.url}
+                  download={getActualFilename() || "presentation.pptx"}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                >
+                  Download to View
+                </a>
+              </div>
+            ) : // Only show DOCX preview for actual DOCX files
+            (getActualFilename() && /\.(docx?)$/i.test(getActualFilename())) ? (
+              errorMsg ? (
+                <div className="text-red-600">{errorMsg}</div>
+              ) : (
+                <div
+                  ref={containerRef}
+                  className="docx-preview !p-0 !bg-none w-full h-[70vh] overflow-auto bg-white rounded"
+                />
+              )
             ) : (
-              <div
-                ref={containerRef}
-                className="docx-preview !p-0 !bg-none w-full h-[70vh] overflow-auto bg-white rounded"
-              />
+              // Fallback for unknown doc types
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <div className="p-4 rounded-full bg-gray-100 mb-4">
+                  <FileText className="w-12 h-12 text-gray-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Document Preview</h3>
+                <p className="text-gray-600 mb-4">This file type cannot be previewed in the browser.</p>
+                <a
+                  href={resolved.url}
+                  download={getActualFilename() || "document.docx"}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Download to View
+                </a>
+              </div>
             )
+          ) : resolved.type === "ppt" ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <div className="p-4 rounded-full bg-orange-100 mb-4">
+                <FileText className="w-12 h-12 text-orange-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">PowerPoint Preview</h3>
+              <p className="text-gray-600 mb-4">PowerPoint files cannot be previewed in the browser.</p>
+              <a
+                href={resolved.url}
+                download={getActualFilename() || "presentation.pptx"}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Download to View
+              </a>
+            </div>
+          ) : resolved.type === "xls" ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <div className="p-4 rounded-full bg-green-100 mb-4">
+                <FileText className="w-12 h-12 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Excel Preview</h3>
+              <p className="text-gray-600 mb-4">Excel files cannot be previewed in the browser.</p>
+              <a
+                href={resolved.url}
+                download={getActualFilename() || "spreadsheet.xlsx"}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Download to View
+              </a>
+            </div>
           ) : resolved.url ? (
             <iframe
               src={resolved.url}
@@ -145,6 +255,8 @@ export default function DocumentPreviewDialog({
 function guessTypeFromString(s) {
   if (/\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(s)) return "image";
   if (/\.(docx?)(\?|$)/i.test(s)) return "doc";
+  if (/\.(pptx?)(\?|$)/i.test(s)) return "ppt";
+  if (/\.(xlsx?)(\?|$)/i.test(s)) return "xls";
   if (/\.(pdf)(\?|$)/i.test(s)) return "pdf";
   return "unknown";
 }
@@ -158,6 +270,8 @@ function guessTypeFromName(name) {
   if (/\.(png|jpe?g|gif|webp|svg)$/i.test(name)) return "image";
   if (/\.(pdf)$/i.test(name)) return "pdf";
   if (/\.(docx?)$/i.test(name)) return "doc";
+  if (/\.(pptx?)$/i.test(name)) return "ppt";
+  if (/\.(xlsx?)$/i.test(name)) return "xls";
   return "unknown";
 }
 
@@ -166,6 +280,8 @@ function guessTypeFromMime(mime) {
   if (/^image\//i.test(mime)) return "image";
   if (/pdf/i.test(mime)) return "pdf";
   if (/msword|officedocument\.wordprocessingml\.document/i.test(mime)) return "doc";
+  if (/officedocument\.presentationml\.presentation/i.test(mime)) return "ppt";
+  if (/officedocument\.spreadsheetml\.sheet/i.test(mime)) return "xls";
   return "unknown";
 }
 
@@ -178,5 +294,9 @@ function guessMimeFromContentOrName(name = "", base64 = "") {
   if (/\.(pdf)$/i.test(name)) return "application/pdf";
   if (/\.(docx?)$/i.test(name))
     return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (/\.(pptx?)$/i.test(name))
+    return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  if (/\.(xlsx?)$/i.test(name))
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   return "application/octet-stream";
 }

@@ -55,7 +55,61 @@ export function HybridContentEditor({
     type: null,
     name: "",
   });
-  const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
+  const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null, nameHint: "" });
+
+  // Get course type from session storage
+  const getCourseType = () => {
+    return sessionStorage.getItem('courseType') || 'ms-word';
+  };
+
+  // Get file upload configuration based on course type
+  const getFileConfig = () => {
+    const courseType = getCourseType();
+    switch (courseType) {
+      case 'ms-word':
+        return {
+          accept: '.doc,.docx',
+          description: 'DOC, DOCX files supported',
+          sourceFilename: 'source-document.docx',
+          answerKeyFilename: 'answer-key.docx'
+        };
+      case 'powerpoint':
+        return {
+          accept: '.ppt,.pptx',
+          description: 'PPT, PPTX files supported',
+          sourceFilename: 'source-presentation.pptx',
+          answerKeyFilename: 'answer-key.pptx'
+        };
+      case 'excel':
+        return {
+          accept: '.xls,.xlsx',
+          description: 'XLS, XLSX files supported',
+          sourceFilename: 'source-spreadsheet.xlsx',
+          answerKeyFilename: 'answer-key.xlsx'
+        };
+      default:
+        return {
+          accept: '.doc,.docx',
+          description: 'DOC, DOCX files supported',
+          sourceFilename: 'source-document.docx',
+          answerKeyFilename: 'answer-key.docx'
+        };
+    }
+  };
+
+  // Get default MIME type based on course type
+  const getDefaultMimeType = (courseType) => {
+    switch (courseType) {
+      case 'ms-word':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'powerpoint':
+        return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      case 'excel':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      default:
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+  };
 
   const collapseOrExpandAll = () => {
     const shouldCollapse = blocks.some((b) => !b.isCollapsed);
@@ -720,7 +774,7 @@ export function HybridContentEditor({
                     {block.content.mode === "state-of-document" && (
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">
-                          Relevant Document (DOC/DOCX)
+                          Relevant Document ({getFileConfig().description})
                         </label>
                         {block.content.document ? (
                           <div className="flex items-center justify-between gap-4 p-2 rounded border border-orange-200 bg-orange-50">
@@ -738,6 +792,7 @@ export function HybridContentEditor({
                                     open: true,
                                     title: "Comparison Document",
                                     src: block.content.document,
+                                    nameHint: block.content.document?.name || getFileConfig().answerKeyFilename,
                                   })
                                 }
                                 className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors cursor-pointer"
@@ -748,7 +803,7 @@ export function HybridContentEditor({
                                 onClick={() =>
                                   downloadFile(
                                     block.content.document,
-                                    "answer-key.docx"
+                                    getFileConfig().answerKeyFilename
                                   )
                                 }
                                 className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
@@ -771,7 +826,7 @@ export function HybridContentEditor({
                         ) : (
                           <input
                             type="file"
-                            accept=".doc,.docx"
+                            accept={getFileConfig().accept}
                             onChange={(e) => {
                               const f = e.target.files?.[0];
                               if (f) {
@@ -914,23 +969,43 @@ export function HybridContentEditor({
       )}
       <DocumentPreviewDialog
         open={docPreview.open}
-        onClose={() => setDocPreview({ open: false, title: "", src: null })}
+        onClose={() => setDocPreview({ open: false, title: "", src: null, nameHint: "" })}
         title={docPreview.title}
         source={docPreview.src}
         mimeHint={(() => {
           const s = docPreview.src;
+          const courseType = getCourseType();
+          
           if (!s) return "";
+          
+          // If it's a File object, use its type
+          if (s instanceof File) {
+            return s.type || getDefaultMimeType(courseType);
+          }
+          
           if (typeof s === "string") {
             if (/^data:/i.test(s)) return "";
             if (!/^https?:\/\//i.test(s)) {
-              return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+              return getDefaultMimeType(courseType);
             }
           } else if (s && !s.type) {
-            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            return getDefaultMimeType(courseType);
           }
           return "";
         })()}
-        nameHint="document.docx"
+        nameHint={docPreview.nameHint || (() => {
+          const courseType = getCourseType();
+          switch (courseType) {
+            case 'ms-word':
+              return 'document.docx';
+            case 'powerpoint':
+              return 'presentation.pptx';
+            case 'excel':
+              return 'spreadsheet.xlsx';
+            default:
+              return 'document.docx';
+          }
+        })()}
       />
     </div>
   );

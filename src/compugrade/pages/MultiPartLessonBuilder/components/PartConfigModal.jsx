@@ -11,6 +11,48 @@ export default function PartConfigModal({
 }) {
   if (!open || !selectedPart) return null;
 
+  // Get course type from session storage
+  const getCourseType = () => {
+    return sessionStorage.getItem('courseType') || 'ms-word';
+  };
+
+  // Get file upload configuration based on course type
+  const getFileConfig = () => {
+    const courseType = getCourseType();
+    switch (courseType) {
+      case 'ms-word':
+        return {
+          accept: '.doc,.docx',
+          description: 'DOC, DOCX files supported',
+          sourceFilename: 'source-document.docx',
+          answerKeyFilename: 'answer-key.docx'
+        };
+      case 'powerpoint':
+        return {
+          accept: '.ppt,.pptx',
+          description: 'PPT, PPTX files supported',
+          sourceFilename: 'source-presentation.pptx',
+          answerKeyFilename: 'answer-key.pptx'
+        };
+      case 'excel':
+        return {
+          accept: '.xls,.xlsx',
+          description: 'XLS, XLSX files supported',
+          sourceFilename: 'source-spreadsheet.xlsx',
+          answerKeyFilename: 'answer-key.xlsx'
+        };
+      default:
+        return {
+          accept: '.doc,.docx',
+          description: 'DOC, DOCX files supported',
+          sourceFilename: 'source-document.docx',
+          answerKeyFilename: 'answer-key.docx'
+        };
+    }
+  };
+
+  const fileConfig = getFileConfig();
+
   return (
     <div className="fixed inset-0 z-50 pt-[3%] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 border-none" onClick={onClose} />
@@ -45,25 +87,26 @@ export default function PartConfigModal({
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Source Document</label>
                 {selectedPartConfig.sourceDocument ? (
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-blue-200">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="p-2 rounded-lg bg-blue-200 flex-shrink-0">
                         <FileText className="w-4 h-4 text-blue-700" />
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-medium text-gray-900 block truncate" title={selectedPartConfig.sourceDocument.name || "Uploaded"}>
                           {selectedPartConfig.sourceDocument.name || "Uploaded"}
                         </span>
                         <p className="text-xs text-gray-500">Source document uploaded</p>
                       </div>
                     </div>
-                    <div className="flex">
+                    <div className="flex flex-shrink-0">
                       <div
                         onClick={() =>
                           setDocPreview({
                             open: true,
                             title: `Part Source Document — ${selectedPart?.title || "Part"}`,
                             src: selectedPartConfig.sourceDocument,
+                            nameHint: selectedPartConfig.sourceDocument?.name || fileConfig.sourceFilename,
                           })
                         }
                         className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
@@ -71,7 +114,7 @@ export default function PartConfigModal({
                         <Eye className="w-4 h-4" />
                       </div>
                       <div
-                        onClick={() => downloadFile(selectedPartConfig.sourceDocument, "source-document.docx")}
+                        onClick={() => downloadFile(selectedPartConfig.sourceDocument, fileConfig.sourceFilename)}
                         className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       >
                         <Download className="w-4 h-4" />
@@ -85,32 +128,33 @@ export default function PartConfigModal({
                     </div>
                   </div>
                 ) : (
-                  <FileInput id="part-source-document" onSelect={(file) => setSelectedPartConfig({ sourceDocument: file })} />
+                  <FileInput id="part-source-document" onSelect={(file) => setSelectedPartConfig({ sourceDocument: file })} fileConfig={fileConfig} />
                 )}
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Answer Key</label>
                 {selectedPartConfig.answerKey ? (
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-green-200">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="p-2 rounded-lg bg-green-200 flex-shrink-0">
                         <FileText className="w-4 h-4 text-green-700" />
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-medium text-gray-900 block truncate" title={selectedPartConfig.answerKey.name || "Uploaded"}>
                           {selectedPartConfig.answerKey.name || "Uploaded"}
                         </span>
                         <p className="text-xs text-gray-500">Answer key uploaded</p>
                       </div>
                     </div>
-                    <div className="flex">
+                    <div className="flex flex-shrink-0">
                       <div
                         onClick={() =>
                           setDocPreview({
                             open: true,
                             title: `Part Answer Key — ${selectedPart?.title || "Part"}`,
                             src: selectedPartConfig.answerKey,
+                            nameHint: selectedPartConfig.answerKey?.name || fileConfig.answerKeyFilename,
                           })
                         }
                         className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
@@ -118,7 +162,7 @@ export default function PartConfigModal({
                         <Eye className="w-4 h-4" />
                       </div>
                       <div
-                        onClick={() => downloadFile(selectedPartConfig.answerKey, "answer-key.docx")}
+                        onClick={() => downloadFile(selectedPartConfig.answerKey, fileConfig.answerKeyFilename)}
                         className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       >
                         <Download className="w-4 h-4" />
@@ -132,7 +176,7 @@ export default function PartConfigModal({
                     </div>
                   </div>
                 ) : (
-                  <FileInput id="part-answer-key" onSelect={(file) => setSelectedPartConfig({ answerKey: file })} />
+                  <FileInput id="part-answer-key" onSelect={(file) => setSelectedPartConfig({ answerKey: file })} fileConfig={fileConfig} />
                 )}
               </div>
             </div>
@@ -143,12 +187,12 @@ export default function PartConfigModal({
   );
 }
 
-function FileInput({ id, onSelect }) {
+function FileInput({ id, onSelect, fileConfig }) {
   return (
     <div className="group border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer">
       <input
         type="file"
-        accept=".doc,.docx"
+        accept={fileConfig.accept}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onSelect(file);
@@ -161,7 +205,7 @@ function FileInput({ id, onSelect }) {
           <UploadIcon />
         </div>
         <p className="text-sm font-medium text-gray-700 group-hover:text-blue-700">Upload document</p>
-        <p className="text-xs text-gray-500 mt-1">DOC, DOCX files supported</p>
+        <p className="text-xs text-gray-500 mt-1">{fileConfig.description}</p>
       </label>
     </div>
   );

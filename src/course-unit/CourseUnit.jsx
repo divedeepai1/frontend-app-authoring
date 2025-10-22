@@ -41,6 +41,8 @@ import DueDate from "./sidebar/DueDate";
 import { base_url } from "../compugrade-constants";
 import InstructionXBlock from "../compugrade/components/InstructionXBlock.jsx";
 import Timer from "./sidebar/Timer";
+import { fetchCsrfToken } from "../cms-csrftoken";
+
 
 const CourseUnit = ({ courseId }) => {
   const { blockId } = useParams();
@@ -120,6 +122,7 @@ const CourseUnit = ({ courseId }) => {
     
 
     sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
+    
     const fetchData = async () => {
       try {
         const encodedBlockId = encodeURIComponent(blockId); 
@@ -142,8 +145,61 @@ const CourseUnit = ({ courseId }) => {
       }
     };
 
+    const fetchCourseType = async () => {
+      const token = await fetchCsrfToken();
+      try {
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const courses = await response.json();
+          // Filter course by courseId
+          const currentCourse = courses.find(course => course.id === courseId);
+          
+          if (currentCourse && currentCourse.course_type) {
+            // Map course_type values to match our session storage format
+            let sessionCourseType = currentCourse.course_type;
+            
+            // Handle different course type formats
+            if (sessionCourseType === 'ms_powerpoint') {
+              sessionCourseType = 'powerpoint';
+            } else if (sessionCourseType === 'ms_excel') {
+              sessionCourseType = 'excel';
+            } else if (sessionCourseType === 'ms_word') {
+              sessionCourseType = 'ms-word';
+            }
+            
+            sessionStorage.setItem('courseType', sessionCourseType);
+            console.log('Course type set to:', sessionCourseType);
+          } else {
+            // Default fallback
+            sessionStorage.setItem('courseType', 'ms-word');
+            console.log('Course not found, defaulting to ms-word');
+          }
+        } else {
+          console.error('Failed to fetch course information:', response.status);
+          // Default fallback
+          sessionStorage.setItem('courseType', 'ms-word');
+        }
+      } catch (err) {
+        console.error('Error fetching course type:', err);
+        // Default fallback
+        sessionStorage.setItem('courseType', 'ms-word');
+      }
+    };
+
     blockId && fetchData();
-  }, [blockId]);
+    courseId && fetchCourseType();
+  }, [blockId, courseId]);
 
   useEffect(() => {
     document.title = getPageHeadTitle("", unitTitle);
