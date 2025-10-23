@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Dropdown } from "react-bootstrap";
 import { Line, Bar } from "react-chartjs-2";
 import { Save, Printer } from "lucide-react";
+import { getConfig } from "@edx/frontend-platform";
+import { fetchCsrfToken } from "../../../cms-csrftoken";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -30,12 +32,110 @@ const ReportsDashboard = () => {
   const [selectedCourse, setSelectedCourse] = useState("Select Course");
   const [selectedClass, setSelectedClass] = useState("Grade -3");
   const [today, setToday] = useState("");
+  
+  // New state for API data
+  const [classes, setClasses] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [courses, setCourses] = useState([]);
+  const [studentStats, setStudentStats] = useState({
+    total_students: 0,
+    students_joined_last_week: 0
+  });
 
   useEffect(() => {
     const now = new Date();
     const formatted = now.toISOString().split("T")[0]; 
     setToday(formatted);
   }, []);
+
+  // API Functions
+  const fetchClasses = async () => {
+    const token = await fetchCsrfToken();
+    try {
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+        }
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get classes: ${response.status} ${errorText}`);
+      }
+      const result = await response.json();
+      const cls = result?.classrooms || [];
+      setClasses(cls);
+      if (cls.length) {
+        setSelectedClassId(cls[0].id);
+        setSelectedClass(cls[0].name);
+        const firstCourses = cls[0]?.courses || [];
+        setCourses(firstCourses);
+        if (firstCourses.length) {
+          setSelectedCourse(firstCourses[0].display_name || "");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching classes:", error.message);
+    }
+  };
+
+  const fetchStudentStats = async (classId) => {
+    if (!classId) return;
+    const token = await fetchCsrfToken();
+    try {
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/classroom/${classId}/student-stats/`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+        }
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get student stats: ${response.status} ${errorText}`);
+      }
+      const result = await response.json();
+      setStudentStats({
+        total_students: result.total_students || 0,
+        students_joined_last_week: result.students_joined_last_week || 0
+      });
+    } catch (error) {
+      console.error("Error fetching student stats:", error.message);
+    }
+  };
+
+  // Initialize data on component mount
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  // Fetch student stats when class changes
+  useEffect(() => {
+    if (selectedClassId) {
+      fetchStudentStats(selectedClassId);
+    }
+  }, [selectedClassId]);
+
+  // Update courses when class changes
+  useEffect(() => {
+    const found = classes.find(c => String(c.id) === String(selectedClassId));
+    const c = found?.courses || [];
+    setCourses(c);
+    if (c.length) {
+      setSelectedCourse(c[0].display_name || "");
+    } else {
+      setSelectedCourse("Select Course");
+    }
+  }, [selectedClassId, classes]);
 
   // Sample data for charts
   const lineChartData = {
@@ -271,12 +371,16 @@ const ReportsDashboard = () => {
               id="classSelect"
               className="custom-select-black"
               style={{ width: "300px", padding: "5px" }}
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
+              value={selectedClassId}
+              onChange={(e) => {
+                setSelectedClassId(e.target.value);
+                const selectedClassData = classes.find(c => String(c.id) === String(e.target.value));
+                setSelectedClass(selectedClassData?.name || "");
+              }}
             >
-              <div className="text-black important">
-                <option>Student Class</option>
-              </div>
+              {classes.map(cls => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -348,16 +452,16 @@ const ReportsDashboard = () => {
             <Col md={2}>
               <MetricCard
                 title="Total Students"
-                value="450"
-                subtitle="20% increase in new students"
+                value={studentStats.total_students.toString()}
+                subtitle="Total enrolled students"
                 trendColor="muted"
               />
             </Col>
             <Col md={2}>
               <MetricCard
                 title="New Students"
-                value="40"
-                subtitle="Enrolled in this week"
+                value={studentStats.students_joined_last_week.toString()}
+                subtitle="Joined in last week"
                 trendColor="muted"
               />
             </Col>
@@ -466,18 +570,14 @@ const ReportsDashboard = () => {
                       {selectedCourse}
                     </Dropdown.Toggle>
                     <Dropdown.Menu>
-                      <Dropdown.Item
-                        onClick={() =>
-                          setSelectedCourse("LBD Microsoft 365 Word-1")
-                        }
-                      >
-                        LBD Microsoft 365 Word-1
-                      </Dropdown.Item>
-                      <Dropdown.Item
-                        onClick={() => setSelectedCourse("Course 2")}
-                      >
-                        Course 2
-                      </Dropdown.Item>
+                      {courses.map(course => (
+                        <Dropdown.Item
+                          key={course.id}
+                          onClick={() => setSelectedCourse(course.display_name || course.name)}
+                        >
+                          {course.display_name || course.name}
+                        </Dropdown.Item>
+                      ))}
                     </Dropdown.Menu>
                   </Dropdown>
                 </Card.Header>

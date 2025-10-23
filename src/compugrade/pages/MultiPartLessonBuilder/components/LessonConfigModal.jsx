@@ -216,7 +216,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
         console.error("Error fetching skills:", err);
       }
     };
-    fetchSkills();
+    sessionStorage.getItem("courseType") == "ms-word" && fetchSkills();
     return () => {
       aborted = true;
     };
@@ -311,9 +311,9 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
           />
         </div>
 
-        {open &&  allSkills.length > 0 && (
+        {open  && (
           <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-56 overflow-auto">
-            {filtered.length === 0 ? (
+            {filtered.length === 0 || allSkills.length === 0 ? (
               <div className="px-3 py-2 text-sm text-gray-500">No skills found</div>
             ) : (
               <ul className="py-1">
