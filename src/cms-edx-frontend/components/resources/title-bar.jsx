@@ -2,7 +2,14 @@ import Row from "react-bootstrap/Row"
 import Col from "react-bootstrap/Col"
 import Form from "react-bootstrap/Form"
 
-export default function TableHeader() {
+export default function TableHeader({ 
+  classes = [], 
+  courses = [], 
+  selectedClassId = "", 
+  selectedCourseId = "", 
+  onClassChange = () => {}, 
+  onCourseChange = () => {} 
+}) {
   const titleStyle = {
     fontSize: "1rem",
     fontWeight: 700,
@@ -34,21 +41,39 @@ export default function TableHeader() {
         <h5 className="primary-text text-xl">Additional Resources</h5>
       </Col>
       <Col className="ms-auto" xs="auto">
-        <div className="d-flex align-items-center">
-          <span style={labelMutedStyle}>Select Class :</span>
-          <Form.Control
-            as="select"
-            size="md"
-            style={selectStyle}
-            defaultValue="Grade -3"
-            aria-label="Select Class"
-          >
-            <option>Student Class Grade -1</option>
-            <option>Student Class Grade -2</option>
-            <option>Student Class Grade -3</option>
-            <option>Student Class Grade -4</option>
-            <option>Student Class Grade -5</option>
-          </Form.Control>
+        <div className="d-flex align-items-center gap-3">
+          <div className="d-flex align-items-center">
+            <span style={labelMutedStyle}>Select Class:</span>
+            <Form.Control
+              as="select"
+              size="md"
+              style={selectStyle}
+              value={selectedClassId}
+              onChange={(e) => onClassChange(e.target.value)}
+              aria-label="Select Class"
+            >
+              <option value="">All Classes</option>
+              {classes && classes.map(cls => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
+            </Form.Control>
+          </div>
+          <div className="d-flex align-items-center">
+            <span style={labelMutedStyle}>Select Course:</span>
+            <Form.Control
+              as="select"
+              size="md"
+              style={selectStyle}
+              value={selectedCourseId}
+              onChange={(e) => onCourseChange(e.target.value)}
+              aria-label="Select Course"
+            >
+              <option value="">All Courses</option>
+              {courses && courses.map(crs => (
+                <option key={crs.id} value={crs.id}>{crs.display_name}</option>
+              ))}
+            </Form.Control>
+          </div>
         </div>
       </Col>
     </Row>

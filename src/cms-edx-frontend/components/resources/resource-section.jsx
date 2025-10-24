@@ -1,7 +1,13 @@
 
 import ResourceItem from "./resource-item"
 
-export default function ResourceSection({ title, items, className }) {
+export default function ResourceSection({ 
+  title, 
+  resources = [], 
+  onDownload = () => {}, 
+  onDelete = () => {}, 
+  className 
+}) {
   const sectionStyle = {
     border: "1px solid #E5E7EB",
     borderRadius: 8,
@@ -21,8 +27,13 @@ export default function ResourceSection({ title, items, className }) {
     <section className={className} style={sectionStyle}>
       <div style={headerStyle}>{title}</div>
       <div>
-        {items.map((label, idx) => (
-          <ResourceItem key={label + idx} label={label} isLast={idx === items.length - 1} />
+        {resources && resources.map((resource, idx) => (
+          <ResourceItem 
+            key={resource.id || idx} 
+            resource={resource} 
+            onDownload={onDownload}
+            onDelete={onDelete}
+          />
         ))}
       </div>
     </section>

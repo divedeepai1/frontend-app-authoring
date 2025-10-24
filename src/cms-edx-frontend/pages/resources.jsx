@@ -3,17 +3,9 @@ import HeaderTop from "../../header";
 import { Header } from "../components/header";
 import { ManagementSection } from "../components/management-section";
 import { Container, Row, Col } from "react-bootstrap";
-import ResourcePanel from "../components/resources/resource-panel";
-import TableHeader from "../components/resources/title-bar";
+import { Resources } from "../components/resources";
 
-const Resources = () => {
-
-    const panelStyle = {
-        border: "1px solid #E5E7EB",
-        borderRadius: 8,
-        boxShadow: "none",
-        backgroundColor: "#FFFFFF",
-      }
+const ResourcesPage = () => {
   return (
     <div>
       <HeaderTop isHiddenMainMenu />
@@ -27,13 +19,8 @@ const Resources = () => {
         <ManagementSection />
         <section className="px-6">
           <main className="py-2 mb-4">
-            <Container style={panelStyle} >
-              <TableHeader />
-              <Row className="mt-1">
-                <Col>
-                  <ResourcePanel />
-                </Col>
-              </Row>
+            <Container>
+              <Resources />
             </Container>
           </main>
         </section>
@@ -42,4 +29,4 @@ const Resources = () => {
   );
 };
 
-export default Resources;
+export default ResourcesPage;

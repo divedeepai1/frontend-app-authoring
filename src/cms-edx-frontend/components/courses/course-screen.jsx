@@ -4,6 +4,7 @@ import { fetchCsrfToken } from "../../../cms-csrftoken"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import docIcon from "../../assests/document.svg"
 import viewIcon from "../../assests/view-button.svg"
+import CourseResourcesDialog from "./CourseResourcesDialog"
 
 function CourseScreen() {
   const [classes, setClasses] = useState([])
@@ -15,6 +16,7 @@ function CourseScreen() {
   const [lessons, setLessons] = useState([])
   const [verticals, setVerticals] = useState([])
   const [expandedChapters, setExpandedChapters] = useState({})
+  const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false)
 
   const fetchClasses = async () => {
     const token = await fetchCsrfToken();
@@ -173,7 +175,12 @@ function CourseScreen() {
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h2 className="primary-text m-0">{courseTitle || "Course"}</h2>
               <div className="d-flex gap-2">
-                <button className="primary-button px-4 py-2">Course Resources</button>
+                <button 
+                  className="primary-button px-4 py-2"
+                  onClick={() => setIsResourcesDialogOpen(true)}
+                >
+                  Course Resources
+                </button>
                 <button className="secondary-button px-4 py-2 ml-3">Customize this Course</button>
               </div>
             </div>
@@ -229,6 +236,14 @@ function CourseScreen() {
           </div>
         </div>
       </div>
+
+      {/* Course Resources Dialog */}
+      <CourseResourcesDialog
+        isOpen={isResourcesDialogOpen}
+        onClose={() => setIsResourcesDialogOpen(false)}
+        classId={selectedClassId}
+        courseId={selectedCourse}
+      />
     </div>
   )
 }
