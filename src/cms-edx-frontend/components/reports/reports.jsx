@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Dropdown } from "react-bootstrap";
+import { Container, Row, Col, Card } from "react-bootstrap";
 import { Line, Bar } from "react-chartjs-2";
 import { Save, Printer } from "lucide-react";
 import { getConfig } from "@edx/frontend-platform";
@@ -30,6 +30,7 @@ ChartJS.register(
 
 const ReportsDashboard = () => {
   const [selectedCourse, setSelectedCourse] = useState("Select Course");
+  const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedClass, setSelectedClass] = useState("Grade -3");
   const [today, setToday] = useState("");
   
@@ -77,6 +78,7 @@ const ReportsDashboard = () => {
         setCourses(firstCourses);
         if (firstCourses.length) {
           setSelectedCourse(firstCourses[0].display_name || "");
+          setSelectedCourseId(firstCourses[0].id);
         }
       }
     } catch (error) {
@@ -132,8 +134,10 @@ const ReportsDashboard = () => {
     setCourses(c);
     if (c.length) {
       setSelectedCourse(c[0].display_name || "");
+      setSelectedCourseId(c[0].id);
     } else {
       setSelectedCourse("Select Course");
+      setSelectedCourseId("");
     }
   }, [selectedClassId, classes]);
 
@@ -357,6 +361,13 @@ const ReportsDashboard = () => {
 
   return (
     <>
+      <style>{`
+        select:focus,
+        select:active {
+          box-shadow: none !important;
+          outline: none !important;
+        }
+      `}</style>
       <div className="col-md-12 d-flex py-4 bg-white">
         <div className="col-md-4">
           <div className="d-flex align-items-center">
@@ -369,8 +380,25 @@ const ReportsDashboard = () => {
             </label>
             <select
               id="classSelect"
-              className="custom-select-black"
-              style={{ width: "300px", padding: "5px" }}
+              style={{
+                boxShadow: "none",
+                outline: "none",
+                borderColor: "#6B7280",
+                color: "#111827",
+                height: 36,
+                padding: "0 40px 0 8px",
+                lineHeight: 1.5,
+                border: "1px solid #6B7280",
+                borderRadius: "4px",
+                width: "300px",
+                backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 12px center",
+                backgroundSize: "14px",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+              }}
               value={selectedClassId}
               onChange={(e) => {
                 setSelectedClassId(e.target.value);
@@ -378,9 +406,13 @@ const ReportsDashboard = () => {
                 setSelectedClass(selectedClassData?.name || "");
               }}
             >
-              {classes.map(cls => (
-                <option key={cls.id} value={cls.id}>{cls.name}</option>
-              ))}
+              {Array.isArray(classes) && classes.length > 0 ? (
+                classes.map(cls => (
+                  <option key={cls.id} value={cls.id}>{cls.name}</option>
+                ))
+              ) : (
+                <option value="">No relevant class</option>
+              )}
             </select>
           </div>
         </div>
@@ -439,7 +471,7 @@ const ReportsDashboard = () => {
       </div>
       <div className="py-4" >
         <div
-          className="mx-4"
+          className=""
           fluid
           style={{
             backgroundColor: "#f8f9fa",
@@ -555,31 +587,44 @@ const ReportsDashboard = () => {
                   >
                     Top Students
                   </h6>
-                  <Dropdown >
-                    <Dropdown.Toggle
-                      variant="outline-secondary"
-                      size="sm"
-                      style={{
-                        border: "1px solid #e0e0e0",
-                        fontSize: "14px",
-                        width: "max-content",
-                        padding: "10px 15px",
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      {selectedCourse}
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu>
-                      {courses.map(course => (
-                        <Dropdown.Item
-                          key={course.id}
-                          onClick={() => setSelectedCourse(course.display_name || course.name)}
-                        >
-                          {course.display_name || course.name}
-                        </Dropdown.Item>
-                      ))}
-                    </Dropdown.Menu>
-                  </Dropdown>
+                  <select
+                    style={{
+                      boxShadow: "none",
+                      outline: "none",
+                      borderColor: "#6B7280",
+                      color: "#111827",
+                      height: 36,
+                      padding: "0 40px 0 8px",
+                      lineHeight: 1.5,
+                      border: "1px solid #6B7280",
+                      borderRadius: "4px",
+                      fontSize: "14px",
+                      width: "max-content",
+                      backgroundColor: "transparent",
+                      backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E\")",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      backgroundSize: "14px",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      MozAppearance: "none",
+                    }}
+                    value={selectedCourseId}
+                    onChange={(e) => {
+                      const courseId = e.target.value;
+                      setSelectedCourseId(courseId);
+                      const course = courses.find(c => String(c.id) === String(courseId));
+                      setSelectedCourse(course?.display_name || course?.name || "");
+                    }}
+                  >
+                    {Array.isArray(courses) && courses.length > 0 ? (
+                      courses.map(crs => (
+                        <option key={crs.id} value={crs.id}>{crs.display_name || crs.name}</option>
+                      ))
+                    ) : (
+                      <option value="">No courses</option>
+                    )}
+                  </select>
                 </Card.Header>
                 <Card.Body
                   className="p-0"

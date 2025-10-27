@@ -5,6 +5,7 @@ import DeleteModal from "../common/delete-modal";
 import ResourcePanel from "./resource-panel";
 import ResourceSection from "./resource-section";
 import TitleBar from "./title-bar";
+import CourseResourcesDialog from "../courses/CourseResourcesDialog";
 
 const Resources = () => {
   const [classes, setClasses] = useState([]);
@@ -16,6 +17,7 @@ const Resources = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [resourceToDelete, setResourceToDelete] = useState(null);
+  const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false);
 
   const fetchClasses = async () => {
     const token = await fetchCsrfToken();
@@ -38,14 +40,16 @@ const Resources = () => {
       const result = await response.json();
       const cls = result?.classrooms || [];
       setClasses(cls);
-      if (cls.length) {
-        setSelectedClassId(cls[0].id);
-        const firstCourses = cls[0]?.courses || [];
-        setCourses(firstCourses);
-        if (firstCourses.length) {
-          setSelectedCourseId(firstCourses[0].id);
+      // Keep selectedClassId as empty string ("All Resources") by default
+      // Show all courses from all classes when "All Resources" is selected
+      const allCourses = [];
+      cls.forEach(classroom => {
+        if (classroom.courses) {
+          allCourses.push(...classroom.courses);
         }
-      }
+      });
+      setCourses(allCourses);
+      setSelectedCourseId("");
     } catch (error) {
       console.error("Error fetching classes:", error.message);
     }
@@ -148,7 +152,6 @@ const Resources = () => {
 
   const handleDeleteConfirm = async () => {
     if (resourceToDelete) {
-      // For now, we'll use the file_path as s3_key until the API provides it
       const s3Key = resourceToDelete.s3_key;
       await deleteResource(s3Key);
       setDeleteModalOpen(false);
@@ -169,19 +172,41 @@ const Resources = () => {
     setSelectedCourseId(courseId);
   };
 
+  const handleAddResourceClick = () => {
+    setIsResourcesDialogOpen(true);
+  };
+
+  const handleResourcesDialogClose = () => {
+    setIsResourcesDialogOpen(false);
+    fetchResources(); // Refresh the resources list
+  };
+
   useEffect(() => {
     fetchClasses();
     fetchResources();
   }, []);
 
   useEffect(() => {
-    if (classes && classes.length > 0) {
-      const found = classes.find(c => String(c.id) === String(selectedClassId));
-      const c = found?.courses || [];
-      setCourses(c);
-      if (c.length) {
-        setSelectedCourseId(c[0].id);
+    if (Array.isArray(classes) && classes.length > 0) {
+      if (selectedClassId) {
+        // When a specific class is selected, show its courses
+        const found = classes.find(c => String(c.id) === String(selectedClassId));
+        const c = found?.courses || [];
+        setCourses(c);
+        if (c.length) {
+          setSelectedCourseId(c[0].id);
+        } else {
+          setSelectedCourseId("");
+        }
       } else {
+        // When "All Resources" is selected, show all classes' courses
+        const allCourses = [];
+        classes.forEach(cls => {
+          if (cls.courses) {
+            allCourses.push(...cls.courses);
+          }
+        });
+        setCourses(allCourses);
         setSelectedCourseId("");
       }
     }
@@ -214,6 +239,7 @@ const Resources = () => {
         selectedCourseId={selectedCourseId}
         onClassChange={handleClassChange}
         onCourseChange={handleCourseChange}
+        onAddResource={handleAddResourceClick}
       />
       
       <div className="p-3">
@@ -246,6 +272,14 @@ const Resources = () => {
         description={`Are you sure you want to delete "${resourceToDelete?.title}"? This action cannot be undone.`}
         // variant="danger"
         btnDefaultLabel="Delete"
+      />
+
+      {/* Course Resources Dialog */}
+      <CourseResourcesDialog
+        isOpen={isResourcesDialogOpen}
+        onClose={handleResourcesDialogClose}
+        classId={selectedClassId}
+        courseId={selectedCourseId}
       />
     </div>
   );

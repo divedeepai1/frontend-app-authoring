@@ -17,12 +17,13 @@ const ResourcesPage = () => {
           outline="outline-white-button"
         />
         <ManagementSection />
-        <section className="px-6">
-          <main className="py-2 mb-4">
-            <Container>
+        <section className="px-5 py-2">
+        <Container>
+          <main className="py-2 mb-4 border rounded-sm">
+           
               <Resources />
-            </Container>
-          </main>
+            </main>
+          </Container>
         </section>
       </div>
     </div>

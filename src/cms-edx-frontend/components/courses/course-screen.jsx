@@ -133,6 +133,13 @@ function CourseScreen() {
 
   return (
     <div>
+      <style>{`
+        select:focus,
+        select:active {
+          box-shadow: none !important;
+          outline: none !important;
+        }
+      `}</style>
       <div className="col-md-12 d-flex py-4">
         <div className="col-md-4">
           <div className="d-flex align-items-center">
@@ -141,13 +148,34 @@ function CourseScreen() {
             </label>
             <select
               id="classSelect"
-              className="custom-select-black p-2"
+              style={{
+                boxShadow: "none",
+                outline: "none",
+                borderColor: "#6B7280",
+                color: "#111827",
+                height: 36,
+                padding: "0 40px 0 8px",
+                lineHeight: 1.5,
+                border: "1px solid #6B7280",
+                borderRadius: "4px",
+                backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 12px center",
+                backgroundSize: "14px",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+              }}
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
             >
-              {classes.map(cls => (
-                <option key={cls.id} value={cls.id}>{cls.name}</option>
-              ))}
+              {Array.isArray(classes) && classes.length > 0 ? (
+                classes.map(cls => (
+                  <option key={cls.id} value={cls.id}>{cls.name}</option>
+                ))
+              ) : (
+                <option value="">No relevant class</option>
+              )}
             </select>
           </div>
         </div>
@@ -158,13 +186,34 @@ function CourseScreen() {
             </label>
             <select
               id="courseSelect"
-              className="custom-select-black p-2"
+              style={{
+                boxShadow: "none",
+                outline: "none",
+                borderColor: "#6B7280",
+                color: "#111827",
+                height: 36,
+                padding: "0 40px 0 8px",
+                lineHeight: 1.5,
+                border: "1px solid #6B7280",
+                borderRadius: "4px",
+                backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 12px center",
+                backgroundSize: "14px",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+              }}
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
             >
-              {courses.map(crs => (
-                <option key={crs.id} value={crs.id}>{crs.display_name}</option>
-              ))}
+              {Array.isArray(courses) && courses.length > 0 ? (
+                courses.map(crs => (
+                  <option key={crs.id} value={crs.id}>{crs.display_name}</option>
+                ))
+              ) : (
+                <option value="">No courses</option>
+              )}
             </select>
           </div>
         </div>
@@ -179,9 +228,9 @@ function CourseScreen() {
                   className="primary-button px-4 py-2"
                   onClick={() => setIsResourcesDialogOpen(true)}
                 >
-                  Course Resources
+                  Add Resources
                 </button>
-                <button className="secondary-button px-4 py-2 ml-3">Customize this Course</button>
+                {/* <button className="secondary-button px-4 py-2 ml-3">Customize this Course</button> */}
               </div>
             </div>
 
@@ -222,10 +271,10 @@ function CourseScreen() {
                               )}
                             </div>
                           </div>
-                          <div className="d-flex">
+                          {/* <div className="d-flex">
                             <img src={docIcon} alt="doc" />
                             <img src={viewIcon} className="ml-3" alt="view"/>
-                          </div>
+                          </div> */}
                         </div>
                       </div>
                     ))}

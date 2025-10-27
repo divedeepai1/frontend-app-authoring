@@ -196,7 +196,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
     let aborted = false;
     const fetchSkills = async () => {
       try {
-        const response = await fetch(`${base_url}/api/skills/get_skills`, {
+        const response = await fetch(`${base_url}/api/skills/get_skills?app_name=${sessionStorage.getItem("courseType") == "ms-word"?"word":sessionStorage.getItem("courseType") == "powerpoint"?"powerpoint":"excel"}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -216,7 +216,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
         console.error("Error fetching skills:", err);
       }
     };
-    sessionStorage.getItem("courseType") == "ms-word" && fetchSkills();
+    fetchSkills();
     return () => {
       aborted = true;
     };
@@ -246,6 +246,8 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
   };
 
   const chipColorClasses = (status) => {
+    const courseType = sessionStorage.getItem("courseType");
+    if (courseType !== "ms-word") return "bg-gray-50 text-gray-800 border-gray-200";
     const s = (status || "").trim();
     if (s === "Working") return "bg-blue-50 text-blue-800 border-blue-200";
     if (s === "Working A2") return "bg-amber-50 text-amber-800 border-amber-200";
@@ -277,7 +279,8 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
 
   return (
     <div className="space-y-2" ref={containerRef}>
-      <label className="text-sm font-medium text-gray-700">Skills</label>
+      
+      <label className="text-sm font-medium text-gray-700"> {sessionStorage.getItem("courseType") === "ms-word" ? "Word Skills" : sessionStorage.getItem("courseType") == "powerpoint" ? "Powerpoint Skills" : "Excel Skills"}</label>
       <div className="relative">
         <div
           className="flex flex-wrap items-center gap-1 rounded-lg border border-gray-200 px-2 py-2 focus-within:ring-2 focus-within:ring-blue-500"
@@ -317,17 +320,23 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
               <div className="px-3 py-2 text-sm text-gray-500">No skills found</div>
             ) : (
               <ul className="py-1">
-                {filtered.map((s) => (
-                  <li
-                    key={s.id}
-                    className="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer flex items-center justify-between"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => addSkill(s)}
-                  >
-                    <span className="font-medium text-gray-800">{s.name}</span>
-                    <span className={`ml-2 rounded px-2 py-0.5 text-xs ${statusColorClasses(s.status)}`}>{s.status === "Working" ? "A1" : s.status === "Working A2" ? "A2" : "OB"}</span>
-                  </li>
-                ))}
+                {filtered.map((s) => {
+                  const courseType = sessionStorage.getItem("courseType");
+                  const showStatus = courseType === "ms-word";
+                  return (
+                    <li
+                      key={s.id}
+                      className="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => addSkill(s)}
+                    >
+                      <span className="font-medium text-gray-800">{s.name}</span>
+                      {showStatus && (
+                        <span className={`ml-2 rounded px-2 py-0.5 text-xs ${statusColorClasses(s.status)}`}>{s.status === "Working" ? "A1" : s.status === "Working A2" ? "A2" : "OB"}</span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

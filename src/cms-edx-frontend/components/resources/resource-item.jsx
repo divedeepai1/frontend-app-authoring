@@ -3,13 +3,15 @@
 import { FileText, Download } from "lucide-react"
 import deleteIcon from "../../assests/delete-icon.svg"
 
-export default function ResourceItem({ resource, onDownload, onDelete }) {
+export default function ResourceItem({ resource, label, onDownload, onDelete, isLast }) {
+  // For backward compatibility with the old resource-panel.jsx
+  const displayText = label || resource?.title;
   const rowStyle = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     padding: "10px 0",
-    borderBottom: "1px solid #E5E7EB",
+    borderBottom: isLast ? "none" : "1px solid #E5E7EB",
   }
 
   const linkStyle = {
@@ -48,7 +50,7 @@ export default function ResourceItem({ resource, onDownload, onDelete }) {
     justifyContent: "center",
     border: "1px solid #D1D5DB",
     borderRadius: 2,
-    backgroundColor: "#D9DCE0",
+    backgroundColor: "#d3d3d3",
     cursor: "pointer",
   }
 
@@ -58,32 +60,35 @@ export default function ResourceItem({ resource, onDownload, onDelete }) {
         <span style={iconSquareStyle} aria-hidden="true">
           <FileText size={16} strokeWidth={2} style={iconStyle} />
         </span>
-        <span style={linkStyle} aria-label={resource.title}>
-          {resource.title}
+        <span style={linkStyle} aria-label={displayText}>
+          {displayText}
         </span>
       </div>
-      <div
-        style={{
-          display: "flex",
-          gap: "12px",
-          justifyContent: "center",
-          cursor: "pointer",
-        }}
-      >
-        <span 
-          style={downloadButtonStyle} 
-          onClick={() => onDownload(resource)} 
-          title="Download"
+      {/* Only show action buttons if resource and handlers are provided */}
+      {resource && onDownload && onDelete && (
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
         >
-          <Download size={14} strokeWidth={2} style={downloadIconStyle} />
-        </span>
-        <img 
-          src={deleteIcon} 
-          onClick={() => onDelete(resource)} 
-          alt="delete" 
-          title="Delete"
-        />
-      </div>
+          <span 
+            style={downloadButtonStyle} 
+            onClick={() => onDownload(resource)} 
+            title="Download"
+          >
+            <Download size={14} strokeWidth={2} style={downloadIconStyle} />
+          </span>
+          <img 
+            src={deleteIcon} 
+            onClick={() => onDelete(resource)} 
+            alt="delete" 
+            title="Delete"
+          />
+        </div>
+      )}
     </div>
   )
 }
