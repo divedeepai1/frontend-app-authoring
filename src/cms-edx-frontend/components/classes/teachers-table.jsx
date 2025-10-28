@@ -1,10 +1,21 @@
 
 import { Table, Container } from "react-bootstrap"
+import { useNavigate } from "react-router";
 import deleteIcon from "../../assests/delete-icon.svg";
 import messageIcon from "../../assests/message-icon.svg";
 
 
 export default function TeachersTable({teachers,selectedEmails, handleDeleteTeachers, handleSelectAllTeachers, handleSelectTeachers}) {
+  const navigate = useNavigate();
+  
+  const handleMessageClick = (teacher) => {
+    navigate("/classes/chat", {
+      state: {
+        email: teacher.email,
+        name: teacher.username || teacher.email,
+      }
+    });
+  };
   
 
   return (
@@ -97,7 +108,7 @@ export default function TeachersTable({teachers,selectedEmails, handleDeleteTeac
                 </button>
                 <button
                   className="btn btn-link p-1"
-                
+                  onClick={() => handleMessageClick(teacher)}
                   style={{ border: "none", background: "none" }}
                 >
                   <img src={messageIcon} alt="message" />

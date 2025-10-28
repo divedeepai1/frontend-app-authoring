@@ -68,7 +68,7 @@ const ManageClasses = () => {
             "Content-Type": "application/json",
             "X-CSRFToken": token,
           },
-          body: JSON.stringify({ email: teachers }),
+          body: JSON.stringify({ emails: teachers }),
         }
       );
 

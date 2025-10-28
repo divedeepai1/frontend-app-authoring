@@ -8,8 +8,16 @@ import { useNavigate } from "react-router";
 
 
 export default function StudentTable({students,setAddStudents, nextStep, prevStep , fromTeachers , selectedIds, handleDeleteStudents, handleSelectAllStudents, handleSelectStudents,classId}) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   
+  const handleMessageClick = (student) => {
+    navigate("/classes/chat", {
+      state: {
+        email: student.email,
+        name: student.username || `${student.first_name} ${student.last_name}` || student.email,
+      }
+    });
+  };
 
   return (
       <>
@@ -111,7 +119,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                 </button>
                {fromTeachers && <button
                   className="btn btn-link p-1"
-                  // onClick={() => handleDelete(student.id)}
+                  onClick={() => handleMessageClick(student)}
                   style={{ border: "none", background: "none" }}
                 >
                   <img src={messageIcon} alt="message" />

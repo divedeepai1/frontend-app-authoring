@@ -55,6 +55,7 @@ import Reports from "./cms-edx-frontend/pages/reports";
 import { fetchCsrfToken } from "./cms-csrftoken";
 import StudentsGrades from "./cms-edx-frontend/pages/students-grades";
 import Resources from "./cms-edx-frontend/pages/resources";
+import Chat from "./cms-edx-frontend/pages/Chat";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,7 @@ const App = () => {
       <>
         <Route path="/home" element={<Main />} />
         <Route path="/classes" element={<Classes />} />
+        <Route path="/classes/chat" element={<Chat />} />
         <Route path="/classes/:classId" element={<Teachers />} />
         <Route path="/classes/:classId/:studentId" element={<StudentsGrades />} />
         <Route path="/reports" element={<Reports />} />
