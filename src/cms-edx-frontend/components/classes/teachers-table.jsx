@@ -1,14 +1,53 @@
 
 import { Table, Container } from "react-bootstrap"
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { getConfig } from "@edx/frontend-platform";
+import { fetchCsrfToken } from "../../../cms-csrftoken";
 import deleteIcon from "../../assests/delete-icon.svg";
 import messageIcon from "../../assests/message-icon.svg";
 
 
 export default function TeachersTable({teachers,selectedEmails, handleDeleteTeachers, handleSelectAllTeachers, handleSelectTeachers}) {
   const navigate = useNavigate();
+  const [unreadByEmail, setUnreadByEmail] = useState({});
+  
+  useEffect(() => {
+    let cancelled = false;
+    const loadStatuses = async () => {
+      try {
+        const token = await fetchCsrfToken();
+        const uniqueEmails = Array.from(new Set((teachers || []).map(t => t.email).filter(Boolean)));
+        const results = await Promise.all(uniqueEmails.map(async (email) => {
+          try {
+            const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/chat/unread-status/?email=${email}`, {
+              method: "GET",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": token,
+              },
+            });
+            if (!res.ok) throw new Error("status failed");
+            const data = await res.json();
+            return [email, !!data?.is_unread];
+          } catch (_) {
+            return [email, false];
+          }
+        }));
+        if (!cancelled) {
+          const map = {};
+          results.forEach(([email, flag]) => { map[email] = flag; });
+          setUnreadByEmail(map);
+        }
+      } catch (_) {}
+    }
+    loadStatuses();
+    return () => { cancelled = true; }
+  }, [teachers]);
   
   const handleMessageClick = (teacher) => {
+    setUnreadByEmail((prev) => ({ ...prev, [teacher.email]: false }));
     navigate("/classes/chat", {
       state: {
         email: teacher.email,
@@ -111,7 +150,20 @@ export default function TeachersTable({teachers,selectedEmails, handleDeleteTeac
                   onClick={() => handleMessageClick(teacher)}
                   style={{ border: "none", background: "none" }}
                 >
-                  <img src={messageIcon} alt="message" />
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img src={messageIcon} alt="message" />
+                    {unreadByEmail[teacher.email] && (
+                      <span style={{
+                        position: 'absolute',
+                        top: -2,
+                        right: -2,
+                        width: 8,
+                        height: 8,
+                        backgroundColor: '#16A34A',
+                        borderRadius: '50%'
+                      }} />
+                    )}
+                  </div>
                 </button>
               </td>
             </tr>

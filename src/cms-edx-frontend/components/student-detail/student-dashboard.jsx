@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Dropdown, Table } from "react-bootstrap";
+import { useNavigate } from "react-router";
 import { fetchCsrfToken } from "../../../cms-csrftoken"
 
 import { getConfig } from "@edx/frontend-platform"
@@ -10,6 +11,7 @@ import { base_url } from "../../../compugrade-constants";
 
 const StudentDashboard = ({ classData, studentName }) => {
   const { studentId } = useParams();
+  const navigate = useNavigate();
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedCourseName, setSelectedCourseName] = useState("");
@@ -279,7 +281,16 @@ const StudentDashboard = ({ classData, studentName }) => {
                   of the { } with average grade{" "}
                   <span style={{ fontWeight: "600" }}>{Number.isFinite(loadingProgress.average) ? loadingProgress.average.toFixed(2) : "0.00"}%</span>
                 </h6>
-                <button className="primary-button px-3 py-2">Send Message</button>
+                <button
+                  className="primary-button px-3 py-2"
+                  onClick={() => {
+                    const email = sessionStorage.getItem("student-email") || "";
+                    const name = sessionStorage.getItem("student-name") || studentName || "User";
+                    navigate("/classes/chat", { state: { email, name } });
+                  }}
+                >
+                  Send Message
+                </button>
               </Col>
               <Col md={5}>
                 <div className="d-flex justify-content-center align-items-center py-2">

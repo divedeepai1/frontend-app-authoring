@@ -118,7 +118,7 @@ export function EnhancedRichTextEditor({
   }
 
   useEffect(() => {
-    document.execCommand("styleWithCSS", false, true)
+    try { document.execCommand("styleWithCSS", false, true) } catch(_) {}
 
     // Inject CSS for proper text formatting
     const style = document.createElement('style')
@@ -145,11 +145,16 @@ export function EnhancedRichTextEditor({
     document.head.appendChild(style)
 
     const handleSelectionChange = () => {
-      const sel = window.getSelection()
-      if (!sel || sel.rangeCount === 0) return
+      const sel = window.getSelection && window.getSelection()
+      if (!sel || typeof sel.rangeCount !== 'number' || sel.rangeCount === 0) return
 
       // Check if selection is within our editor
-      const range = sel.getRangeAt(0)
+      let range
+      try {
+        range = sel.getRangeAt(0)
+      } catch(_) {
+        return
+      }
       if (!editorRef.current?.contains(range.commonAncestorContainer)) return
 
       let node = sel.anchorNode
@@ -264,14 +269,43 @@ export function EnhancedRichTextEditor({
     if (editor) {
       editor.addEventListener("click", handleSelectionChange)
       editor.addEventListener("keyup", handleSelectionChange)
+      // Stop bubbling to parents that may collapse on outside clicks
+      const stop = (e) => e.stopPropagation()
+      editor.addEventListener("mousedown", stop)
+      editor.addEventListener("mouseup", stop)
+      editor.addEventListener("pointerdown", stop)
+      // Cleanup for these listeners below
+      editor.__stopHandler = stop
     }
+
+    // Global CAPTURE handlers to stop outside click/collapse if event originated inside editor
+    const stopIfInsideCapture = (e) => {
+      const ed = editorRef.current
+      if (ed && ed.contains(e.target)) {
+        e.stopPropagation()
+      }
+    }
+    document.addEventListener('mousedown', stopIfInsideCapture, true)
+    document.addEventListener('pointerdown', stopIfInsideCapture, true)
+    document.addEventListener('click', stopIfInsideCapture, true)
+    document.addEventListener('touchstart', stopIfInsideCapture, true)
     
     return () => {
       document.removeEventListener("selectionchange", handleSelectionChange)
       if (editor) {
         editor.removeEventListener("click", handleSelectionChange)
         editor.removeEventListener("keyup", handleSelectionChange)
+        if (editor.__stopHandler) {
+          editor.removeEventListener("mousedown", editor.__stopHandler)
+          editor.removeEventListener("mouseup", editor.__stopHandler)
+          editor.removeEventListener("pointerdown", editor.__stopHandler)
+          delete editor.__stopHandler
+        }
       }
+      document.removeEventListener('mousedown', stopIfInsideCapture, true)
+      document.removeEventListener('pointerdown', stopIfInsideCapture, true)
+      document.removeEventListener('click', stopIfInsideCapture, true)
+      document.removeEventListener('touchstart', stopIfInsideCapture, true)
       // Clean up injected CSS
       if (style && style.parentNode) {
         style.parentNode.removeChild(style)
@@ -522,11 +556,14 @@ const applyFontSize = (px) => {
   setFontSize(px)
   editorRef.current?.focus()
 
-  const selection = window.getSelection()
-  if (selection && selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0)
+  const selection = window.getSelection && window.getSelection()
+  if (selection && typeof selection.rangeCount === 'number' && selection.rangeCount > 0) {
+    let range
+    try {
+      range = selection.getRangeAt(0)
+    } catch(_) { range = null }
 
-    if (!range.collapsed) {
+    if (range && !range.collapsed) {
       // Apply to selected text
       const span = document.createElement("span")
       span.style.fontSize = px + "px"
@@ -580,9 +617,9 @@ const applyBlockFormat = (tag) => {
   setBlockFormat(tag)
   editorRef.current?.focus()
   
-  const selection = window.getSelection()
-  if (selection && selection.rangeCount > 0) {
-    const range = selection.getRangeCount() > 0 ? selection.getRangeAt(0) : null
+  const selection = window.getSelection && window.getSelection()
+  if (selection && typeof selection.rangeCount === 'number' && selection.rangeCount > 0) {
+    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null
     
     if (range) {
       // Find the current block element
@@ -913,29 +950,35 @@ const applyBlockFormat = (tag) => {
             </div>
 
             {/* Image */}
-            <div
+            {/* <div
               onClick={() => fileInputRef.current?.click()}
               className="h-8 w-8 hover:bg-green-50 rounded flex items-center justify-center transition-colors"
               title="Insert Image"
             >
               <Image className="w-4 h-4" />
-            </div>
+            </div> */}
           </div>
 
-          {onToggleCollapse && (
+          {/* {onToggleCollapse && (
             <div
               onClick={onToggleCollapse}
               className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
             >
               <ChevronUp className="w-4 h-4" />
             </div>
-          )}
+          )} */}
         </div>
       </div>
      
 
       {/* Editable area */}
-      <div className="p-3 shadow-sm border border-blue-200 rounded-lg bg-white">
+      <div
+        className="p-3 shadow-sm border border-blue-200 rounded-lg bg-white"
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div
           ref={editorRef}
           contentEditable

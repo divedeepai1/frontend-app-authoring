@@ -173,7 +173,7 @@ const ActivityFeed = ({ classes ,setClasses}) => {
                                              setSelectedClass(cls.id)
 
                    }} alt="delete" />
-                  <img src={messageIcon} alt="edit" />
+                  {/* <img src={messageIcon} alt="edit" /> */}
                 </div>
               </td>
             </tr>

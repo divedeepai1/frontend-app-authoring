@@ -5,10 +5,49 @@ import viewIcon from "../../assests/view-icon.svg";
 import deleteIcon from "../../assests/delete-icon.svg";
 import messageIcon from "../../assests/message-icon.svg";
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { getConfig } from "@edx/frontend-platform";
+import { fetchCsrfToken } from "../../../cms-csrftoken";
 
 
 export default function StudentTable({students,setAddStudents, nextStep, prevStep , fromTeachers , selectedIds, handleDeleteStudents, handleSelectAllStudents, handleSelectStudents,classId}) {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
+  const [unreadByEmail, setUnreadByEmail] = useState({});
+  
+  useEffect(() => {
+    let cancelled = false;
+    const loadStatuses = async () => {
+      try {
+        const token = await fetchCsrfToken();
+        const emails = Array.from(new Set((students || []).map(s => s.email).filter(Boolean)));
+        const results = await Promise.all(emails.map(async (email) => {
+          try {
+            const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/chat/unread-status/?email=${encodeURIComponent(email)}`, {
+              method: "GET",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": token,
+              },
+            });
+            if (!res.ok) throw new Error("status failed");
+            const data = await res.json();
+            return [email, !!data?.is_unread];
+          } catch (_) {
+            return [email, false];
+          }
+        }));
+        if (!cancelled) {
+          const map = {};
+          results.forEach(([email, flag]) => { map[email] = flag; });
+          setUnreadByEmail(map);
+        }
+      } catch (_) {}
+    }
+    if (fromTeachers) loadStatuses();
+    return () => { cancelled = true; }
+  }, [students, fromTeachers])
+
   
   const handleMessageClick = (student) => {
     navigate("/classes/chat", {
@@ -104,6 +143,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                   className="btn btn-link p-1 me-2"
                   onClick={() =>{ navigate(`/classes/${classId}/${student.id}`)
                   sessionStorage.setItem("student-name", student.username)
+                  sessionStorage.setItem("student-email", student.email)
                }
                 }
                   style={{ border: "none", background: "none" }}
@@ -117,14 +157,31 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                 >
                   <img src={deleteIcon} alt="delete" />
                 </button>
-               {fromTeachers && <button
-                  className="btn btn-link p-1"
-                  onClick={() => handleMessageClick(student)}
-                  style={{ border: "none", background: "none" }}
-                >
-                  <img src={messageIcon} alt="message" />
-                  
-                </button>}
+               {fromTeachers && (
+                 <button
+                   className="btn btn-link p-1"
+                   onClick={() => {
+                     setUnreadByEmail((prev) => ({ ...prev, [student.email]: false }));
+                     handleMessageClick(student)
+                   }}
+                   style={{ border: "none", background: "none" }}
+                 >
+                   <div style={{ position: 'relative', display: 'inline-block' }}>
+                     <img src={messageIcon} alt="message" />
+                     {unreadByEmail[student.email] && (
+                       <span style={{
+                         position: 'absolute',
+                         top: -2,
+                         right: -2,
+                         width: 8,
+                         height: 8,
+                         backgroundColor: '#16A34A',
+                         borderRadius: '50%'
+                       }} />
+                     )}
+                   </div>
+                 </button>
+               )}
               </td>
             </tr>
           ))}

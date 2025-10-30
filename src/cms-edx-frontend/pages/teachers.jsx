@@ -20,11 +20,15 @@ const Teachers = () => {
     showDeleteModal: false,
   });
 
+  const [teacherSearch, setTeacherSearch] = useState("");
+
   const [studentState, setStudentState] = useState({
     list: [],
     selectedIds: [],
     showDeleteModal: false,
   });
+
+  const [studentSearch, setStudentSearch] = useState("");
 
   const fetchTeachers = async () => {
     const token = await fetchCsrfToken();
@@ -83,6 +87,26 @@ const Teachers = () => {
     fetchStudents();
     fetchTeachers();
   }, []);
+
+  const filteredTeachers = teacherState.list.filter((t) => {
+    const q = teacherSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (t.username || "").toLowerCase().includes(q) ||
+      (t.email || "").toLowerCase().includes(q)
+    );
+  });
+
+  const filteredStudents = studentState.list.filter((s) => {
+    const q = studentSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (s.username || "").toLowerCase().includes(q) ||
+      (s.first_name || "").toLowerCase().includes(q) ||
+      (s.last_name || "").toLowerCase().includes(q) ||
+      (s.email || "").toLowerCase().includes(q)
+    );
+  });
 
   const handleSelectTeachers = (email) => {
     setTeacherState(prev => ({
@@ -229,6 +253,14 @@ const Teachers = () => {
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h3 className="primary-text">Assigned Teachers</h3>
                   <div>
+                    <input
+                      type="text"
+                      className="form-control d-inline-block mr-3"
+                      placeholder="Search teachers..."
+                      value={teacherSearch}
+                      onChange={(e) => setTeacherSearch(e.target.value)}
+                      style={{ width: 240, display: "inline-block" }}
+                    />
                     {teacherState.selectedEmails.length > 0 && (
                       <button
                         className="outline-black-button px-3 py-2 mr-3"
@@ -246,7 +278,7 @@ const Teachers = () => {
                   </div>
                 </div>
                 <TeachersTable
-                  teachers={teacherState.list}
+                  teachers={filteredTeachers}
                   selectedEmails={teacherState.selectedEmails}
                   handleDeleteTeachers={handleDeleteTeachers}
                   handleSelectAllTeachers={handleSelectAllTeachers}
@@ -257,6 +289,14 @@ const Teachers = () => {
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h3 className="primary-text">Students Information</h3>
                   <div>
+                    <input
+                      type="text"
+                      className="form-control d-inline-block mr-3"
+                      placeholder="Search students..."
+                      value={studentSearch}
+                      onChange={(e) => setStudentSearch(e.target.value)}
+                      style={{ width: 240, display: "inline-block" }}
+                    />
                     {studentState.selectedIds.length > 0 && (
                       <button
                         className="outline-black-button px-3 py-2 mr-3"
@@ -274,7 +314,7 @@ const Teachers = () => {
                   </div>
                 </div>
                 <StudentTable
-                  students={studentState.list}
+                  students={filteredStudents}
                   fromTeachers={true}
                   classId={classId}
                   selectedIds={studentState.selectedIds}

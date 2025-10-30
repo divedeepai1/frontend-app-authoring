@@ -1,4 +1,5 @@
-import { BookOpen, Save, Upload } from "lucide-react";
+import { BookOpen, Save, Upload, ChevronRight } from "lucide-react";
+import { useNavigate, useParams } from "react-router";
 
 export default function PageHeader({
   onOpenPreview,
@@ -7,9 +8,36 @@ export default function PageHeader({
   saveDraftLoading,
   publishLoading,
 }) {
+  const navigate = useNavigate();
+  const { courseId } = useParams();
+  const unitTitle = sessionStorage?.getItem("unitTitle");
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
       <div className="px-4 py-2">
+        {/* Top Breadcrumbs */}
+        <nav className="flex items-center text-[18px] font-semibold  mb-2 mt-2">
+          <div
+            onClick={() => navigate("/home")}
+            className="hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            Home
+          </div>
+          <ChevronRight className="w-4 h-4 mx-2 mt-1" />
+          <div
+            onClick={() => courseId && navigate(`/course/${courseId}/`) }
+            className="hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            Course Outline
+          </div>
+          <ChevronRight className="w-4 h-4 mx-2 mt-1" />
+          <div
+            onClick={() => navigate(-1)}
+            className="hover:text-blue-600 transition-colors cursor-pointer"
+            title="Go back"
+          >
+            {unitTitle}
+          </div>
+        </nav>
         <div className="flex items-center justify-between">
           <div className="flex items-center  gap-4">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -17,7 +45,7 @@ export default function PageHeader({
             </div>
             <div className="mt-2">
               <h1 className="text-[20px] font-bold text-gray-900">
-                {sessionStorage?.getItem("unitTitle")}
+                {unitTitle}
               </h1>
               <p className="text-sm text-gray-600 mt-1">
                 Create and organize your lesson content with ease

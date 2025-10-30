@@ -6,7 +6,7 @@ import { useNavigate, useParams, useLocation } from "react-router";
 import { fetchCsrfToken } from "../../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
 import { useEffect, useState, useRef } from "react";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, Edit as EditIcon, X as CloseIcon, Check as CheckIcon } from "lucide-react";
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -19,6 +19,11 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const textAreaRef = useRef(null);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingText, setEditingText] = useState("");
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
 
   useEffect(() => {
     // Get email and name from URL params or location state
@@ -36,8 +41,17 @@ const Chat = () => {
     }
   }, [location]);
 
-  const fetchChatHistory = async (email) => {
-    setIsLoading(true);
+  // Poll chat history every 3 seconds for near real-time updates
+  useEffect(() => {
+    if (!recipientEmail) return;
+    const intervalId = setInterval(() => {
+      fetchChatHistory(recipientEmail, { silent: true });
+    }, 3000);
+    return () => clearInterval(intervalId);
+  }, [recipientEmail]);
+
+  const fetchChatHistory = async (email, { silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
     const token = await fetchCsrfToken();
     try {
       const response = await fetch(
@@ -66,7 +80,7 @@ const Chat = () => {
     } catch (error) {
       console.error("Error fetching chat history:", error.message);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
@@ -76,6 +90,18 @@ const Chat = () => {
 
     setIsSending(true);
     const token = await fetchCsrfToken();
+    // Optimistic UI update
+    const optimistic = {
+      id: `temp-${Date.now()}`,
+      sender: { email: currentUserEmail },
+      text: message.trim(),
+      timestamp: new Date().toISOString(),
+      edited: false,
+      __optimistic: true,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    const sentText = message.trim();
+    setMessage("");
     try {
       const response = await fetch(
         `${getConfig().STUDIO_BASE_URL}/myplugin/chat/send/`,
@@ -88,7 +114,7 @@ const Chat = () => {
           },
           body: JSON.stringify({
             email: recipientEmail,
-            message: message.trim(),
+            message: sentText,
           }),
         }
       );
@@ -97,12 +123,12 @@ const Chat = () => {
         const errorText = await response.text();
         throw new Error(`Failed to send message: ${response.status} ${errorText}`);
       }
-
-      // Refresh chat history after sending
-      await fetchChatHistory(recipientEmail);
-      setMessage("");
+      // Silent refresh to reconcile without wiping UI
+      fetchChatHistory(recipientEmail, { silent: true });
     } catch (error) {
       console.error("Error sending message:", error.message);
+      // Revert optimistic if failed
+      setMessages((prev) => prev.filter((m) => m !== optimistic));
     } finally {
       setIsSending(false);
     }
@@ -110,13 +136,70 @@ const Chat = () => {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (chatEndRef.current) {
+    if (autoScrollEnabled && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
+  // Auto-resize textarea
+  const autoResize = () => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const max = 160; // px
+    el.style.height = Math.min(el.scrollHeight, max) + 'px';
+  };
+  useEffect(() => {
+    autoResize();
+  }, []);
+
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const startEditMessage = (msg) => {
+    setEditingMessageId(msg.id);
+    setEditingText(msg.text || "");
+  };
+
+  const cancelEditMessage = () => {
+    setEditingMessageId(null);
+    setEditingText("");
+  };
+
+  const saveEditMessage = async () => {
+    if (!editingMessageId || !editingText.trim()) return;
+    const token = await fetchCsrfToken();
+    try {
+      const res = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/chat/edit/${encodeURIComponent(editingMessageId)}/`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+          body: JSON.stringify({ text: editingText.trim() }),
+        }
+      );
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Failed to edit: ${res.status} ${t}`);
+      }
+      setMessages((prev) => prev.map((m) => (m.id === editingMessageId ? { ...m, text: editingText.trim(), edited: true } : m)));
+      cancelEditMessage();
+    } catch (e) {
+      console.error("edit error", e);
+    }
+  };
+
+  const handleChatScroll = () => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+    const threshold = 40;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+    setAutoScrollEnabled(atBottom);
   };
 
   return (
@@ -161,6 +244,8 @@ const Chat = () => {
                     overflowY: "auto",
                     backgroundColor: "#F9FAFB"
                   }}
+                  ref={chatContainerRef}
+                  onScroll={handleChatScroll}
                 >
                   {isLoading ? (
                     <div className="d-flex justify-content-center align-items-center h-80">
@@ -185,20 +270,74 @@ const Chat = () => {
                             key={msg.id || idx}
                             className={`d-flex ${isSent ? 'justify-content-end' : 'justify-content-start'} mb-3`}
                           >
-                            <div
-                              className="rounded p-3 text-gray-800"
-                              style={{ 
-                                maxWidth: "70%", 
-                                wordWrap: "break-word",
-                                backgroundColor: isSent ? "#E3F2FD" : "#F5F5F5"
-                              }}
-                            >
-                              <p className="mb-1 small" style={{ marginBottom: "4px" }}>{msg.text}</p>
-                              {msg.timestamp && (
-                                <p className={`mb-0 text-muted small`} style={{ fontSize: "0.75rem", opacity: 0.7 }}>
-                                  {new Date(msg.timestamp).toLocaleString()}
-                                </p>
-                              )}
+                            <div style={{ maxWidth: "70%" }}>
+                              <div
+                                className="rounded p-3 text-gray-800"
+                                style={{ 
+                                  wordWrap: "break-word",
+                                  backgroundColor: isSent ? "#E3F2FD" : "#F5F5F5"
+                                }}
+                              >
+                                {editingMessageId === msg.id ? (
+                                  <div>
+                                    <textarea
+                                      className="form-control mb-2"
+                                      rows={3}
+                                      value={editingText}
+                                      onChange={(e) => setEditingText(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                                          e.preventDefault();
+                                          saveEditMessage();
+                                        }
+                                      }}
+                                      style={{ resize: 'vertical' }}
+                                    />
+                                    <div className="d-flex justify-content-end gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={cancelEditMessage}
+                                        title="Cancel edit"
+                                        className="btn btn-link p-1"
+                                        style={{ border: 'none', background: 'none', color: '#6B7280' }}
+                                      >
+                                        <CloseIcon size={18} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={saveEditMessage}
+                                        title="Save edit"
+                                        className="btn btn-link p-1"
+                                        style={{ border: 'none', background: 'none', color: '#255A71' }}
+                                      >
+                                        <CheckIcon size={18} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <p className="mb-1 small" style={{ marginBottom: "4px" }}>{msg.text}</p>
+                                    <div className="d-flex align-items-center justify-content-between">
+                                      {msg.timestamp && (
+                                        <p className={`mb-0 text-muted small`} style={{ fontSize: "0.75rem", opacity: 0.7 }}>
+                                          {new Date(msg.timestamp).toLocaleString()} {msg.edited ? '(edited)' : ''}
+                                        </p>
+                                      )}
+                                      {isSent && (
+                                        <button
+                                          type="button"
+                                          className="btn btn-link p-0 ml-2"
+                                          onClick={() => startEditMessage(msg)}
+                                          title="Edit message"
+                                          style={{ color: '#255A71' }}
+                                        >
+                                          <EditIcon size={14} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -211,15 +350,32 @@ const Chat = () => {
                 {/* Message input */}
                 <form onSubmit={handleSendMessage}>
                   <div className="d-flex align-items-center gap-2">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Type your message..."
+                    <textarea
+                      ref={textAreaRef}
+                      className="form-control p-2"
+                      placeholder="Type your message... (Enter to send, Shift+Enter or Ctrl+Enter for new line)"
+                      rows={1}
                       value={message}
-                      onChange={(e) => setMessage(e.target.value)}
+                      onChange={(e) => {
+                        setMessage(e.target.value);
+                        autoResize();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey)) {
+                          return; // allow newline
+                        }
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                        }
+                      }}
                       style={{
                         border: "1px solid #6B7280",
                         borderRadius: "4px",
+                        padding: '6px 8px',
+                        lineHeight: 1.4,
+                        resize: 'none',
+                        overflow: 'hidden',
                       }}
                     />
                     <button

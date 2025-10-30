@@ -251,8 +251,8 @@ export function HybridContentEditor({
       return acc;
     }, {});
     setPreDragCollapsed(stateById);
-    const collapsedBlocks = blocks.map((b) => ({ ...b, isCollapsed: true }));
-    setBlocks(collapsedBlocks);
+    // Do not auto-collapse all blocks on drag start; this caused UX issues
+    // Keep current visual state while dragging
   };
 
   const handleBlockDrop = (dropIndex) => {
@@ -415,7 +415,6 @@ export function HybridContentEditor({
             <div
               onClick={() => collapseOrExpandAll()}
               className="px-3 py-2 text-sm font-medium text-white cursor-pointer bg-blue-600 rounded hover:bg-blue-700"
-              onDragEnd={handleBlockDragEnd}
             >
               {blocks.some((b) => !b.isCollapsed) ? "Collapse" : "Expand"} All
             </div>

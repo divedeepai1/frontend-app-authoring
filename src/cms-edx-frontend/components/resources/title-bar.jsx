@@ -109,7 +109,7 @@ export default function TableHeader({
             className="primary-button px-4 py-2"
             onClick={onAddResource}
           >
-            Add Resource
+            Add Resources
           </button>
         </div>
       </Col>
