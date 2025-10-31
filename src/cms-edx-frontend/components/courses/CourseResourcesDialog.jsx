@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../../cms-csrftoken";
@@ -23,6 +23,24 @@ const CourseResourcesDialog = ({ isOpen, onClose, classId, courseId }) => {
       fileInputRef.current.value = "";
     }
   };
+
+  // Reset upload type when dialog opens/closes or classId changes
+  useEffect(() => {
+    if (isOpen) {
+      // If no class is selected (All Resources), only allow general
+      if (!classId) {
+        setUploadType("general");
+      }
+    } else {
+      // Reset state when dialog closes
+      setSelectedFile(null);
+      setUploadProgress(0);
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [isOpen, classId]);
 
 
   const handleUpload = async () => {
@@ -101,18 +119,19 @@ const CourseResourcesDialog = ({ isOpen, onClose, classId, courseId }) => {
 
       setUploadProgress(100);
       
-      // Reset form after successful upload
+      // Clear progress bar and reset form after a brief delay
       setTimeout(() => {
-        setSelectedFile(null);
+        setIsUploading(false);
         setUploadProgress(0);
+        setSelectedFile(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
-      }, 2000);
+      }, 500);
 
     } catch (error) {
       console.error("Upload error:", error);
-    } finally {
+      setUploadProgress(0);
       setIsUploading(false);
     }
   };
@@ -157,8 +176,12 @@ const CourseResourcesDialog = ({ isOpen, onClose, classId, courseId }) => {
               onChange={(e) => setUploadType(e.target.value)}
             >
               <option value="general">General Resource</option>
-              <option value="class">Upload Resource by Class</option>
-              <option value="course">Upload Resource by Course</option>
+              {classId && (
+                <>
+                  <option value="class">Upload Resource by Class</option>
+                  {courseId && <option value="course">Upload Resource by Course</option>}
+                </>
+              )}
             </select>
           </div>
         </div>
@@ -216,7 +239,7 @@ const CourseResourcesDialog = ({ isOpen, onClose, classId, courseId }) => {
           </div>
 
           {/* Upload Progress */}
-          {isUploading && (
+          {isUploading && uploadProgress > 0 && (
             <div className="mb-6">
               <div className="flex justify-between text-sm text-gray-600 mb-1">
                 <span>Uploading...</span>

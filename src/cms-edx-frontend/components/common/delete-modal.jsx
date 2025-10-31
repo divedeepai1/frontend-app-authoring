@@ -33,13 +33,18 @@ const DeleteModal = ({
               e.stopPropagation();
               close();
             }}
+            disabled={loading}
+            style={loading ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
             Cancel
           </button>
-           <button className="ml-3 primary-button px-3 py-2 " onClick={onDeleteSubmit}>
-                       
-            {btnDefaultLabel}
-             </button>
+           <button 
+            className="ml-3 primary-button px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={onDeleteSubmit}
+            disabled={loading}
+          >
+            {loading ? (btnPendingLabel || "Deleting...") : btnDefaultLabel}
+           </button>
         </ActionRow>
       )}
     >
@@ -56,6 +61,7 @@ DeleteModal.defaultProps = {
   btnState: 'default',
   btnDefaultLabel: '',
   btnPendingLabel: '',
+  loading: false,
 };
 
 DeleteModal.propTypes = {
@@ -69,6 +75,7 @@ DeleteModal.propTypes = {
   btnState: PropTypes.string,
   btnDefaultLabel: PropTypes.string,
   btnPendingLabel: PropTypes.string,
+  loading: PropTypes.bool,
 };
 
 export default DeleteModal;

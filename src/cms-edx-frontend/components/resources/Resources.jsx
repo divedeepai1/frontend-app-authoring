@@ -18,6 +18,7 @@ const Resources = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [resourceToDelete, setResourceToDelete] = useState(null);
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchClasses = async () => {
     const token = await fetchCsrfToken();
@@ -86,7 +87,7 @@ const Resources = () => {
     }
   };
 
-  const deleteResource = async (s3Key) => {
+  const deleteResource = async (id) => {
     try {
       const token = await fetchCsrfToken();
       const response = await fetch(
@@ -98,7 +99,7 @@ const Resources = () => {
             "Content-Type": "application/json",
             "X-CSRFToken": token,
           },
-          body: JSON.stringify({ s3_key: s3Key }),
+          body: JSON.stringify({ id: id }),
         }
       );
 
@@ -151,17 +152,26 @@ const Resources = () => {
   };
 
   const handleDeleteConfirm = async () => {
-    if (resourceToDelete) {
-      const s3Key = resourceToDelete.s3_key;
-      await deleteResource(s3Key);
-      setDeleteModalOpen(false);
-      setResourceToDelete(null);
+    if (resourceToDelete && !isDeleting) {
+      setIsDeleting(true);
+      try {
+        const resourceId = resourceToDelete.id;
+        await deleteResource(resourceId);
+        setDeleteModalOpen(false);
+        setResourceToDelete(null);
+      } catch (error) {
+        console.error("Error during delete:", error);
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
   const handleDeleteCancel = () => {
-    setDeleteModalOpen(false);
-    setResourceToDelete(null);
+    if (!isDeleting) {
+      setDeleteModalOpen(false);
+      setResourceToDelete(null);
+    }
   };
 
   const handleClassChange = (classId) => {
@@ -193,11 +203,9 @@ const Resources = () => {
         const found = classes.find(c => String(c.id) === String(selectedClassId));
         const c = found?.courses || [];
         setCourses(c);
-        if (c.length) {
-          setSelectedCourseId(c[0].id);
-        } else {
-          setSelectedCourseId("");
-        }
+        // Clear course selection when class changes to allow class-only filtering
+        // User can then optionally select a course to filter further
+        setSelectedCourseId("");
       } else {
         // When "All Resources" is selected, show all classes' courses
         const allCourses = [];
@@ -216,11 +224,23 @@ const Resources = () => {
     if (resources && Array.isArray(resources)) {
       let filtered = resources;
   
-      if (selectedCourseId) {
-        filtered = resources.filter(resource => resource.course === selectedCourseId);
-      } else if (selectedClassId) {
-        filtered = resources.filter(resource => resource.classroom === selectedClassId);
+     
+      if (selectedCourseId && selectedCourseId !== "") {
+     
+        filtered = resources.filter(resource => {
+          const resourceCourse = resource?.course;
+          return resourceCourse !== null && resourceCourse !== undefined && 
+                 String(resourceCourse) === String(selectedCourseId);
+        });
+      } else if (selectedClassId && selectedClassId !== "") {
+     
+        filtered = resources.filter(resource => {
+          const resourceClassroom = resource?.classroom || resource?.classroom_id || resource?.class_id;
+          return resourceClassroom !== null && resourceClassroom !== undefined && 
+                 String(resourceClassroom) === String(selectedClassId);
+        });
       }
+      // If neither course nor class selected, show all resources
   
       setFilteredResources(filtered);
     } else {
@@ -272,6 +292,8 @@ const Resources = () => {
         description={`Are you sure you want to delete "${resourceToDelete?.title}"? This action cannot be undone.`}
         // variant="danger"
         btnDefaultLabel="Delete"
+        loading={isDeleting}
+        btnPendingLabel="Deleting..."
       />
 
       {/* Course Resources Dialog */}

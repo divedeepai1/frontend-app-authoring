@@ -177,7 +177,7 @@ const CourseUnit = ({ courseId }) => {
           const currentCourse = courses.find(course => course.id == courseId);
           
           if (currentCourse && currentCourse.course_type) {
-            // Map course_type values to match our session storage format
+            sessionStorage.setItem('courseTitle', currentCourse?.display_name);
             let sessionCourseType = currentCourse.course_type;
             
             // Handle different course type formats

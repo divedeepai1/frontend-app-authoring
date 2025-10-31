@@ -27,7 +27,7 @@ export default function PageHeader({
             onClick={() => courseId && navigate(`/course/${courseId}/`) }
             className="hover:text-blue-600 transition-colors cursor-pointer"
           >
-            Course Outline
+            {sessionStorage?.getItem("courseTitle")}
           </div>
           <ChevronRight className="w-4 h-4 mx-2 mt-1" />
           <div
