@@ -975,6 +975,8 @@ export default function LessonBuilder() {
               id: `instruction-${timestamp}-${idx}`,
               type: "instruction",
               name: "Instruction " + (ins + idx),
+              errorCodes: [],
+              weightage: 10,
               content: {
                 html: text || "",
                 attachments: { images: [], videos: [] },

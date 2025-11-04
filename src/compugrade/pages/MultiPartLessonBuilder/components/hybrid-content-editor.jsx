@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Download, Eye, Layers, Settings, Pencil, Check, Wand2, Save as SaveIcon } from "lucide-react";
 import {
   Plus,
@@ -45,6 +45,16 @@ export function HybridContentEditor({
     open: false,
     timestamp: null,
   });
+
+  // Memoize filtered error codes for dropdown to prevent lag
+  const filteredErrorCodes = useMemo(() => {
+    const filtered = availableErrorCodes
+      .filter((c) => !selectedErrorCodes.includes(c))
+      .filter((c) => !errorCodeQuery || c.toLowerCase().includes(errorCodeQuery.toLowerCase()));
+    
+    // Limit to first 100 items for performance
+    return filtered.slice(0, 100);
+  }, [availableErrorCodes, selectedErrorCodes, errorCodeQuery]);
   // Collapse/Expand All is computed from current part's instruction blocks
 
   const [videoEnabled, setVideoEnabled] = useState(
@@ -353,11 +363,18 @@ export function HybridContentEditor({
       if (!codes.length) {
         setErrorGenMessage("No error codes returned for the provided inputs.");
       }
-      // Clear previous selection and options, then populate with fresh set
-      setSelectedErrorCodes([]);
-      setAvailableErrorCodes([]);
-      setAvailableErrorCodes(codes);
-      setSelectedErrorCodes(codes);
+      // Concatenate new codes with existing ones instead of replacing
+      setAvailableErrorCodes((prev) => {
+        const combined = [...prev, ...codes];
+        // Remove duplicates
+        return [...new Set(combined)];
+      });
+      // Add new codes to selected if they're not already selected
+      setSelectedErrorCodes((prev) => {
+        const combined = [...prev, ...codes];
+        // Remove duplicates
+        return [...new Set(combined)];
+      });
       setErrorCodeQuery("");
     } catch (e) {
       setErrorGenMessage(e?.message || "Failed to generate error codes.");
@@ -376,6 +393,12 @@ export function HybridContentEditor({
 
   const removeSelectedCode = (code) => {
     setSelectedErrorCodes((prev) => prev.filter((c) => c !== code));
+  };
+
+  const resetErrorCodes = () => {
+    setAvailableErrorCodes([]);
+    setSelectedErrorCodes([]);
+    setErrorCodeQuery("");
   };
 
   const saveErrorCodes = () => {
@@ -787,7 +810,11 @@ export function HybridContentEditor({
                       {/* Error Codes button */}
                       <button
                         onClick={() => openErrorCodesModal(block)}
-                        className="inline-flex items-center gap-2 px-2 py-1 text-xs font-medium text-gray-700 bg-transparent border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                        className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                          block.content?.errorCodes && Array.isArray(block.content.errorCodes) && block.content.errorCodes.length > 0
+                            ? "text-green-700 bg-green-50 border border-green-200 hover:bg-green-100"
+                            : "text-gray-700 bg-transparent border border-gray-200 hover:bg-gray-50"
+                        }`}
                       >
                        Add Error Codes
                       </button>
@@ -1188,7 +1215,18 @@ export function HybridContentEditor({
                 <div className="text-sm text-red-600">{errorGenMessage}</div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Error Codes</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Select Error Codes</label>
+                  {(availableErrorCodes.length > 0 || selectedErrorCodes.length > 0) && (
+                    <button
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                      onClick={resetErrorCodes}
+                      title="Reset error codes list"
+                    >
+                      <Trash2 className="w-4 h-4" /> Reset
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {/* {selectedErrorCodes.map((code) => (
                     <span key={code} className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-50 text-blue-700 border border-blue-200">
@@ -1202,7 +1240,7 @@ export function HybridContentEditor({
                     <span className="text-xs text-gray-500">No error codes selected</span>
                   )}
                 </div>
-                <div className="space-y-2" ref={setErrorAutoRef}>
+                <div className="space-y-2 relative" ref={setErrorAutoRef}>
                   <div
                     className="flex flex-wrap items-center gap-1 rounded-lg border border-gray-200 px-2 py-2 focus-within:ring-2 focus-within:ring-blue-500"
                     onClick={() => setErrorDropdownOpen(true)}
@@ -1237,24 +1275,28 @@ export function HybridContentEditor({
                     />
                   </div>
                   {errorDropdownOpen && (
-                    <div className="absolute z-10 mt-1  w-[calc(100%-3rem)] rounded-lg border border-gray-200 bg-white shadow-lg max-h-56 overflow-auto">
+                    <div className="absolute z-10 mt-1  w-[calc(100%-3rem)] rounded-lg border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
                       {availableErrorCodes.length === 0 ? (
                         <div className="px-3 py-2 text-sm text-gray-500">No codes yet. Use Generate above.</div>
+                      ) : filteredErrorCodes.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-gray-500">No matching codes found.</div>
                       ) : (
                         <ul className="py-1">
-                          {availableErrorCodes
-                            .filter((c) => !selectedErrorCodes.includes(c))
-                            .filter((c) => !errorCodeQuery || c.toLowerCase().includes(errorCodeQuery.toLowerCase()))
-                            .map((c) => (
-                              <li
-                                key={c}
-                                className="px-3 py-2 text-sm hover:bg-gray-50 border-1 border-b-gray-500 cursor-pointer"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => addSelectedCode(c)}
-                              >
-                                {c}
-                              </li>
-                            ))}
+                          {filteredErrorCodes.map((c) => (
+                            <li
+                              key={c}
+                              className="px-3 py-2 text-sm hover:bg-gray-50 border-1 border-b-gray-500 cursor-pointer"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => addSelectedCode(c)}
+                            >
+                              {c}
+                            </li>
+                          ))}
+                          {availableErrorCodes.filter((c) => !selectedErrorCodes.includes(c)).length > 100 && (
+                            <li className="px-3 py-2 text-sm text-gray-500 italic">
+                              Showing first 100 results. Use search to filter.
+                            </li>
+                          )}
                         </ul>
                       )}
                     </div>

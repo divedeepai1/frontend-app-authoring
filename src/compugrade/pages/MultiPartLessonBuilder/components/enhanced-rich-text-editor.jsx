@@ -537,20 +537,40 @@ export function EnhancedRichTextEditor({
     setHighlightColor(color)
     editorRef.current?.focus()
     
+    // Use execCommand for better browser compatibility
+    document.execCommand("styleWithCSS", false, true)
+    
     const selection = window.getSelection()
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0)
       
       if (!range.collapsed) {
-        // Apply highlight to selected text
-        const span = document.createElement("span")
-        span.style.backgroundColor = color
-        try {
-          range.surroundContents(span)
-        } catch (e) {
-          const contents = range.extractContents()
-          span.appendChild(contents)
-          range.insertNode(span)
+        // Check if selection already has highlight
+        let hasHighlight = false
+        let currentNode = range.commonAncestorContainer
+        if (currentNode.nodeType === Node.TEXT_NODE) {
+          currentNode = currentNode.parentNode
+        }
+        
+        while (currentNode && currentNode !== editorRef.current) {
+          if (currentNode.nodeType === Node.ELEMENT_NODE && currentNode.tagName === 'SPAN') {
+            const bgColor = currentNode.style.backgroundColor || window.getComputedStyle(currentNode).backgroundColor
+            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent' && bgColor !== 'rgb(255, 255, 255)') {
+              hasHighlight = true
+              break
+            }
+          }
+          currentNode = currentNode.parentNode
+        }
+        
+        // If removing highlight (white/transparent) or toggling off existing highlight
+        if (color === '#ffffff' || color === '#FFFFFF' || color === 'transparent' || (hasHighlight && color === highlightColor)) {
+          // Remove highlight
+          removeHighlight()
+        } else {
+          // Apply highlight using execCommand
+          document.execCommand("hiliteColor", false, color)
+          document.execCommand("backColor", false, color)
         }
       } else {
         // Cursor only - create a span for new text
@@ -565,6 +585,61 @@ export function EnhancedRichTextEditor({
         newRange.collapse(true)
         selection.removeAllRanges()
         selection.addRange(newRange)
+      }
+    }
+    updateContent()
+  }
+
+  // Function to remove highlight from selected text
+  const removeHighlight = () => {
+    saveState()
+    editorRef.current?.focus()
+    
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      
+      if (!range.collapsed) {
+        // Clone range contents before extraction
+        const rangeContents = range.cloneContents()
+        const tempDiv = document.createElement('div')
+        tempDiv.appendChild(rangeContents)
+        
+        // Find and unwrap all highlight spans
+        const allSpans = tempDiv.querySelectorAll('span[style*="background-color"]')
+        allSpans.forEach(span => {
+          const bgColor = span.style.backgroundColor
+          if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent' && bgColor !== 'rgb(255, 255, 255)') {
+            // Unwrap the span
+            const parent = span.parentNode
+            while (span.firstChild) {
+              parent.insertBefore(span.firstChild, span)
+            }
+            if (parent) {
+              parent.removeChild(span)
+            }
+          }
+        })
+        
+        // Extract original contents and replace with cleaned content
+        range.extractContents()
+        
+        // Insert cleaned content
+        const fragment = document.createDocumentFragment()
+        while (tempDiv.firstChild) {
+          fragment.appendChild(tempDiv.firstChild)
+        }
+        range.insertNode(fragment)
+        
+        // Collapse range to end
+        range.collapse(false)
+        selection.removeAllRanges()
+        selection.addRange(range)
+        
+        // Also try execCommand as fallback
+        document.execCommand("styleWithCSS", false, true)
+        document.execCommand("hiliteColor", false, "transparent")
+        document.execCommand("backColor", false, "transparent")
       }
     }
     updateContent()
@@ -1223,12 +1298,52 @@ const applyBlockFormat = (tag) => {
                 value={highlightColor}
                 onChange={(e) => {
                   setHighlightColor(e.target.value)
-                  applyHighlightColor(e.target.value)
+                  const selection = window.getSelection()
+                  if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+                    // Check if selected text is already highlighted
+                    const range = selection.getRangeAt(0)
+                    let hasHighlight = false
+                    let currentNode = range.commonAncestorContainer
+                    if (currentNode.nodeType === Node.TEXT_NODE) {
+                      currentNode = currentNode.parentNode
+                    }
+                    while (currentNode && currentNode !== editorRef.current) {
+                      if (currentNode.nodeType === Node.ELEMENT_NODE && currentNode.tagName === 'SPAN') {
+                        const bgColor = currentNode.style.backgroundColor || window.getComputedStyle(currentNode).backgroundColor
+                        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent' && bgColor !== 'rgb(255, 255, 255)') {
+                          hasHighlight = true
+                          break
+                        }
+                      }
+                      currentNode = currentNode.parentNode
+                    }
+                    // If text is highlighted and selecting white/transparent, remove highlight
+                    if (hasHighlight && (e.target.value === '#ffffff' || e.target.value === '#FFFFFF')) {
+                      removeHighlight()
+                    } else {
+                      applyHighlightColor(e.target.value)
+                    }
+                  } else {
+                    applyHighlightColor(e.target.value)
+                  }
                 }}
                 className="w-8 h-8 border rounded cursor-pointer"
-                title="Highlight Color"
+                title="Highlight Color - Select white to remove highlight"
               />
-              <Highlighter className="w-4 h-4 text-blue-400" />
+              <div
+                className="h-8 w-8 hover:bg-blue-100 rounded flex items-center justify-center transition-colors cursor-pointer"
+                onClick={() => {
+                  const selection = window.getSelection()
+                  if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+                    removeHighlight()
+                  } else {
+                    editorRef.current?.focus()
+                  }
+                }}
+                title="Remove highlight from selected text"
+              >
+                <Highlighter className="w-4 h-4 text-blue-400" />
+              </div>
             </div>
 
             {/* Lists */}
