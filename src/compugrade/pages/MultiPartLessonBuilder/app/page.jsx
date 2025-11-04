@@ -54,8 +54,8 @@ export default function LessonBuilder() {
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
 
-   // console.log(lessonParts);
-  //console.log(lessonConfig)
+   console.log(lessonParts);
+  console.log(lessonConfig)
   
 
   const handleSaveAll = async (instructions) => {
@@ -120,6 +120,8 @@ export default function LessonBuilder() {
             type: "instruction",
             content: {
               html: item.natural_text || "",
+              errorCodes: item.error_codes || [],
+              weightage: item.weightage || 10,
               attachments: {
                 images: Array.isArray(item.image_name) ? item.image_name : [],
                 videos: [
@@ -532,6 +534,8 @@ export default function LessonBuilder() {
                   block_type: block.type,
                   item_type: block.content.item_type || "no-skill",
                   natural_text: block.content.html || "",
+                  error_codes: block.content.errorCodes || [],
+                  weightage: block.content.weightage || 10,
                   images: imagesBase64,
                   videos: videosBase64,
                   video_timestamp: timestamp, 

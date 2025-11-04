@@ -141,6 +141,27 @@ export function EnhancedRichTextEditor({
       [contenteditable] span[style*="font-family"] {
         display: inline;
       }
+      /* Prevent browser selection from being treated as formatting */
+      [contenteditable]::selection {
+        background-color: rgba(0, 123, 255, 0.3);
+      }
+      [contenteditable]::-moz-selection {
+        background-color: rgba(0, 123, 255, 0.3);
+      }
+      /* Reduce list indentation to bring bullets closer to text */
+      [contenteditable] ul,
+      [contenteditable] ol {
+        padding-left: 24px;
+        margin-left: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+      }
+      [contenteditable] li {
+        margin-left: 0;
+        padding-left: 4px;
+        margin-top: 2px;
+        margin-bottom: 2px;
+      }
     `
     document.head.appendChild(style)
 
@@ -189,10 +210,22 @@ export function EnhancedRichTextEditor({
           setFontColor(color)
         }
 
-        // Get background color for highlight
+        // Get background color for highlight - ignore browser selection colors
         const bg = rgbToHex(computed.backgroundColor)
+        // Only detect highlight if it's not a browser default selection color (usually blue-ish)
+        // Ignore colors like rgba(0, 123, 255, 0.3) or similar browser selection colors
         if (bg && bg !== "#ffffff" && bg !== "rgba(0, 0, 0, 0)" && bg !== "#000000") {
-          setHighlightColor(bg)
+          // Check if it's a browser selection color (usually contains transparency or specific blue values)
+          const match = computed.backgroundColor.match(/\d+/g)
+          if (match && match.length >= 4) {
+            const [r, g, b, a] = match.map(Number)
+            // Skip browser selection colors (typically blue with low opacity)
+            if (!(r < 50 && g > 100 && b > 200 && a < 0.5)) {
+              setHighlightColor(bg)
+            }
+          } else {
+            setHighlightColor(bg)
+          }
         }
 
         break
@@ -217,7 +250,17 @@ export function EnhancedRichTextEditor({
         if (inlineStyle.backgroundColor) {
           const bg = inlineStyle.backgroundColor
           if (bg && bg !== "#ffffff" && bg !== "rgba(0, 0, 0, 0)" && bg !== "#000000") {
-            setHighlightColor(bg)
+            // Check if it's a browser selection color
+            const match = bg.match(/\d+/g)
+            if (match && match.length >= 4) {
+              const [r, g, b, a] = match.map(Number)
+              // Skip browser selection colors (typically blue with low opacity)
+              if (!(r < 50 && g > 100 && b > 200 && a < 0.5)) {
+                setHighlightColor(bg)
+              }
+            } else {
+              setHighlightColor(bg)
+            }
           }
         }
         
@@ -330,6 +373,100 @@ export function EnhancedRichTextEditor({
   const formatText = (command, value) => {
     saveState() // Save state before applying formatting
     editorRef.current?.focus()
+    
+    // Special handling for list commands to preserve existing lists
+    if (command === "insertUnorderedList" || command === "insertOrderedList") {
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        let currentNode = range.commonAncestorContainer
+        
+        // Find if we're inside a list item
+        let listItem = null
+        let listType = null
+        
+        while (currentNode && currentNode !== editorRef.current) {
+          if (currentNode.nodeType === Node.ELEMENT_NODE) {
+            const tagName = currentNode.tagName?.toLowerCase()
+            if (tagName === "li") {
+              listItem = currentNode
+              // Find the parent list
+              let parent = currentNode.parentNode
+              while (parent && parent !== editorRef.current) {
+                if (parent.nodeType === Node.ELEMENT_NODE) {
+                  const parentTagName = parent.tagName?.toLowerCase()
+                  if (parentTagName === "ul" || parentTagName === "ol") {
+                    listType = parentTagName
+                    break
+                  }
+                }
+                parent = parent.parentNode
+              }
+              break
+            }
+          }
+          currentNode = currentNode.parentNode
+        }
+        
+        // If we're already in a list of the same type, don't toggle it off
+        // Instead, just ensure we're in a list item
+        if (listItem && listType) {
+          const requestedType = command === "insertUnorderedList" ? "ul" : "ol"
+          if (listType === requestedType) {
+            // Already in the correct list type, just ensure cursor is positioned correctly
+            return
+          } else {
+            // Different list type, convert it
+            // First exit current list, then create new one
+            document.execCommand(command === "insertUnorderedList" ? "insertOrderedList" : "insertUnorderedList", false, null)
+            document.execCommand(command, false, null)
+            updateContent()
+            return
+          }
+        }
+        
+        // If we're not in a list, check if we're at the start of a line
+        // and if so, create a new list item without affecting other blocks
+        if (!listItem) {
+          // Collapse selection to start if it's not collapsed
+          if (!range.collapsed) {
+            range.collapse(true)
+            selection.removeAllRanges()
+            selection.addRange(range)
+          }
+          
+          // Find the current block element
+          let currentBlock = range.commonAncestorContainer
+          while (currentBlock && currentBlock !== editorRef.current) {
+            if (currentBlock.nodeType === Node.ELEMENT_NODE) {
+              const tagName = currentBlock.tagName?.toLowerCase()
+              if (tagName === "p" || tagName === "div" || tagName === "h1" || tagName === "h2" || tagName === "h3") {
+                // Check if we're at the start of this block
+                const isAtStart = range.collapsed && 
+                  (range.startContainer.nodeType === Node.TEXT_NODE
+                    ? range.startOffset === 0
+                    : range.startOffset === 0)
+                
+                if (isAtStart || currentBlock.textContent.trim() === "") {
+                  // Create a new list item for this block only
+                  const tempRange = document.createRange()
+                  tempRange.selectNodeContents(currentBlock)
+                  tempRange.collapse(true)
+                  selection.removeAllRanges()
+                  selection.addRange(tempRange)
+                  
+                  document.execCommand(command, false, null)
+                  updateContent()
+                  return
+                }
+                break
+              }
+            }
+            currentBlock = currentBlock.parentNode
+          }
+        }
+      }
+    }
     
     // Special handling for color commands
     if (command === "foreColor" || command === "hiliteColor") {
@@ -702,6 +839,218 @@ const applyBlockFormat = (tag) => {
         
         updateContent()
       }
+    } else if (e.key === "Enter") {
+      // Handle Enter key for lists - ensure lists continue properly and allow easy exit
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        let currentNode = range.commonAncestorContainer
+        
+        // Find if we're inside a list item
+        let listItem = null
+        let listType = null
+        
+        while (currentNode && currentNode !== editorRef.current) {
+          if (currentNode.nodeType === Node.ELEMENT_NODE) {
+            const tagName = currentNode.tagName?.toLowerCase()
+            if (tagName === "li") {
+              listItem = currentNode
+              // Find the parent list
+              let parent = currentNode.parentNode
+              while (parent && parent !== editorRef.current) {
+                if (parent.nodeType === Node.ELEMENT_NODE) {
+                  const parentTagName = parent.tagName?.toLowerCase()
+                  if (parentTagName === "ul" || parentTagName === "ol") {
+                    listType = parentTagName
+                    break
+                  }
+                }
+                parent = parent.parentNode
+              }
+              break
+            }
+          }
+          currentNode = currentNode.parentNode
+        }
+        
+        if (listItem && listType) {
+          // Check if list item is empty
+          const isEmpty = listItem.textContent.trim() === "" || listItem.textContent === ""
+          
+          // Check if cursor is at the start of the list item
+          let isAtStart = false
+          if (range.collapsed) {
+            if (range.startContainer === listItem || listItem.contains(range.startContainer)) {
+              if (range.startContainer.nodeType === Node.TEXT_NODE) {
+                isAtStart = range.startOffset === 0
+              } else {
+                // Check if we're before the first child or at the start
+                const firstChild = listItem.firstChild
+                if (!firstChild) {
+                  isAtStart = true
+                } else {
+                  try {
+                    const testRange = document.createRange()
+                    testRange.setStartBefore(firstChild)
+                    testRange.setEnd(range.startContainer, range.startOffset)
+                    isAtStart = testRange.collapsed
+                  } catch {
+                    isAtStart = range.startOffset === 0
+                  }
+                }
+              }
+            }
+          }
+          
+          // Check if cursor is at the end of the list item
+          let isAtEnd = false
+          if (range.collapsed) {
+            if (range.endContainer === listItem || listItem.contains(range.endContainer)) {
+              if (range.endContainer.nodeType === Node.TEXT_NODE) {
+                isAtEnd = range.endOffset === range.endContainer.length
+              } else {
+                const lastChild = listItem.lastChild
+                if (!lastChild) {
+                  isAtEnd = true
+                } else {
+                  try {
+                    const testRange = document.createRange()
+                    testRange.setStart(range.endContainer, range.endOffset)
+                    testRange.setEndAfter(lastChild)
+                    isAtEnd = testRange.collapsed
+                  } catch {
+                    isAtEnd = false
+                  }
+                }
+              }
+            }
+          }
+          
+          // If empty and at start, exit the list
+          if (isEmpty && isAtStart) {
+            e.preventDefault()
+            saveState()
+            
+            // Remove the list item and create a paragraph
+            const p = document.createElement("p")
+            p.appendChild(document.createTextNode("\u200B"))
+            
+            // Replace list item with paragraph
+            if (listItem.parentNode) {
+              listItem.parentNode.insertBefore(p, listItem)
+              listItem.parentNode.removeChild(listItem)
+            } else {
+              editorRef.current?.appendChild(p)
+            }
+            
+            // Move cursor to new paragraph
+            const newRange = document.createRange()
+            newRange.setStart(p.firstChild, 1)
+            newRange.collapse(true)
+            selection.removeAllRanges()
+            selection.addRange(newRange)
+            
+            updateContent()
+            return
+          }
+          
+          // If empty and at end, also allow exit (double Enter)
+          if (isEmpty && isAtEnd) {
+            // Check if this is the second empty item in a row (double Enter)
+            const prevSibling = listItem.previousElementSibling
+            if (prevSibling && prevSibling.tagName?.toLowerCase() === "li" && 
+                (prevSibling.textContent.trim() === "" || prevSibling.textContent === "")) {
+              e.preventDefault()
+              saveState()
+              
+              // Exit the list
+              const p = document.createElement("p")
+              p.appendChild(document.createTextNode("\u200B"))
+              
+              if (listItem.parentNode) {
+                listItem.parentNode.insertBefore(p, listItem)
+                listItem.parentNode.removeChild(listItem)
+              } else {
+                editorRef.current?.appendChild(p)
+              }
+              
+              const newRange = document.createRange()
+              newRange.setStart(p.firstChild, 1)
+              newRange.collapse(true)
+              selection.removeAllRanges()
+              selection.addRange(newRange)
+              
+              updateContent()
+              return
+            }
+          }
+          
+          // Save state before Enter
+          saveState()
+          
+          // Handle empty list items - manually create new list item
+          if (isEmpty && !isAtStart) {
+            e.preventDefault()
+            
+            // Create a new list item
+            const newLi = document.createElement("li")
+            newLi.appendChild(document.createTextNode("\u200B"))
+            
+            // Insert after current list item
+            if (listItem.parentNode && listItem.nextSibling) {
+              listItem.parentNode.insertBefore(newLi, listItem.nextSibling)
+            } else if (listItem.parentNode) {
+              listItem.parentNode.appendChild(newLi)
+            }
+            
+            // Move cursor to new list item
+            const newRange = document.createRange()
+            newRange.setStart(newLi.firstChild, 1)
+            newRange.collapse(true)
+            selection.removeAllRanges()
+            selection.addRange(newRange)
+            
+            updateContent()
+            return
+          }
+          
+          // For non-empty items, let browser handle Enter naturally
+          // But check if list was broken afterwards
+          setTimeout(() => {
+            const newSel = window.getSelection()
+            if (newSel && newSel.rangeCount > 0) {
+              const newRange = newSel.getRangeAt(0)
+              let newNode = newRange.commonAncestorContainer
+              let stillInList = false
+              
+              // Check if we're still in a list
+              while (newNode && newNode !== editorRef.current) {
+                if (newNode.nodeType === Node.ELEMENT_NODE) {
+                  const tagName = newNode.tagName?.toLowerCase()
+                  if (tagName === "ul" || tagName === "ol") {
+                    stillInList = true
+                    break
+                  } else if (tagName === "li") {
+                    const parent = newNode.parentNode
+                    if (parent && (parent.tagName?.toLowerCase() === "ul" || parent.tagName?.toLowerCase() === "ol")) {
+                      stillInList = true
+                      break
+                    }
+                  }
+                }
+                newNode = newNode.parentNode
+              }
+              
+              // If list was broken, restore it
+              if (!stillInList && listType) {
+                const command = listType === "ul" ? "insertUnorderedList" : "insertOrderedList"
+                document.execCommand(command, false, null)
+                updateContent()
+              }
+            }
+          }, 10)
+        }
+      }
     }
   }
 
@@ -747,10 +1096,10 @@ const applyBlockFormat = (tag) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Toolbar */}
-      <div className="p-4 shadow-sm border border-blue-200 rounded-lg bg-white focus:bg-blue-50">
-        <div className="flex items-center justify-between mb-2">
+      <div className="p-3 shadow-sm border border-blue-200 rounded-lg bg-white focus:bg-blue-50">
+        <div className="flex items-center justify-between">
           <div className="flex flex-wrap items-center gap-1">
          
 
@@ -973,7 +1322,7 @@ const applyBlockFormat = (tag) => {
 
       {/* Editable area */}
       <div
-        className="p-3 shadow-sm border border-blue-200 rounded-lg bg-white"
+        className="p-1 shadow-sm border border-blue-200 rounded-lg bg-white"
         onMouseDown={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
@@ -982,7 +1331,7 @@ const applyBlockFormat = (tag) => {
         <div
           ref={editorRef}
           contentEditable
-          className="min-h-[300px] p-4 border-2 border-dashed border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:bg-blue-50 transition-all"
+          className="min-h-[170px] p-2 px-3 border-2  rounded-lg focus:outline-none   transition-all"
           style={{ 
             whiteSpace: "pre-wrap",
             fontFamily: "Arial, sans-serif",

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Eye, Layers, Settings } from "lucide-react";
+import { Download, Eye, Layers, Settings, Pencil, Check, Wand2, Save as SaveIcon } from "lucide-react";
 import {
   Plus,
   FileText,
@@ -14,6 +14,7 @@ import {
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor";
 import { FileDiffIcon, Image as ImageIcon, Video, Label } from "lucide-react";
+import { base_url } from "../../../../compugrade-constants";
 import { ObjectiveEditor } from "./objective-editor";
 import EditableBlockName from "./ui/input-name";
 import { get } from "lodash";
@@ -28,6 +29,18 @@ export function HybridContentEditor({
   selectedPart,
 }) {
   const [blocks, setBlocks] = useState(content.blocks || []);
+  const [editingWeightageFor, setEditingWeightageFor] = useState(null);
+  const [tempWeightage, setTempWeightage] = useState(10);
+  const [errorCodesModal, setErrorCodesModal] = useState({ open: false, blockId: null });
+  const [errorCodesInput, setErrorCodesInput] = useState("");
+  const [availableErrorCodes, setAvailableErrorCodes] = useState([]);
+  const [selectedErrorCodes, setSelectedErrorCodes] = useState([]);
+  const [errorCodeQuery, setErrorCodeQuery] = useState("");
+  const [errorDropdownOpen, setErrorDropdownOpen] = useState(false);
+  const [errorAutoRef, setErrorAutoRef] = useState(null);
+  const [errorGenLoading, setErrorGenLoading] = useState(false);
+  const [errorGenLoadingFor, setErrorGenLoadingFor] = useState(null);
+  const [errorGenMessage, setErrorGenMessage] = useState("");
   const [timestampPreview, setTimestampPreview] = useState({
     open: false,
     timestamp: null,
@@ -217,6 +230,168 @@ export function HybridContentEditor({
     setBlocks(newBlocks);
     updateContent({ ...content, blocks: newBlocks });
   };
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (errorAutoRef && !errorAutoRef.contains(e.target)) {
+        setErrorDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [errorAutoRef]);
+
+  const startEditWeightage = (block) => {
+    const currentVal =
+      typeof block.content?.weightage === "number"
+        ? block.content.weightage
+        : typeof block.content?.errorWeightage === "number"
+          ? block.content.errorWeightage
+          : 10;
+    setTempWeightage(currentVal);
+    setEditingWeightageFor(block.id);
+  };
+  const cancelEditWeightage = () => setEditingWeightageFor(null);
+  const saveEditWeightage = (block) => {
+    const val = parseInt(tempWeightage || 0, 10);
+    const next = isNaN(val) ? 0 : val;
+    updateBlock(block.id, { ...block.content, weightage: next, errorWeightage: next });
+    setEditingWeightageFor(null);
+  };
+
+  const openErrorCodesModal = (block) => {
+    const currentSelected = Array.isArray(block.content?.errorCodes)
+      ? block.content.errorCodes
+      : [];
+    setSelectedErrorCodes(currentSelected);
+    // Initialize available list as empty - will be populated when user generates codes
+    setAvailableErrorCodes([]);
+    setErrorCodesInput(block.content?.errorCodesText || "");
+    setErrorCodesModal({ open: true, blockId: block.id });
+  };
+
+  const closeErrorCodesModal = () => {
+    setErrorCodesModal({ open: false, blockId: null });
+    setErrorCodesInput("");
+    setAvailableErrorCodes([]);
+    setSelectedErrorCodes([]);
+  };
+
+  const fileToBase64 = async (input) => {
+    if (!input) return "";
+    if (input instanceof File || input instanceof Blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(input);
+        reader.onload = () => {
+          try {
+            const base64String = String(reader.result).split(",")[1] || "";
+            resolve(base64String);
+          } catch (e) {
+            resolve("");
+          }
+        };
+        reader.onerror = (err) => reject(err);
+      });
+    }
+    // assume already base64 or URL; if URL, backend may not accept; best-effort
+    return input;
+  };
+
+  const getAppName = () => {
+    const t = sessionStorage.getItem("courseType");
+    if (t === "ms-word") return "word";
+    if (t === "powerpoint") return "powerpoint";
+    if (t === "excel") return "excel";
+    return "word";
+  };
+
+  const handleGenerateCodes = async (withText) => {
+    try {
+      setErrorGenMessage("");
+      setErrorGenLoading(true);
+      setErrorGenLoadingFor(withText ? "text" : "notext");
+      // Validate part configuration
+      const src = selectedPart?.sourceDocument;
+      const ans = selectedPart?.answerKey;
+      if (!src || !ans) {
+        setErrorGenMessage("Please attach Source Document and Answer Key in Part Configuration before generating error codes.");
+        setErrorGenLoading(false);
+        setErrorGenLoadingFor(null);
+        return;
+      }
+      const sourceBase64 = await fileToBase64(src);
+      const answerBase64 = await fileToBase64(ans);
+      if (!sourceBase64 || !answerBase64) {
+        setErrorGenMessage("Invalid document(s). Please re-upload Source Document and Answer Key.");
+        setErrorGenLoading(false);
+        setErrorGenLoadingFor(null);
+        return;
+      }
+
+      const payload = {
+        source_document: sourceBase64,
+        answer_key: answerBase64,
+        app_name: getAppName(),
+        filter_text: withText ? (errorCodesInput || "") : "",
+      };
+      const res = await fetch(base_url + "/api/openedx/get_error_codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Failed to get error codes: ${res.status} ${t}`);
+      }
+      const data = await res.json();
+      const codes = Array.isArray(data?.error_codes)
+        ? data.error_codes
+        : Array.isArray(data)
+          ? data
+          : [];
+      if (!codes.length) {
+        setErrorGenMessage("No error codes returned for the provided inputs.");
+      }
+      // Clear previous selection and options, then populate with fresh set
+      setSelectedErrorCodes([]);
+      setAvailableErrorCodes([]);
+      setAvailableErrorCodes(codes);
+      setSelectedErrorCodes(codes);
+      setErrorCodeQuery("");
+    } catch (e) {
+      setErrorGenMessage(e?.message || "Failed to generate error codes.");
+    } finally {
+      setErrorGenLoading(false);
+      setErrorGenLoadingFor(null);
+    }
+  };
+
+  const addSelectedCode = (code) => {
+    if (!code) return;
+    if (!availableErrorCodes.includes(code)) return;
+    if (selectedErrorCodes.includes(code)) return;
+    setSelectedErrorCodes((prev) => [...prev, code]);
+  };
+
+  const removeSelectedCode = (code) => {
+    setSelectedErrorCodes((prev) => prev.filter((c) => c !== code));
+  };
+
+  const saveErrorCodes = () => {
+    const blockId = errorCodesModal.blockId;
+    if (!blockId) return;
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    updateBlock(blockId, {
+      ...block.content,
+      errorCodes: selectedErrorCodes,
+      errorCodesText: errorCodesInput,
+    });
+    closeErrorCodesModal();
+  };
+
+  
 
   const renameBlock = (blockId, newName) => {
     const newBlocks = blocks.map((block) =>
@@ -454,7 +629,58 @@ export function HybridContentEditor({
                 <EditableBlockName block={block} renameBlock={renameBlock} />
               </div>
 
+              
+
               <div className="flex items-center gap-2">
+
+              {block.type === "instruction" && (
+              <div className="ml-2 flex items-center gap-2">
+                {editingWeightageFor === block.id ? (
+                  <div className="flex items-center gap-1 mt-1 mr-2">
+                    <span className="text-sm font-semibold">Weightage</span>
+                    <input
+                      type="number"
+                      min={0}
+                      className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900"
+                      value={tempWeightage}
+                      onChange={(e) => setTempWeightage(e.target.value)}
+                    />
+                    <button
+                      className="p-1 border-none bg-transparent text-green-600 hover:bg-green-50 rounded"
+                      onClick={() => saveEditWeightage(block)}
+                      title="Save"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      className="p-1 border-none bg-transparent text-gray-600 hover:bg-gray-100 rounded"
+                      onClick={cancelEditWeightage}
+                      title="Cancel"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 group/weight mt-1 mr-2">
+                    <span className="text-sm font-semibold mr-1">Weightage :</span>
+                    <span className="text-xs font-semibold text-gray-900 mt-1">
+                      {typeof block.content?.weightage === "number"
+                        ? block.content.weightage
+                        : typeof block.content?.errorWeightage === "number"
+                          ? block.content.errorWeightage
+                          : 10}
+                    </span>
+                    <button
+                      className="p-1 border-none bg-transparent opacity-0 group-hover/weight:opacity-100 hover:bg-blue-50 rounded"
+                      onClick={() => startEditWeightage(block)}
+                      title="Edit weightage"
+                    >
+                      <Pencil className="w-4 h-4 mb-1" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
                 {/* Move Up/Down controls */}
                 <div
                   onClick={() => moveBlock(index, index - 1)}
@@ -487,6 +713,8 @@ export function HybridContentEditor({
                   )}
                 </div>
 
+           
+
                 {blocks.length > 0 && (
                   <div
                     onClick={() => deleteBlock(block.id)}
@@ -518,7 +746,7 @@ export function HybridContentEditor({
                         Instruction {getInstructionNumber(block.id)}
                       </div>
 
-                      <div className="flex items-center gap-2 mr-2">
+                    <div className="flex items-center gap-2 mr-2">
                         <select
                           defaultValue="no-skill"
                           value={block.content.item_type || "no-skill"}
@@ -555,6 +783,14 @@ export function HybridContentEditor({
                         >
                           <Video className="w-4 h-4" /> Video
                         </button>
+
+                      {/* Error Codes button */}
+                      <button
+                        onClick={() => openErrorCodesModal(block)}
+                        className="inline-flex items-center gap-2 px-2 py-1 text-xs font-medium text-gray-700 bg-transparent border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                      >
+                       Add Error Codes
+                      </button>
                       </div>
                     </div>
 
@@ -906,6 +1142,143 @@ export function HybridContentEditor({
         onClose={() => setTimestampPreview({ open: false, timestamp: null })}
         videoUrl={video}
       />
+
+      {/* Error Codes Modal */}
+      {errorCodesModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={closeErrorCodesModal}
+          />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-[90vw] max-h-[85vh] overflow-auto">
+            <div className="flex items-center justify-between px-4 py-2 border-b">
+              <div className="text-sm font-medium">Add Error Codes</div>
+              <button className="p-1 border-none bg-transparent" onClick={closeErrorCodesModal}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Text (optional)</label>
+                <textarea
+                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                  value={errorCodesInput}
+                  onChange={(e) => setErrorCodesInput(e.target.value)}
+                  placeholder="Paste or type text to generate error codes from..."
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleGenerateCodes(true)}
+                  disabled={errorGenLoadingFor !== null}
+                >
+                  <Wand2 className="w-4 h-4" /> {errorGenLoadingFor === "text" ? "Generating..." : "Generate error codes for text"}
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleGenerateCodes(false)}
+                  disabled={errorGenLoadingFor !== null}
+                >
+                  <Wand2 className="w-4 h-4" /> {errorGenLoadingFor === "notext" ? "Generating..." : "Generate error codes without text"}
+                </button>
+              </div>
+              {errorGenMessage && (
+                <div className="text-sm text-red-600">{errorGenMessage}</div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Select Error Codes</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {/* {selectedErrorCodes.map((code) => (
+                    <span key={code} className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-50 text-blue-700 border border-blue-200">
+                      {code}
+                      <button className="p-0.5 border-none bg-transparent" onClick={() => removeSelectedCode(code)}>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))} */}
+                  {selectedErrorCodes.length === 0 && (
+                    <span className="text-xs text-gray-500">No error codes selected</span>
+                  )}
+                </div>
+                <div className="space-y-2" ref={setErrorAutoRef}>
+                  <div
+                    className="flex flex-wrap items-center gap-1 rounded-lg border border-gray-200 px-2 py-2 focus-within:ring-2 focus-within:ring-blue-500"
+                    onClick={() => setErrorDropdownOpen(true)}
+                  >
+                    {(selectedErrorCodes || []).map((code) => (
+                      <span key={code} className="flex items-center gap-1 rounded-md border text-xs px-2 py-1 bg-blue-50 text-blue-800 border-blue-200">
+                        <span className="font-medium">{code}</span>
+                        <div
+                          className="ml-1 text-gray-500 hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeSelectedCode(code);
+                          }}
+                          aria-label="Remove"
+                        >
+                          <X className="w-3 h-3" />
+                        </div>
+                      </span>
+                    ))}
+                    <input
+                      value={errorCodeQuery}
+                      onChange={(e) => setErrorCodeQuery(e.target.value)}
+                      onFocus={() => setErrorDropdownOpen(true)}
+                      placeholder={
+                        availableErrorCodes.length === 0
+                          ? "Generate codes to choose"
+                          : availableErrorCodes.length > selectedErrorCodes.length
+                            ? "Type to search codes..."
+                            : ""
+                      }
+                      className="flex-1 min-w-[160px] outline-none border-none text-sm px-1 py-1"
+                    />
+                  </div>
+                  {errorDropdownOpen && (
+                    <div className="absolute z-10 mt-1  w-[calc(100%-3rem)] rounded-lg border border-gray-200 bg-white shadow-lg max-h-56 overflow-auto">
+                      {availableErrorCodes.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-gray-500">No codes yet. Use Generate above.</div>
+                      ) : (
+                        <ul className="py-1">
+                          {availableErrorCodes
+                            .filter((c) => !selectedErrorCodes.includes(c))
+                            .filter((c) => !errorCodeQuery || c.toLowerCase().includes(errorCodeQuery.toLowerCase()))
+                            .map((c) => (
+                              <li
+                                key={c}
+                                className="px-3 py-2 text-sm hover:bg-gray-50 border-1 border-b-gray-500 cursor-pointer"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => addSelectedCode(c)}
+                              >
+                                {c}
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="px-4 py-4 border-t flex justify-center gap-3">
+              <button
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                onClick={closeErrorCodesModal}
+              >
+                <X className="w-4 h-4" /> Cancel
+              </button>
+              <button
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                onClick={saveErrorCodes}
+              >
+                <SaveIcon className="w-4 h-4" /> Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preview Modal */}
       {previewState.open && (

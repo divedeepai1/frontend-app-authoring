@@ -55,7 +55,7 @@ const Chat = () => {
     const token = await fetchCsrfToken();
     try {
       const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/chat/history/?email=${encodeURIComponent(email)}`,
+        `${getConfig().STUDIO_BASE_URL}/myplugin/chat/history/?email=${encodeURIComponent(email)}&limit=30`,
         {
           method: "GET",
           credentials: "include",
@@ -136,10 +136,13 @@ const Chat = () => {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (autoScrollEnabled && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (autoScrollEnabled && chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
-  }, [messages]);
+  }, [messages, autoScrollEnabled]);
 
   // Auto-resize textarea
   const autoResize = () => {
@@ -213,9 +216,9 @@ const Chat = () => {
           outline="outline-white-button"
         />
         <ManagementSection />
-        <section className="px-5">
+        <section className="px-5 bg-white">
           <Container>
-            <div className="py-4 mb-4" style={{ width: "100%", maxWidth: "900px", margin: "0 auto" }}>
+            <div className="py-1  bg-white mb-4" style={{ width: "100%", maxWidth: "1000px", margin: "0 auto" }}>
               <div className="p-4 class-div-style-2">
                 {/* Header with back button and recipient info */}
                 <div className="d-flex align-items-center mb-4 pb-3 border-bottom">
