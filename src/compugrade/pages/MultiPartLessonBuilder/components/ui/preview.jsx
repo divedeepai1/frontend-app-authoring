@@ -21,12 +21,12 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
             <BookOpenText size={18} className="text-blue-600" /> {block.name} 
           </div>
           
-          <pre className="whitespace-pre-wrap font-normal text-gray-700 text-sm leading-relaxed">
+          {/* <pre className="whitespace-pre-wrap font-normal text-gray-700 text-sm leading-relaxed">
             {block.content?.html || "No instruction content"}
-          </pre>
-         {/* <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm leading-relaxed">
+          </pre> */}
+         <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No instruction content" }} className="text-gray-700 bg-transparent text-sm">
              
-          </div> */}
+          </div>
         </div>
       );
     }
@@ -69,9 +69,12 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
           <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 mb-1">
             <FileText size={18} className="text-purple-600" /> {block.name}
           </div>
-          <pre className="whitespace-pre-wrap font-normal text-gray-700 text-sm leading-relaxed">
+          <div dangerouslySetInnerHTML={{ __html: block.content?.html || "No text content" }} className="text-gray-700 text-sm">
+             
+             </div>
+          {/* <pre className="whitespace-pre-wrap font-normal text-gray-700 text-sm leading-relaxed">
             {block.content?.html || "No text content"}
-          </pre>
+          </pre> */}
         </div>
       );
     }

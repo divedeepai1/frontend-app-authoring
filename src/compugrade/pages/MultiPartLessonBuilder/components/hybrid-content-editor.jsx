@@ -396,9 +396,13 @@ export function HybridContentEditor({
   };
 
   const resetErrorCodes = () => {
-    setAvailableErrorCodes([]);
+    // Clear textarea input
+    setErrorCodesInput("");
+    // Clear selected codes
     setSelectedErrorCodes([]);
+    // Clear search query
     setErrorCodeQuery("");
+    // Keep availableErrorCodes intact so all generated codes remain in dropdown
   };
 
   const saveErrorCodes = () => {
@@ -1275,7 +1279,7 @@ export function HybridContentEditor({
                     />
                   </div>
                   {errorDropdownOpen && (
-                    <div className="absolute z-10 mt-1  w-[calc(100%-3rem)] rounded-lg border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 mt-1  w-[calc(100%)] rounded-lg border border-gray-200 bg-white shadow-lg max-h-48 overflow-y-auto">
                       {availableErrorCodes.length === 0 ? (
                         <div className="px-3 py-2 text-sm text-gray-500">No codes yet. Use Generate above.</div>
                       ) : filteredErrorCodes.length === 0 ? (
