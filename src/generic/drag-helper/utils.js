@@ -232,34 +232,34 @@ export const possibleUnitMoves = (
   unit
 ) => (index, step) => {
 
-  console.log(unit,units)
+  // console.log(unit,units)
 
   if (unit.category === "vertical") {
     const itemId = unit.id;
     const displayName = `${extractParts(unit.displayName).typePart} ${subsectionIndex + 1}.${id + 1} ${extractParts(unit.displayName).stringPart}`;
   
-    fetch(`${base_url}/api/openedx/update_rubric`, {
-      method: "PATCH",
-      headers: {
-        Accept: "application/json, text/plain, */*",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        openedx_based_id: itemId,
-        title: displayName,
-      }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          return response.text().then((text) => {
-            console.error("API call failed:", text);
-          });
-        }
-        // console.log("Rubric updated successfully.");
-      })
-      .catch((error) => {
-        // console.error("Network or server error:", error);
-      });
+    // fetch(`${base_url}/api/openedx/update_rubric`, {
+    //   method: "PATCH",
+    //   headers: {
+    //     Accept: "application/json, text/plain, */*",
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify({
+    //     openedx_based_id: itemId,
+    //     title: displayName,
+    //   }),
+    // })
+    //   .then((response) => {
+    //     if (!response.ok) {
+    //       return response.text().then((text) => {
+    //         console.error("API call failed:", text);
+    //       });
+    //     }
+    //     // console.log("Rubric updated successfully.");
+    //   })
+    //   .catch((error) => {
+    //     // console.error("Network or server error:", error);
+    //   });
   }
 
   if (!units[index].actions.draggable) {

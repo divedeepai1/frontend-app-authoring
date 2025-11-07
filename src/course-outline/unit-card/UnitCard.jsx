@@ -117,11 +117,9 @@ const UnitCard = ({
     const match = titleValue.match(
       /^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
     );
-  
     const typePart = match ? match[1] : "";
     const numberPart = match ? match[2] : "";
     const stringPart = match ? match[3] : titleValue;
-  
     return { numberPart, typePart, stringPart };
   }
 
@@ -129,16 +127,16 @@ const UnitCard = ({
 
 
 
-  const { typePart, numberPart, stringPart } = extractParts(displayName);
+  const { typePart, stringPart } = extractParts(displayName);
+  // For immediate UX feedback after drag/drop, use computed index-based prefix
   const numberPrefix =
-  subsectionIndex != null && index != null
-    ? `${subsectionIndex + 1}.${index + 1}`
-    : "";
-  console.log(numberPrefix)
+    subsectionIndex != null && index != null
+      ? `${subsectionIndex + 1}.${index + 1}`
+      : "";
 
   const titleComponent = (
     <TitleLink
-      title={[typePart, numberPrefix,stringPart].filter(Boolean).join(" ")}
+      title={[typePart, numberPrefix, stringPart].filter(Boolean).join(" ")}
       titleLink={getTitleLink(id)}
       namePrefix={namePrefix}
     />

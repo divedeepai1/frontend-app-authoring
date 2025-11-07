@@ -109,11 +109,9 @@ const CardHeader = ({
     const match = titleValue.match(
       /^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
     );
-  
     const typePart = match ? match[1] : "";
     const numberPart = match ? match[2] : "";
     const stringPart = match ? match[3] : titleValue;
-  
     return {  typePart,numberPart, stringPart };
   }
 

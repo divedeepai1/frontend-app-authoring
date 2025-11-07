@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Download, Eye, Layers, Settings, Pencil, Check, Wand2, Save as SaveIcon } from "lucide-react";
 import {
   Plus,
@@ -27,6 +27,7 @@ export function HybridContentEditor({
   content,
   onContentChange,
   selectedPart,
+  lessonSkills = [],
 }) {
   const [blocks, setBlocks] = useState(content.blocks || []);
   const [editingWeightageFor, setEditingWeightageFor] = useState(null);
@@ -66,6 +67,7 @@ export function HybridContentEditor({
   const [uploadedVideo, setUploadedVideo] = useState(null);
   const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
   const [preDragCollapsed, setPreDragCollapsed] = useState(null);
+  const dragStartRef = useRef({ blockId: null, fromHeader: false });
   const [sourceDocument, setSourceDocument] = useState(null);
   const [answerKey, setAnswerKey] = useState(null);
   const [documentComparisonMode, setDocumentComparisonMode] = useState(
@@ -193,6 +195,8 @@ export function HybridContentEditor({
       content: {
         html: "",
         attachments: { images: [], videos: [] },
+        weightage: 10,
+        errorWeightage: 10,
       },
       isCollapsed: false,
     };
@@ -339,11 +343,18 @@ export function HybridContentEditor({
         return;
       }
 
+      const workingSkill = (lessonSkills || []).find((skill) => {
+        const normalizedStatus = (skill?.status || "").trim().toLowerCase();
+        return normalizedStatus === "working" || normalizedStatus === "working a2";
+      });
+      const skillStatus = workingSkill ? (workingSkill.status || "").trim() : "";
+
       const payload = {
         source_document: sourceBase64,
         answer_key: answerBase64,
         app_name: getAppName(),
         filter_text: withText ? (errorCodesInput || "") : "",
+        skill_status: skillStatus,
       };
       const res = await fetch(base_url + "/api/openedx/get_error_codes", {
         method: "POST",
@@ -445,7 +456,9 @@ export function HybridContentEditor({
     updateContent({ ...content, blocks: newBlocks });
   };
 
-  const handleBlockDragStart = (index) => {
+  const handleBlockDragStart = (e, index) => {
+    // This function is only called if drag is allowed (from header, not editor)
+    // So we can proceed with the drag operation
     setDraggedBlockIndex(index);
     // Capture current collapse state per block and collapse all to create space
     const stateById = blocks.reduce((acc, b) => {
@@ -609,8 +622,26 @@ export function HybridContentEditor({
     <div className="space-y-4">
       <div
         className="space-y-3"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={() => handleBlockDrop(blocks.length)}
+        onDragOver={(e) => {
+          // Don't allow drop if dragging from editor
+          const editorContainer = e.target.closest('[id^="editor-"]') || 
+                                 e.target.closest('.jodit-container') ||
+                                 e.target.closest('.jodit-wysiwyg') ||
+                                 e.target.closest('.jodit-workplace');
+          if (!editorContainer) {
+            e.preventDefault();
+          }
+        }}
+        onDrop={(e) => {
+          // Don't handle drop if it's from editor
+          const editorContainer = e.target.closest('[id^="editor-"]') || 
+                                 e.target.closest('.jodit-container') ||
+                                 e.target.closest('.jodit-wysiwyg') ||
+                                 e.target.closest('.jodit-workplace');
+          if (!editorContainer) {
+            handleBlockDrop(blocks.length);
+          }
+        }}
       > 
         {blocks.length > 0 && (
           <div className="flex justify-end mb-2"> 
@@ -626,18 +657,95 @@ export function HybridContentEditor({
           <div
             key={block.id}
             className="relative group  border-blue-200 rounded-lg shadow-sm bg-white"
-            draggable
-            onDragStart={() => handleBlockDragStart(index)}
-            onDragOver={(e) => e.preventDefault()}
+            draggable={true}
+            onMouseDownCapture={(e) => {
+              // Use capture phase to run first, before child handlers
+              // Track where the mouse down happened
+              const target = e.target;
+              const editorContainer = target.closest('[id^="editor-"]') || 
+                                     target.closest('.jodit-container') ||
+                                     target.closest('.jodit-wysiwyg') ||
+                                     target.closest('.jodit-workplace');
+              
+              // If in editor, mark as not from grip icon
+              if (editorContainer) {
+                dragStartRef.current = {
+                  blockId: block.id,
+                  fromHeader: false
+                };
+                return;
+              }
+              
+              // ONLY check if it's the grip icon, not the whole header
+              const isGripIcon = target.closest('.cursor-move');
+              
+              // Set initial value - only true if from grip icon
+              // Grip icon handler can override to true if needed
+              dragStartRef.current = {
+                blockId: block.id,
+                fromHeader: isGripIcon
+              };
+            }}
+            onDragStart={(e) => {
+              // Check if drag started from grip icon ONLY (tracked in onMouseDown)
+              const isFromGripIcon = dragStartRef.current.blockId === block.id && dragStartRef.current.fromHeader;
+              
+              // Double check - prevent if from editor
+              const target = e.target;
+              const editorContainer = target.closest('[id^="editor-"]') || 
+                                     target.closest('.jodit-container') ||
+                                     target.closest('.jodit-wysiwyg') ||
+                                     target.closest('.jodit-workplace');
+              
+              // Only allow if from grip icon AND not from editor
+              if (!isFromGripIcon || editorContainer) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+              }
+              
+              handleBlockDragStart(e, index);
+            }}
+            onDragEnd={() => {
+              // Reset drag start tracking
+              dragStartRef.current = { blockId: null, fromHeader: false };
+            }}
+            onDragOver={(e) => {
+              // Don't allow drop if dragging from editor
+              const editorContainer = e.target.closest('[id^="editor-"]') || 
+                                     e.target.closest('.jodit-container') ||
+                                     e.target.closest('.jodit-wysiwyg') ||
+                                     e.target.closest('.jodit-workplace');
+              if (!editorContainer) {
+                e.preventDefault();
+              }
+            }}
             onDrop={(e) => {
-              e.stopPropagation();
-              handleBlockDrop(index);
+              // Don't handle drop if it's from editor
+              const editorContainer = e.target.closest('[id^="editor-"]') || 
+                                     e.target.closest('.jodit-container') ||
+                                     e.target.closest('.jodit-wysiwyg') ||
+                                     e.target.closest('.jodit-workplace');
+              if (!editorContainer) {
+                e.stopPropagation();
+                handleBlockDrop(index);
+              }
             }}
           >
             {/* Block Header */}
             <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-gray-50 to-blue-50">
               <div className="flex items-center gap-3">
-                <div className="cursor-move opacity-50 group-hover:opacity-100">
+                <div 
+                  className="cursor-move opacity-50 group-hover:opacity-100"
+                  onMouseDown={(e) => {
+                    // Mark that drag started from grip icon ONLY
+                    dragStartRef.current = {
+                      blockId: block.id,
+                      fromHeader: true
+                    };
+                    // Don't stop propagation - let the block handle the drag
+                  }}
+                >
                   <GripVertical className="w-4 h-4 text-gray-400" />
                 </div>
                 {block.type === "text" && (

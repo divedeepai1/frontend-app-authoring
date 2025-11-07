@@ -335,6 +335,7 @@ export async function configureCourseUnit(unitId, isVisibleToStaffOnly, groupAcc
 export async function editItemDisplayName(itemId, displayName) {
   const { data } = await getAuthenticatedHttpClient()
     .post(getCourseItemApiUrl(itemId), {
+      publish: 'republish',
       metadata: {
         display_name: displayName,
       },

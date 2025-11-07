@@ -228,7 +228,7 @@ const useCourseOutline = ({ courseId }) => {
   };
 
   const handleEditSubmit = (itemId, sectionId, displayName, namePrefix) => {
-    dispatch(editCourseItemQuery(itemId, sectionId, displayName,namePrefix));
+    return dispatch(editCourseItemQuery(itemId, sectionId, displayName, namePrefix));
   };
 
   const handleDeleteItemSubmit = () => {
@@ -253,15 +253,15 @@ const useCourseOutline = ({ courseId }) => {
   };
 
   const handleDuplicateSectionSubmit = () => {
-    dispatch(duplicateSectionQuery(currentSection.id, courseStructure.id));
+    dispatch(duplicateSectionQuery(currentSection.id, courseStructure.id, courseId));
   };
 
   const handleDuplicateSubsectionSubmit = () => {
-    dispatch(duplicateSubsectionQuery(currentSubsection.id, currentSection.id));
+    dispatch(duplicateSubsectionQuery(currentSubsection.id, currentSection.id, courseId));
   };
 
   const handleDuplicateUnitSubmit = () => {
-    dispatch(duplicateUnitQuery(currentItem.id, currentSubsection.id, currentSection.id));
+    dispatch(duplicateUnitQuery(currentItem.id, currentSubsection.id, currentSection.id, courseId));
   };
 
   const handleVideoSharingOptionChange = (value) => {
@@ -303,6 +303,7 @@ const useCourseOutline = ({ courseId }) => {
     subsectionId,
     unitListIds,
     restoreSectionList,
+    postSuccessCallback,
   ) => {
     dispatch(setUnitOrderListQuery(
       sectionId,
@@ -310,6 +311,7 @@ const useCourseOutline = ({ courseId }) => {
       prevSectionId,
       unitListIds,
       restoreSectionList,
+      postSuccessCallback,
     ));
   };
 

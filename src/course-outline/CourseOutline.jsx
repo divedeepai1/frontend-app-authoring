@@ -225,6 +225,46 @@ const CourseOutline = ({ courseId }) => {
     }
     const [sectionsCopy, newSubsections] = fn(...args);
     if (newSubsections && sectionId) {
+      // After subsection move, renumber unit titles within all subsections
+      // of both destination and source sections so numbering stays consistent.
+      const extractParts = (titleValue) => {
+        const match = titleValue.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+        const typePart = match ? match[1] : '';
+        const numberPart = match ? match[2] : '';
+        const stringPart = match ? match[3] : titleValue;
+        return { typePart, numberPart, stringPart };
+      };
+
+      const renumberSectionUnits = (sectionRef) => {
+        if (!sectionRef?.childInfo?.children) return sectionRef;
+        const updatedSubsections = sectionRef.childInfo.children.map((subRef, sIdx) => {
+          const units = subRef?.childInfo?.children || [];
+          const updatedUnits = units.map((unitItem, uIdx) => {
+            const { typePart, stringPart } = extractParts(unitItem.displayName || '');
+            const typeLabel = typePart || 'Lesson';
+            const newNumberPrefix = `${sIdx + 1}.${uIdx + 1}`;
+            const newDisplayName = [typeLabel, newNumberPrefix, stringPart].filter(Boolean).join(' ');
+            if (newDisplayName !== unitItem.displayName) {
+              handleEditSubmit(unitItem.id, sectionRef.id, newDisplayName, 'unit');
+            }
+            return { ...unitItem, displayName: newDisplayName };
+          });
+          return { ...subRef, childInfo: { ...subRef.childInfo, children: updatedUnits } };
+        });
+        return { ...sectionRef, childInfo: { ...sectionRef.childInfo, children: updatedSubsections } };
+      };
+
+      const destSectionIndex = sectionsCopy.findIndex(s => s.id === section.id);
+      if (destSectionIndex !== -1) {
+        sectionsCopy[destSectionIndex] = renumberSectionUnits(sectionsCopy[destSectionIndex]);
+      }
+      if (sectionId !== section.id) {
+        const srcSectionIndex = sectionsCopy.findIndex(s => s.id === sectionId);
+        if (srcSectionIndex !== -1) {
+          sectionsCopy[srcSectionIndex] = renumberSectionUnits(sectionsCopy[srcSectionIndex]);
+        }
+      }
+
       setSections(sectionsCopy);
       handleSubsectionDragAndDrop(
         sectionId,
@@ -251,7 +291,43 @@ const CourseOutline = ({ courseId }) => {
     }
     const [sectionsCopy, newUnits] = fn(...args);
     if (newUnits && sectionId && subsectionId) {
-      console.log(newUnits)
+      // After drag-and-drop, also update unit display names to reflect new order
+      // so views relying on displayName (e.g., Table View) stay consistent.
+      const extractParts = (titleValue) => {
+        const match = titleValue.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+        const typePart = match ? match[1] : '';
+        const numberPart = match ? match[2] : '';
+        const stringPart = match ? match[3] : titleValue;
+        return { typePart, numberPart, stringPart };
+      };
+
+      const saveOps = [];
+      const renumberSection = (targetSectionId) => {
+        const idx = sectionsCopy.findIndex(s => s.id === targetSectionId);
+        if (idx === -1) return;
+        const sectionRef = sectionsCopy[idx];
+        const updatedSubsections = (sectionRef.childInfo.children || []).map((subRef, sIdx) => {
+          const updatedUnits = (subRef.childInfo?.children || []).map((unitItem, uIdx) => {
+            const { typePart, stringPart } = extractParts(unitItem.displayName || '');
+            const typeLabel = typePart || 'Lesson';
+            const newNumberPrefix = `${sIdx + 1}.${uIdx + 1}`;
+            const newDisplayName = [typeLabel, newNumberPrefix, stringPart].filter(Boolean).join(' ');
+            if (newDisplayName && newDisplayName !== unitItem.displayName) {
+              saveOps.push({ unitId: unitItem.id, sectionId: targetSectionId, name: newDisplayName });
+            }
+            return { ...unitItem, displayName: newDisplayName };
+          });
+          return { ...subRef, childInfo: { ...subRef.childInfo, children: updatedUnits } };
+        });
+        sectionsCopy[idx] = { ...sectionRef, childInfo: { ...sectionRef.childInfo, children: updatedSubsections } };
+      };
+
+      // Renumber destination
+      renumberSection(section.id);
+      // If moving across sections, renumber source as well
+      if (sectionId && sectionId !== section.id) {
+        renumberSection(sectionId);
+      }
       setSections(sectionsCopy);
       handleUnitDragAndDrop(
         sectionId,
@@ -259,8 +335,91 @@ const CourseOutline = ({ courseId }) => {
         subsectionId,
         newUnits.map(unit => unit.id),
         restoreSectionList,
+        async () => {
+          // Persist AFTER backend order saved and sections refetched, sequentially
+          for (const { unitId, sectionId: sId, name } of saveOps) {
+            // eslint-disable-next-line no-await-in-loop
+            await handleEditSubmit(unitId, sId, name, 'unit');
+          }
+        }
       );
+      
     }
+  };
+
+  // Ensure drag handle (free DnD) path also renumbers and saves after backend reorder
+  const handleUnitDragAndDropWithRenumber = (
+    sectionId,
+    prevSectionId,
+    subsectionId,
+    unitListIds,
+    restoreList,
+  ) => {
+    const extractParts = (titleValue) => {
+      const match = titleValue.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+      const typePart = match ? match[1] : '';
+      const numberPart = match ? match[2] : '';
+      const stringPart = match ? match[3] : titleValue;
+      return { typePart, numberPart, stringPart };
+    };
+
+    // Build a local copy reflecting the dropped order for the specific subsection
+    const sectionsCopy = JSON.parse(JSON.stringify(sections));
+    const destSectionIdx = sectionsCopy.findIndex(s => s.id === sectionId);
+    if (destSectionIdx !== -1) {
+      const destSection = sectionsCopy[destSectionIdx];
+      const destSubIdx = destSection.childInfo.children.findIndex(ss => ss.id === subsectionId);
+      if (destSubIdx !== -1) {
+        const subRef = destSection.childInfo.children[destSubIdx];
+        const idToUnit = {};
+        (subRef.childInfo.children || []).forEach(u => { idToUnit[u.id] = u; });
+        const reordered = unitListIds.map(id => idToUnit[id]).filter(Boolean);
+        subRef.childInfo.children = reordered;
+      }
+    }
+
+    const saveOps = [];
+    const renumberSection = (targetSectionId) => {
+      const idx = sectionsCopy.findIndex(s => s.id === targetSectionId);
+      if (idx === -1) return;
+      const sectionRef = sectionsCopy[idx];
+      const updatedSubsections = (sectionRef.childInfo.children || []).map((subRef, sIdx) => {
+        const updatedUnits = (subRef.childInfo?.children || []).map((unitItem, uIdx) => {
+          const { typePart, stringPart } = extractParts(unitItem.displayName || '');
+          const typeLabel = typePart || 'Lesson';
+          const newNumberPrefix = `${sIdx + 1}.${uIdx + 1}`;
+          const newDisplayName = [typeLabel, newNumberPrefix, stringPart].filter(Boolean).join(' ');
+          if (newDisplayName && newDisplayName !== unitItem.displayName) {
+            saveOps.push({ unitId: unitItem.id, sectionId: targetSectionId, name: newDisplayName });
+          }
+          return { ...unitItem, displayName: newDisplayName };
+        });
+        return { ...subRef, childInfo: { ...subRef.childInfo, children: updatedUnits } };
+      });
+      sectionsCopy[idx] = { ...sectionRef, childInfo: { ...sectionRef.childInfo, children: updatedSubsections } };
+    };
+
+    renumberSection(sectionId);
+    if (prevSectionId && prevSectionId !== sectionId) {
+      renumberSection(prevSectionId);
+    }
+
+    // Optimistically update UI
+    setSections(sectionsCopy);
+
+    handleUnitDragAndDrop(
+      sectionId,
+      prevSectionId,
+      subsectionId,
+      unitListIds,
+      restoreList,
+      async () => {
+        for (const { unitId, sectionId: sId, name } of saveOps) {
+          // eslint-disable-next-line no-await-in-loop
+          await handleEditSubmit(unitId, sId, name, 'unit');
+        }
+      },
+    );
   };
 
   useEffect(() => {
@@ -371,7 +530,7 @@ const CourseOutline = ({ courseId }) => {
                               restoreSectionList={restoreSectionList}
                               handleSectionDragAndDrop={handleSectionDragAndDrop}
                               handleSubsectionDragAndDrop={handleSubsectionDragAndDrop}
-                              handleUnitDragAndDrop={handleUnitDragAndDrop}
+                              handleUnitDragAndDrop={handleUnitDragAndDropWithRenumber}
                             >
                               <SortableContext
                                 id="root"

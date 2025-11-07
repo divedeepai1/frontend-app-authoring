@@ -542,7 +542,7 @@ function duplicateCourseItemQuery(itemId, parentLocator, duplicateFn) {
   };
 }
 
-export function duplicateSectionQuery(sectionId, courseBlockId) {
+export function duplicateSectionQuery(sectionId, courseBlockId, courseId) {
   return async (dispatch) => {
     dispatch(
       duplicateCourseItemQuery(sectionId, courseBlockId, async (locator) => {
@@ -550,27 +550,239 @@ export function duplicateSectionQuery(sectionId, courseBlockId) {
         // Page should scroll to newly duplicated item.
         duplicatedItem.shouldScroll = true;
         dispatch(duplicateSection({ id: sectionId, duplicatedItem }));
+        
+        // Create in integrated backend
+        if (courseId) {
+          try {
+            // Remove "Duplicate of" from name if present
+            let sectionTitle = duplicatedItem.displayName;
+            sectionTitle = sectionTitle.replace(/^Duplicate of ['"]/i, '').replace(/['"]$/, '').trim();
+            
+            // Update name in Open edX if changed
+            if (sectionTitle !== duplicatedItem.displayName) {
+              await editItemDisplayName(locator, sectionTitle);
+            }
+            
+            const response = await fetch(base_url + "/api/openedx/create_section", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: sectionTitle,
+                openedx_based_id: duplicatedItem.id,
+                course_id: courseId,
+              }),
+            });
+            if (!response.ok) {
+              console.error("Error creating section in integrated backend:", await response.text());
+            } else if (sectionTitle !== duplicatedItem.displayName) {
+              // Update title in integrated backend too
+              await fetch(base_url + `/api/openedx/update_section`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  openedx_based_id: duplicatedItem.id,
+                  title: sectionTitle,
+                }),
+              });
+            }
+          } catch (error) {
+            console.error("Error creating section in integrated backend:", error);
+          }
+        }
       })
     );
   };
 }
 
-export function duplicateSubsectionQuery(subsectionId, sectionId) {
+export function duplicateSubsectionQuery(subsectionId, sectionId, courseId) {
   return async (dispatch) => {
     dispatch(
-      duplicateCourseItemQuery(subsectionId, sectionId, async () =>
-        dispatch(fetchCourseSectionQuery([sectionId], true))
-      )
+      duplicateCourseItemQuery(subsectionId, sectionId, async (duplicatedSubsectionLocator) => {
+        // Fetch the duplicated subsection data (Open edX already duplicates child units)
+        const duplicatedSubsection = await getCourseItem(duplicatedSubsectionLocator);
+        
+        // Helper to extract parts from display name
+        const extractParts = (titleValue) => {
+          const match = (titleValue || '').match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+          const typePart = match ? match[1] : '';
+          const numberPart = match ? match[2] : '';
+          // Remove "Duplicate of" prefix if present
+          let stringPart = match ? match[3] : titleValue;
+          stringPart = stringPart.replace(/^Duplicate of ['"]/i, '').replace(/['"]$/, '').trim();
+          return { typePart, numberPart, stringPart };
+        };
+        
+        // Create subsection in integrated backend
+        if (courseId) {
+          try {
+            // Remove "Duplicate of" from subsection name if present
+            let subsectionTitle = duplicatedSubsection.displayName;
+            subsectionTitle = subsectionTitle.replace(/^Duplicate of ['"]/i, '').replace(/['"]$/, '').trim();
+            
+            const response = await fetch(base_url + "/api/openedx/create_subsection", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: subsectionTitle,
+                openedx_based_id: duplicatedSubsection.id,
+                course_id: courseId,
+                section_id: sectionId,
+              }),
+            });
+            if (!response.ok) {
+              console.error("Error creating subsection in integrated backend:", await response.text());
+            }
+            
+            // Wait a bit for Open edX to finish duplicating child units
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Fetch the duplicated subsection again to get all child units
+            const duplicatedSubsectionWithChildren = await getCourseItem(duplicatedSubsectionLocator);
+            
+            // Create rubrics for all duplicated units and fix their names
+            if (duplicatedSubsectionWithChildren?.childInfo?.children) {
+              const units = duplicatedSubsectionWithChildren.childInfo.children;
+              
+              // First, create all rubrics in backend
+              for (let idx = 0; idx < units.length; idx++) {
+                const unit = units[idx];
+                try {
+                  // Create rubric in integrated backend
+                  const rubricResponse = await fetch(base_url + "/api/openedx/create_rubric", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      openedx_based_id: unit.id,
+                      course_id: courseId,
+                      user_id: 1,
+                      subsection_id: duplicatedSubsectionLocator,
+                    }),
+                  });
+                  if (!rubricResponse.ok) {
+                    console.error("Error creating rubric in integrated backend:", await rubricResponse.text());
+                  }
+                } catch (error) {
+                  console.error("Error creating rubric:", error);
+                }
+              }
+              
+              // Then, renumber and rename all units to remove "Duplicate of" and fix numbering
+              const originalSubsection = await getCourseItem(subsectionId);
+              const originalUnits = originalSubsection?.childInfo?.children || [];
+              
+              // Find subsection index in section to calculate proper numbering
+              const section = await getCourseItem(sectionId);
+              const subsectionIndex = (section?.childInfo?.children || []).findIndex(
+                ss => ss.id === duplicatedSubsectionLocator
+              );
+              
+              for (let idx = 0; idx < units.length; idx++) {
+                const duplicatedUnit = units[idx];
+                const originalUnit = originalUnits[idx];
+                
+                if (originalUnit) {
+                  // Extract original name parts (without "Duplicate of")
+                  const { typePart, stringPart } = extractParts(originalUnit.displayName);
+                  const typeLabel = typePart || 'Lesson';
+                  const newNumberPrefix = `${subsectionIndex + 1}.${idx + 1}`;
+                  const newDisplayName = [typeLabel, newNumberPrefix, stringPart].filter(Boolean).join(' ');
+                  
+                  // Update unit name in Open edX to remove "Duplicate of" and fix numbering
+                  if (newDisplayName !== duplicatedUnit.displayName) {
+                    try {
+                      await editItemDisplayName(duplicatedUnit.id, newDisplayName);
+                      // Update in integrated backend
+                      await fetch(base_url + `/api/openedx/update_rubric`, {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          openedx_based_id: duplicatedUnit.id,
+                          title: newDisplayName,
+                        }),
+                      });
+                    } catch (error) {
+                      console.error("Error updating unit name:", error);
+                    }
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error creating subsection in integrated backend:", error);
+          }
+        }
+        
+        // Refresh the section to show duplicated items with correct names
+        await dispatch(fetchCourseSectionQuery([sectionId], true));
+      })
     );
   };
 }
 
-export function duplicateUnitQuery(unitId, subsectionId, sectionId) {
+export function duplicateUnitQuery(unitId, subsectionId, sectionId, courseId) {
   return async (dispatch) => {
     dispatch(
-      duplicateCourseItemQuery(unitId, subsectionId, async () =>
-        dispatch(fetchCourseSectionQuery([sectionId], true))
-      )
+      duplicateCourseItemQuery(unitId, subsectionId, async (duplicatedUnitLocator) => {
+        // Create rubric in integrated backend
+        if (courseId) {
+          try {
+            const duplicatedUnit = await getCourseItem(duplicatedUnitLocator);
+            const originalUnit = await getCourseItem(unitId);
+            
+            // Remove "Duplicate of" from name if present
+            let unitTitle = duplicatedUnit.displayName;
+            unitTitle = unitTitle.replace(/^Duplicate of ['"]/i, '').replace(/['"]$/, '').trim();
+            
+            // If name was changed, update it in Open edX
+            if (unitTitle !== duplicatedUnit.displayName) {
+              await editItemDisplayName(duplicatedUnitLocator, unitTitle);
+            }
+            
+            const response = await fetch(base_url + "/api/openedx/create_rubric", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                openedx_based_id: duplicatedUnitLocator,
+                course_id: courseId,
+                user_id: 1,
+                subsection_id: subsectionId,
+              }),
+            });
+            if (!response.ok) {
+              console.error("Error creating rubric in integrated backend:", await response.text());
+            } else if (unitTitle !== duplicatedUnit.displayName) {
+              // Update title in integrated backend too
+              await fetch(base_url + `/api/openedx/update_rubric`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  openedx_based_id: duplicatedUnitLocator,
+                  title: unitTitle,
+                }),
+              });
+            }
+          } catch (error) {
+            console.error("Error creating rubric in integrated backend:", error);
+          }
+        }
+        
+        // Refresh the section to show duplicated item
+        await dispatch(fetchCourseSectionQuery([sectionId], true));
+      })
     );
   };
 }
@@ -815,7 +1027,8 @@ export function setUnitOrderListQuery(
   subsectionId,
   prevSectionId,
   unitListIds,
-  restoreCallback
+  restoreCallback,
+  postSuccessCallback
 ) {
   console.log("hello")
   return async (dispatch) => {
@@ -825,12 +1038,15 @@ export function setUnitOrderListQuery(
         unitListIds,
         setCourseItemOrderList,
         restoreCallback,
-        () => {
+        async () => {
           const sectionIds = [sectionId];
           if (prevSectionId && prevSectionId !== sectionId) {
             sectionIds.push(prevSectionId);
           }
-          dispatch(fetchCourseSectionQuery(sectionIds));
+          await dispatch(fetchCourseSectionQuery(sectionIds));
+          if (typeof postSuccessCallback === 'function') {
+            postSuccessCallback();
+          }
         }
       )
     );

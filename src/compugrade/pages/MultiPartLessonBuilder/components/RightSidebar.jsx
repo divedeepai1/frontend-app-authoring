@@ -14,7 +14,59 @@ export default function RightSidebar({
   onDragOver,
   onDrop,
 }) {
-  const totalWeight = lessonParts.reduce((sum, part) => sum + part.weightage, 0);
+  const getInstructionWeight = (block) => {
+    const weightFromContent = block.content?.weightage;
+    const fallbackErrorWeight = block.content?.errorWeightage;
+    const fallbackTopLevel = block.weightage;
+
+    if (typeof weightFromContent === 'number') {
+      return weightFromContent;
+    }
+    if (typeof fallbackErrorWeight === 'number') {
+      return fallbackErrorWeight;
+    }
+    if (typeof fallbackTopLevel === 'number') {
+      return fallbackTopLevel;
+    }
+    const parsed = parseFloat(weightFromContent);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+    return 0;
+  };
+
+  const getPartWeight = (part) => {
+    if (typeof part?.weightage === "number") {
+      return part.weightage;
+    }
+    const parsed = parseFloat(part?.weightage);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const formatPercent = (value) => {
+    if (!Number.isFinite(value)) {
+      return "0%";
+    }
+    if (Number.isInteger(value)) {
+      return `${value}%`;
+    }
+    return `${value.toFixed(1)}%`;
+  };
+
+  const partSummaries = lessonParts.map((part, index) => {
+    const instructionWeight = (part.content?.blocks || [])
+      .filter((block) => block.type === "instruction")
+      .reduce((instructionSum, block) => instructionSum + getInstructionWeight(block), 0);
+
+    return {
+      id: part.id,
+      title: part.title || `Part ${index + 1}`,
+      instructionWeight,
+      partWeight: getPartWeight(part),
+    };
+  });
+
+  const totalWeight = lessonParts.reduce((sum, part) => sum + getPartWeight(part), 0);
   const isWeightValid = totalWeight === 100;
 
   return (
@@ -74,10 +126,31 @@ export default function RightSidebar({
               <span className="text-gray-600">Total Parts:</span>
               <span className="font-semibold text-gray-900">{lessonParts.length}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Weight:</span>
+            {partSummaries.map((summary, idx) => (
+              <div key={summary.id} className="border border-blue-100 rounded-md px-3 py-2 bg-white/90">
+                <p className="text-xs font-semibold text-gray-500 mb-1">
+                  Part {idx + 1}{summary.title ? ` (${summary.title})` : ""}
+                </p>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Total Weightage:</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatPercent(summary.partWeight)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Instruction Weightage:</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatPercent(summary.instructionWeight)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-between pt-1">
+              <span className="text-gray-600">Total Lesson Weightage:</span>
               <span className={`font-semibold ${isWeightValid ? "text-green-600" : "text-red-600"}`}>
-                {totalWeight}%
+                {formatPercent(totalWeight)}
               </span>
             </div>
             {!isWeightValid && (

@@ -975,11 +975,11 @@ export default function LessonBuilder() {
               id: `instruction-${timestamp}-${idx}`,
               type: "instruction",
               name: "Instruction " + (ins + idx),
-              errorCodes: [],
-              weightage: 10,
               content: {
                 html: text || "",
                 attachments: { images: [], videos: [] },
+                weightage: 10,
+                errorWeightage: 10,
               },
               isCollapsed: false,
             }));
@@ -1180,6 +1180,7 @@ export default function LessonBuilder() {
                   selectedPart={selectedPart}
                   content={selectedPart.content || { blocks: [] }}
                   onContentChange={handleContentChange}
+                  lessonSkills={lessonConfig?.skills || []}
                 />
               </div>
             ) : (

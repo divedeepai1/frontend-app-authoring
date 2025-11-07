@@ -123,6 +123,213 @@ export function EnhancedRichTextEditor({ content, onContentChange, id }) {
     }
   }, [])
 
+  // Prevent drag events from editor from bubbling to parent drag handlers
+  useEffect(() => {
+    if (!editorRef.current) return
+
+    const editorContainer = document.querySelector(`#${uniqueId.current}`)
+    if (!editorContainer) return
+
+    // Check if user is selecting text
+    let isTextSelection = false
+    let mouseDownTime = 0
+    let mouseDownTarget = null
+
+    const handleMouseDown = (e) => {
+      const wysiwyg = editorContainer.querySelector('.jodit-wysiwyg')
+      const toolbar = editorContainer.querySelector('.jodit-toolbar')
+      const workplace = editorContainer.querySelector('.jodit-workplace')
+      
+      // Check if clicking anywhere in the editor (content area, empty areas, etc.)
+      // but NOT in the toolbar
+      const isInEditorContent = (
+        (wysiwyg && (wysiwyg === e.target || wysiwyg.contains(e.target))) ||
+        (workplace && (workplace === e.target || workplace.contains(e.target))) ||
+        (editorContainer && (editorContainer === e.target || editorContainer.contains(e.target)))
+      )
+      
+      const isInToolbar = toolbar && (toolbar === e.target || toolbar.contains(e.target))
+      
+      if (isInEditorContent && !isInToolbar) {
+        // User is clicking anywhere in editor content (including empty areas)
+        isTextSelection = true
+        mouseDownTime = Date.now()
+        mouseDownTarget = e.target
+        // Prevent drag from starting
+        e.stopPropagation()
+      } else if (isInToolbar) {
+        isTextSelection = false
+      }
+    }
+
+    const handleMouseMove = (e) => {
+      // If mouse moved while button is down, user is likely selecting text
+      if (isTextSelection && e.buttons === 1) {
+        // Check if there's actually a text selection
+        const selection = window.getSelection()
+        if (selection && selection.toString().length > 0) {
+          isTextSelection = true
+        }
+      }
+    }
+
+    const handleMouseUp = () => {
+      // Small delay to allow selection to complete
+      setTimeout(() => {
+        isTextSelection = false
+        mouseDownTarget = null
+      }, 100)
+    }
+
+    // Stop drag events only if they're not part of text selection
+    const stopDragEvents = (e) => {
+      // Always stop drag events from editor to prevent parent drag handlers
+      // Text selection doesn't use drag events, so this is safe
+      e.stopPropagation()
+      e.stopImmediatePropagation()
+      
+      // Only prevent default if it's not a text selection drag
+      if (!isTextSelection) {
+        e.preventDefault()
+      }
+      return false
+    }
+
+    // Stop drag events at multiple phases
+    const eventsToStop = [
+      'dragstart',
+      'drag',
+      'dragend',
+      'dragover',
+      'dragenter',
+      'dragleave',
+      'drop'
+    ]
+
+    // Add handlers to editor container and all its children
+    const addDragStoppers = (element) => {
+      eventsToStop.forEach(eventType => {
+        element.addEventListener(eventType, stopDragEvents, true) // capture phase
+        element.addEventListener(eventType, stopDragEvents, false) // bubble phase
+      })
+    }
+
+    // Add mouse event handlers for text selection detection
+    document.addEventListener('mousedown', handleMouseDown, true)
+    document.addEventListener('mousemove', handleMouseMove, true)
+    document.addEventListener('mouseup', handleMouseUp, true)
+
+    // Stop drag on the container itself
+    addDragStoppers(editorContainer)
+
+    // Also stop on all child elements (especially wysiwyg area and workplace)
+    const wysiwyg = editorContainer.querySelector('.jodit-wysiwyg')
+    const workplace = editorContainer.querySelector('.jodit-workplace')
+    const wysiwygChildren = wysiwyg ? Array.from(wysiwyg.querySelectorAll('*')) : []
+    const workplaceChildren = workplace ? Array.from(workplace.querySelectorAll('*')) : []
+    
+    if (wysiwyg) {
+      addDragStoppers(wysiwyg)
+      // Also add to all children of wysiwyg (including empty paragraphs)
+      wysiwygChildren.forEach(child => {
+        addDragStoppers(child)
+      })
+    }
+    
+    if (workplace) {
+      addDragStoppers(workplace)
+      // Also add to all children of workplace
+      workplaceChildren.forEach(child => {
+        addDragStoppers(child)
+      })
+    }
+
+    // Handle iframe content
+    const iframe = editorContainer.querySelector('iframe')
+    if (iframe) {
+      const setupIframe = () => {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+          if (iframeDoc) {
+            addDragStoppers(iframeDoc.body)
+            iframeDoc.body.querySelectorAll('*').forEach(child => {
+              addDragStoppers(child)
+            })
+          }
+        } catch (e) {
+          // Cross-origin iframe, can't access
+        }
+      }
+
+      if (iframe.contentDocument) {
+        setupIframe()
+      } else {
+        iframe.addEventListener('load', setupIframe)
+      }
+    }
+
+    // Also prevent mousedown from initiating drag on the container
+    const preventContainerDrag = (e) => {
+      // Prevent drag if clicking anywhere in editor content (including empty areas), not toolbar
+      const wysiwyg = editorContainer.querySelector('.jodit-wysiwyg')
+      const toolbar = editorContainer.querySelector('.jodit-toolbar')
+      const workplace = editorContainer.querySelector('.jodit-workplace')
+      
+      const isInEditorContent = (
+        (wysiwyg && (wysiwyg === e.target || wysiwyg.contains(e.target))) ||
+        (workplace && (workplace === e.target || workplace.contains(e.target))) ||
+        (editorContainer === e.target || editorContainer.contains(e.target))
+      )
+      
+      const isInToolbar = toolbar && (toolbar === e.target || toolbar.contains(e.target))
+      
+      if (isInEditorContent && !isInToolbar) {
+        // User is clicking anywhere in editor content (including empty areas), prevent any drag
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+      }
+    }
+
+    editorContainer.addEventListener('mousedown', preventContainerDrag, true)
+
+    return () => {
+      // Remove mouse event handlers
+      document.removeEventListener('mousedown', handleMouseDown, true)
+      document.removeEventListener('mousemove', handleMouseMove, true)
+      document.removeEventListener('mouseup', handleMouseUp, true)
+
+      // Remove drag event handlers
+      eventsToStop.forEach(eventType => {
+        editorContainer.removeEventListener(eventType, stopDragEvents, true)
+        editorContainer.removeEventListener(eventType, stopDragEvents, false)
+      })
+      
+      if (wysiwyg) {
+        eventsToStop.forEach(eventType => {
+          wysiwyg.removeEventListener(eventType, stopDragEvents, true)
+          wysiwyg.removeEventListener(eventType, stopDragEvents, false)
+          wysiwygChildren.forEach(child => {
+            child.removeEventListener(eventType, stopDragEvents, true)
+            child.removeEventListener(eventType, stopDragEvents, false)
+          })
+        })
+      }
+      
+      if (workplace) {
+        eventsToStop.forEach(eventType => {
+          workplace.removeEventListener(eventType, stopDragEvents, true)
+          workplace.removeEventListener(eventType, stopDragEvents, false)
+          workplaceChildren.forEach(child => {
+            child.removeEventListener(eventType, stopDragEvents, true)
+            child.removeEventListener(eventType, stopDragEvents, false)
+          })
+        })
+      }
+
+      editorContainer.removeEventListener('mousedown', preventContainerDrag, true)
+    }
+  }, [])
+
   // Fix Tab and Backspace handling - only when editor content is focused
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -260,8 +467,25 @@ export function EnhancedRichTextEditor({ content, onContentChange, id }) {
         background: "white",
         borderRadius: 8,
       }}
+      onDragStart={(e) => {
+        // Prevent editor container from being dragged
+        e.preventDefault()
+        e.stopPropagation()
+        return false
+      }}
+      draggable={false}
     >
       <style>{`
+        #${uniqueId.current} {
+          user-select: none;
+        }
+        #${uniqueId.current} .jodit-wysiwyg,
+        #${uniqueId.current} .jodit-wysiwyg * {
+          user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+        }
         #${uniqueId.current} .jodit-container p {
           margin: 0 !important;
           line-height: 1.2 !important;
@@ -292,6 +516,17 @@ export function EnhancedRichTextEditor({ content, onContentChange, id }) {
         }
         #${uniqueId.current} .jodit-workplace + * {
           display: none !important;
+        }
+        #${uniqueId.current} iframe {
+          pointer-events: auto !important;
+        }
+        #${uniqueId.current} iframe body,
+        #${uniqueId.current} iframe .jodit-wysiwyg,
+        #${uniqueId.current} iframe .jodit-wysiwyg * {
+          user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
         }
       `}</style>
 
