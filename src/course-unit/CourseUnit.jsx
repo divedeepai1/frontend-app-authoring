@@ -181,11 +181,11 @@ const CourseUnit = ({ courseId }) => {
             let sessionCourseType = currentCourse.course_type;
             
             // Handle different course type formats
-            if (sessionCourseType === 'ms_powerpoint') {
+            if (sessionCourseType === 'ms_powerpoint' || sessionCourseType === 'google_slides') {
               sessionCourseType = 'powerpoint';
-            } else if (sessionCourseType === 'ms_excel') {
+            } else if (sessionCourseType === 'ms_excel' || sessionCourseType === 'google_sheets') {
               sessionCourseType = 'excel';
-            } else if (sessionCourseType === 'ms_word') {
+            } else if (sessionCourseType === 'ms_word' || sessionCourseType === 'google_docs') {
               sessionCourseType = 'ms-word';
             }
             
