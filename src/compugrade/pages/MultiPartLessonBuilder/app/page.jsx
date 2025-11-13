@@ -42,7 +42,7 @@ export default function LessonBuilder() {
   const [saveDraftLoading, setSaveDraftLoading] = useState(false);
   const [partConfigOpen, setPartConfigOpen] = useState(false);
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [lessonConfig, setLessonConfig] = useState({
     sourceDocument: null,
     answerKey: null,
@@ -204,10 +204,7 @@ export default function LessonBuilder() {
   };
 
   useEffect(() => {
-    const lesson = sessionStorage.getItem("new"); 
-    if (lesson =="false") {
-      loadRubricFromApi(true); 
-    }
+      loadRubricFromApi(true);  
   }, [blockId]);
 
   const addToast = ({ title, message, variant = "info", duration = 3500 }) => {
