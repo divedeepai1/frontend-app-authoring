@@ -112,8 +112,7 @@ const CourseUnit = ({ courseId }) => {
 
   useEffect(() => {
     sessionStorage.removeItem("unitData");
-    
-
+    sessionStorage.setItem("new", "false");
     sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
     
     const fetchData = async () => {
