@@ -133,36 +133,44 @@ const CourseOutline = ({ courseId }) => {
   const [skills,setSkills]=useState([])
   const [viewMode, setViewMode] = useState("list")
 
-  useEffect(() => {
+  // Extract fetch function so it can be called independently
+  const fetchRubricSkills = React.useCallback(async () => {
+    if (!courseId) return;
     const encodedCourseId = encodeURIComponent(courseId);
+    try {
+      const response = await fetch(
+        `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-     const fetchRubricSkills= async () => {
-            try {
-              const response = await fetch(
-                `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                 
-                }
-              );
-        
-              if (!response.ok) {
-                throw new Error("Network response was not ok");
-              }
-        
-              const data = await response.json();
-              setSkills(data)
-        
-            
-              // 
-            } catch (err) {
-              console.error(err);
-            }
-          };
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
 
+      const data = await response.json();
+      setSkills(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [courseId]);
+
+  // Wrap handleDuplicateSectionSubmit to refetch skills after completion
+  const handleDuplicateSectionSubmitWithSkills = React.useCallback(() => {
+    // Call the original duplication handler
+    handleDuplicateSectionSubmit();
+    // Wait for section duplication to complete (includes subsections and units)
+    // Based on thunk code, it waits 1000ms + processing time, so we wait a bit longer
+    setTimeout(() => {
+      fetchRubricSkills();
+    }, 2000);
+  }, [handleDuplicateSectionSubmit, fetchRubricSkills]);
+
+  useEffect(() => {
     fetchRubricSkills();
 
     // Wait for the course data to load before exporting tags.
@@ -177,9 +185,56 @@ const CourseOutline = ({ courseId }) => {
       // Delete `#export-tags` from location
       window.location.href = '#';
     }
-  }, [location, courseId, courseName]);
+  }, [location, courseId, courseName, fetchRubricSkills]);
 
   const [sections, setSections] = useState(sectionsList);
+
+  // Refetch skills when sectionsList or local sections change (e.g., after duplication)
+  // Track section IDs and unit count to detect any duplication
+  // Create separate hashes for sectionsList and local sections to catch changes in either
+  const structureHashFromList = React.useMemo(() => {
+    if (sectionsList.length === 0) return '';
+    const sectionIds = sectionsList.map(s => s.id).join(',');
+    const totalUnitCount = sectionsList.reduce((count, section) => {
+      return count + (section.childInfo?.children || []).reduce((subCount, subsection) => {
+        return subCount + (subsection.childInfo?.children || []).length;
+      }, 0);
+    }, 0);
+    return `${sectionIds}-${totalUnitCount}`;
+  }, [sectionsList]);
+
+  const structureHashFromLocal = React.useMemo(() => {
+    if (sections.length === 0) return '';
+    const sectionIds = sections.map(s => s.id).join(',');
+    const totalUnitCount = sections.reduce((count, section) => {
+      return count + (section.childInfo?.children || []).reduce((subCount, subsection) => {
+        return subCount + (subsection.childInfo?.children || []).length;
+      }, 0);
+    }, 0);
+    return `${sectionIds}-${totalUnitCount}`;
+  }, [sections]);
+
+  // Use a ref to track previous hashes and only fetch when they actually change
+  const prevHashRef = React.useRef({ list: '', local: '' });
+  
+  useEffect(() => {
+    const hasChanged = 
+      (structureHashFromList && structureHashFromList !== prevHashRef.current.list) ||
+      (structureHashFromLocal && structureHashFromLocal !== prevHashRef.current.local);
+    
+    if (courseId && hasChanged) {
+      prevHashRef.current = { 
+        list: structureHashFromList || prevHashRef.current.list,
+        local: structureHashFromLocal || prevHashRef.current.local
+      };
+      // Add a delay to ensure backend has finished processing duplication
+      // Longer delay for section duplication as it may take more time
+      const timeoutId = setTimeout(() => {
+        fetchRubricSkills();
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [structureHashFromList, structureHashFromLocal, courseId, fetchRubricSkills]);
 
   const restoreSectionList = () => {
     setSections(() => [...sectionsList]);
@@ -551,7 +606,7 @@ const CourseOutline = ({ courseId }) => {
                                     onOpenConfigureModal={openConfigureModal}
                                     onOpenDeleteModal={openDeleteModal}
                                     onEditSectionSubmit={handleEditSubmit}
-                                    onDuplicateSubmit={handleDuplicateSectionSubmit}
+                                    onDuplicateSubmit={handleDuplicateSectionSubmitWithSkills}
                                     isSectionsExpanded={isSectionsExpanded}
                                     onNewSubsectionSubmit={handleNewSubsectionSubmit}
                                     onOrderChange={updateSectionOrderByIndex}

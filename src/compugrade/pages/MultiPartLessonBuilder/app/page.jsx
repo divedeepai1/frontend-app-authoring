@@ -42,6 +42,7 @@ export default function LessonBuilder() {
   const [saveDraftLoading, setSaveDraftLoading] = useState(false);
   const [partConfigOpen, setPartConfigOpen] = useState(false);
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [lessonConfig, setLessonConfig] = useState({
     sourceDocument: null,
     answerKey: null,
@@ -54,8 +55,8 @@ export default function LessonBuilder() {
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
 
-   console.log(lessonParts);
-  console.log(lessonConfig)
+  //  console.log(lessonParts);
+  // console.log(lessonConfig)
   
 
   const handleSaveAll = async (instructions) => {
@@ -168,29 +169,46 @@ export default function LessonBuilder() {
     };
   }
 
-  const loadRubricFromSessionToState = () => {
-    const savedData = sessionStorage.getItem("Rubric");
-    if (!savedData) return;
+  const loadRubricFromApi = async (showLoading = false) => {
+    if (!blockId) {
+      setInitialLoading(false);
+      return;
+    }
     try {
-      const parsedData = JSON.parse(savedData);
-      const frontendData = fromBackendToFrontend(parsedData);
-      setLessonParts(frontendData?.lessonParts);
-      setLessonConfig(frontendData);
-      if (
-        (frontendData?.videos && frontendData.videos.length > 0) &&
-        !frontendData.videoEnabled
-      ) {
-        setLessonConfig((c) => ({ ...c, videoEnabled: true }));
+      
+      if (showLoading) {
+        setInitialLoading(true);
       }
-      if (frontendData.lessonParts.length > 0) {
-        setSelectedPartId(frontendData.lessonParts[0].id);
+      const result = await fetchAndStoreRubric(blockId);
+      if (result?.rubric) {
+        const frontendData = fromBackendToFrontend(result.rubric);
+        setLessonParts(frontendData?.lessonParts || []);
+        setLessonConfig(frontendData);
+        if (
+          (frontendData?.videos && frontendData.videos.length > 0) &&
+          !frontendData.videoEnabled
+        ) {
+          setLessonConfig((c) => ({ ...c, videoEnabled: true }));
+        }
+        if (frontendData.lessonParts && frontendData.lessonParts.length > 0) {
+          setSelectedPartId(frontendData.lessonParts[0].id);
+        }
       }
-    } catch (_) {}
+    } catch (error) {
+      console.error("Error loading rubric from API:", error);
+    } finally {
+      if (showLoading) {
+        setInitialLoading(false);
+      }
+    }
   };
 
   useEffect(() => {
-    loadRubricFromSessionToState();
-  }, []);
+    const lesson = sessionStorage.getItem("new"); 
+    if (lesson =="false") {
+      loadRubricFromApi(true); 
+    }
+  }, [blockId]);
 
   const addToast = ({ title, message, variant = "info", duration = 3500 }) => {
     const id = Date.now().toString();
@@ -228,8 +246,7 @@ export default function LessonBuilder() {
       promises.push(handleUploadToS3(mergedResult?.items));
 
       await Promise.all(promises);
-      await fetchAndStoreRubric(blockId);
-      loadRubricFromSessionToState();
+      await loadRubricFromApi();
       addToast({ title: "Draft Saved", message: "Lesson draft saved.", variant: "success" });
     } catch (error) {
       console.error("Error during saving draft:", error);
@@ -256,9 +273,6 @@ export default function LessonBuilder() {
       }
 
       const result = await response.json();
-      if (result?.rubric) {
-        sessionStorage.setItem("Rubric", JSON.stringify(result.rubric));
-      }
       return result;
     } catch (err) {
       console.log(err);
@@ -834,32 +848,20 @@ export default function LessonBuilder() {
     handleUpdatePart(selectedPart.id, { ...configUpdates });
   };
 
-  const getRubricFromSession = () => {
-    try {
-      const savedData = sessionStorage.getItem("Rubric");
-      if (!savedData) return null;
-      return JSON.parse(savedData);
-    } catch (e) {
-      return null;
-    }
-  };
-
   const canRunAiVideo = (partId) => {
-    const rubric = getRubricFromSession();
-    if (!rubric) return false;
-    const hasVideo = !!rubric.video;
-    const lessons = Array.isArray(rubric.lessons) ? rubric.lessons : [];
+    if (!lessonConfig) return false;
+    const hasVideo = !!(lessonConfig.videos && lessonConfig.videos.length > 0);
+    const lessons = Array.isArray(lessonConfig.lessonParts) ? lessonConfig.lessonParts : [];
     const partExists = lessons.some((l) => String(l.id) === String(partId));
     return hasVideo && partExists;
   };
 
   const getAiVideoDisableReason = (partId) => {
-    const rubric = getRubricFromSession();
-    if (!rubric)
+    if (!lessonConfig)
       return "The Lesson is not saved yet. Save it to enable AI Video";
-    if (!rubric.video)
+    if (!lessonConfig.videos || lessonConfig.videos.length === 0)
       return "Attach video in Configuration and save lesson to enable AI Video";
-    const lessons = Array.isArray(rubric.lessons) ? rubric.lessons : [];
+    const lessons = Array.isArray(lessonConfig.lessonParts) ? lessonConfig.lessonParts : [];
     const partExists = lessons.some((l) => String(l.id) === String(partId));
     if (!partExists)
       return "This part is not saved/exist in Lesson yet. Save the lesson to enable AI Video";
@@ -1023,20 +1025,27 @@ export default function LessonBuilder() {
       nextImageId={nextImageId}
       setNextImageId={setNextImageId}
     >
-     
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <PageHeader
-          onOpenPreview={() => setOpen(true)}
-          onSaveDraft={handleSaveDraftClick}
-          onPublish={handlePublishClick}
-          saveDraftLoading={saveDraftLoading}
-          publishLoading={loading}
-        />
+      {initialLoading ? (
+        <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+          <div className="spinner-border text-primary" role="status" style={{ width: '2rem', height: '2rem' }}>
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            <PageHeader
+              onOpenPreview={() => setOpen(true)}
+              onSaveDraft={handleSaveDraftClick}
+              onPublish={handlePublishClick}
+              saveDraftLoading={saveDraftLoading}
+              publishLoading={loading}
+            />
 
-        <div className="flex h-[calc(100vh-88px)]">
-          {/* Left Panel - Main Editing Area (70%) */}
-          <div className="flex-1 px-4 py-3 overflow-y-auto">
-            {selectedPart ? (
+            <div className="flex h-[calc(100vh-88px)]">
+              {/* Left Panel - Main Editing Area (70%) */}
+              <div className="flex-1 px-4 py-3 overflow-y-auto">
+                {selectedPart ? (
               <div className="space-y-6">
                 {/* Enhanced Part Header */}
                 <div
@@ -1313,6 +1322,8 @@ export default function LessonBuilder() {
           nameHint="document.docx"
         />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+        </>
+      )}
     </ImagesProvider>
   );
 }

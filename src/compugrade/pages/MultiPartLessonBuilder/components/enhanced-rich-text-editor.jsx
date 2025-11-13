@@ -79,6 +79,62 @@ export function EnhancedRichTextEditor({ content, onContentChange, id }) {
     }
   }
 
+  // Show wysiwyg editor once it's ready (hide textarea flash)
+  useEffect(() => {
+    const editorContainer = document.querySelector(`#${uniqueId.current}`)
+    if (!editorContainer) return
+
+    const showWysiwyg = () => {
+      const wysiwyg = editorContainer.querySelector('.jodit-wysiwyg')
+      const textarea = editorContainer.querySelector('textarea')
+      
+      if (wysiwyg) {
+        // Hide textarea if still visible
+        if (textarea) {
+          textarea.style.display = 'none'
+          textarea.style.opacity = '0'
+          textarea.style.visibility = 'hidden'
+        }
+        // Show wysiwyg with fade-in
+        wysiwyg.style.opacity = '1'
+      }
+    }
+
+    // Check immediately and periodically
+    const interval = setInterval(() => {
+      showWysiwyg()
+      const wysiwyg = editorContainer.querySelector('.jodit-wysiwyg')
+      if (wysiwyg && wysiwyg.style.opacity === '1') {
+        clearInterval(interval)
+      }
+    }, 50)
+
+    // Also use MutationObserver for faster detection
+    const observer = new MutationObserver(() => {
+      showWysiwyg()
+    })
+
+    observer.observe(editorContainer, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    })
+
+    // Cleanup after editor is ready
+    const timeout = setTimeout(() => {
+      showWysiwyg()
+      clearInterval(interval)
+      observer.disconnect()
+    }, 500)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+      observer.disconnect()
+    }
+  }, [id, content?.html])
+
   // Handle transparent background in brush tool
   useEffect(() => {
     if (!editorRef.current) return
@@ -485,6 +541,25 @@ export function EnhancedRichTextEditor({ content, onContentChange, id }) {
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
           -ms-user-select: text !important;
+        }
+        /* Hide textarea immediately to prevent flash */
+        #${uniqueId.current} textarea {
+          display: none !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          width: 0 !important;
+          position: absolute !important;
+        }
+        /* Initially hide wysiwyg, will be shown via JS when ready */
+        #${uniqueId.current} .jodit-wysiwyg {
+          opacity: 0;
+          transition: opacity 0.2s ease-in;
+        }
+        /* Show wysiwyg when opacity is set to 1 */
+        #${uniqueId.current} .jodit-wysiwyg[style*="opacity: 1"],
+        #${uniqueId.current} .jodit-wysiwyg[style*="opacity:1"] {
+          opacity: 1 !important;
         }
         #${uniqueId.current} .jodit-container p {
           margin: 0 !important;

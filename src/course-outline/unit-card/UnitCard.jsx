@@ -146,7 +146,7 @@ const UnitCard = ({
 
     const filteredSkills = skills.filter((skill) => skill.unit_id == unit.id);
     setunitSkills(filteredSkills[0]?.skills_used);
-  }, []);
+  }, [skills]);
 
   useEffect(() => {
     // if this items has been newly added, scroll to it.

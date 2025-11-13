@@ -84,34 +84,27 @@ const CourseUnit = ({ courseId }) => {
   const handleCreateCompugradeXBlock = (type) => {
 
     if(true){
-    
+      sessionStorage.setItem("unitTitle", unitTitle);
      if(type=="text"){
       sessionStorage.setItem("unitData", JSON.stringify(unitData));
-      sessionStorage.setItem("unitTitle", unitTitle);
      }
      if(type=="preview"){
-      sessionStorage.setItem("unitData", JSON.stringify(unitData));
-      sessionStorage.setItem("unitTitle", unitTitle);
+      sessionStorage.setItem("unitData", JSON.stringify(unitData)); 
      }
      if(type =="skills")
      {
-      sessionStorage.setItem("unitTitle", unitTitle);
+      
       sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
      }
      if(type == "engine"){
-      sessionStorage.setItem("unitTitle", unitTitle);
+      
       sessionStorage.setItem("skills_used", JSON.stringify(unitData?.skills_used));
      }
      if(type=="new-lesson"){
-      sessionStorage.setItem("Rubric", JSON.stringify(unitData?.rubric));
-      sessionStorage.setItem("unitTitle", unitTitle);
-
+      sessionStorage.setItem("new", "false");
      }
      if(type=="new"){
-      sessionStorage.removeItem("Rubric");
-      sessionStorage.setItem("unitTitle", unitTitle);
-
-      
+      sessionStorage.setItem("new", "true");  
      }
      navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type=="text"?"engine":type=="new"? "new-lesson":type}`);
     }
