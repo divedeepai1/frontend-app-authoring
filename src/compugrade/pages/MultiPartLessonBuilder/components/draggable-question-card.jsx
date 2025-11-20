@@ -12,6 +12,9 @@ export function DraggableQuestionCard({
   onDragOver,
   onDrop,
   children,
+  hideDelete = false,
+  hideGrip = false,
+  questionNumber = null,
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -43,8 +46,8 @@ export function DraggableQuestionCard({
     <div>
       <div className="flex items-center justify-between mb-2 border-b bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center gap-2 text-gray-400 cursor-grab active:cursor-grabbing">
-          <GripVertical className="w-4 h-4" />
-          <span className="text-sm font-medium text-gray-600">Question {index + 1}</span>
+          {!hideGrip && <GripVertical className="w-4 h-4" />}
+          <span className="text-sm font-medium text-gray-600">Question {questionNumber !== null ? questionNumber : index + 1}</span>
         </div>
         <div className="flex items-center gap-2 ">
           <div
@@ -54,13 +57,15 @@ export function DraggableQuestionCard({
           >
             {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           </div>
-          <div
-            onClick={onDelete}
-            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
-            title="Delete question"
-          >
-            <Trash2 className="w-4 h-4" />
-          </div>
+          {!hideDelete && (
+            <div
+              onClick={onDelete}
+              className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
+              title="Delete question"
+            >
+              <Trash2 className="w-4 h-4" />
+            </div>
+          )}
         </div>
       </div>
 

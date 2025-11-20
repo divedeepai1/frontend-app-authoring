@@ -27,7 +27,7 @@ const QUESTION_TYPES = [
   // { value: "reordering", label: "Reordering" },
 ]
 
-export function ObjectiveEditor({ content, onContentChange }) {
+export function ObjectiveEditor({ content, onContentChange, singleQuestionMode = false, questionNumber = 1 }) {
   const [questions, setQuestions] = useState(content?.questions || [])
   const [selectedQuestionType, setSelectedQuestionType] = useState("true-false")
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null)
@@ -186,6 +186,9 @@ export function ObjectiveEditor({ content, onContentChange }) {
         onDragStart={handleQuestionDragStart}
         onDragOver={handleQuestionDragOver}
         onDrop={handleQuestionDrop}
+        hideDelete={singleQuestionMode}
+        hideGrip={singleQuestionMode}
+        questionNumber={singleQuestionMode ? questionNumber : index + 1}
       >
         {questionComponent}
       </DraggableQuestionCard>
@@ -207,30 +210,32 @@ export function ObjectiveEditor({ content, onContentChange }) {
       ) : (
         <div className="space-y-4">{questions.map((question, index) => renderQuestion(question, index))}</div>
       )}
-       {/* Add Question Controls */}
-       <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedQuestionType}
-            onChange={(e) => setSelectedQuestionType(e.target.value)}
-            className="w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {QUESTION_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+       {/* Add Question Controls - Hidden in single question mode */}
+       {!singleQuestionMode && (
+         <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedQuestionType}
+              onChange={(e) => setSelectedQuestionType(e.target.value)}
+              className="w-48 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {QUESTION_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
 
-          <div
-            onClick={addQuestion}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Question
+            <div
+              onClick={addQuestion}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Question
+            </div>
           </div>
         </div>
-      </div>
+       )}
     </div>
   )
 }

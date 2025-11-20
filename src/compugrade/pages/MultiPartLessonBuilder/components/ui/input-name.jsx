@@ -53,7 +53,7 @@ export default function EditableBlockName({ block, renameBlock }) {
   };
 
   return (
-    <div className="flex items-center group">
+    <div className="flex items-center group gap-2">
       <input
         ref={inputRef}
         value={value}
@@ -69,18 +69,19 @@ export default function EditableBlockName({ block, renameBlock }) {
           }
         }}
         onKeyDown={handleKeyDown}
-        style={{ width: `${value.length}ch` }}
+        style={{ 
+          minWidth: '100px',
+          maxWidth: '300px',
+          width: `${Math.max(value.length * 8 + 14, 100)}px`
+        }}
         placeholder={block.type === "instruction" ? "Instruction" : "Block name"}
         className="text-sm font-medium p-2 rounded text-gray-900 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
       />
 
-    
-     
-
       <div
         type="button"
         onClick={() => inputRef.current?.focus()}
-        className="cursor-pointer hidden group-hover:block text-gray-500 hover:text-blue-600 transition-colors ml-2"
+        className="cursor-pointer hidden group-hover:block text-gray-500 hover:text-blue-600 transition-colors flex-shrink-0"
       >
         <Pencil size={16} />
       </div>

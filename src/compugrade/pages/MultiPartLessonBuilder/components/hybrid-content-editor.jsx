@@ -32,6 +32,7 @@ export function HybridContentEditor({
   const [blocks, setBlocks] = useState(content.blocks || []);
   const [editingWeightageFor, setEditingWeightageFor] = useState(null);
   const [tempWeightage, setTempWeightage] = useState(10);
+  const [questionTypeModal, setQuestionTypeModal] = useState({ open: false, selectedType: "true-false" });
   const [errorCodesModal, setErrorCodesModal] = useState({ open: false, blockId: null });
   const [errorCodesInput, setErrorCodesInput] = useState("");
   const [availableErrorCodes, setAvailableErrorCodes] = useState([]);
@@ -50,12 +51,11 @@ export function HybridContentEditor({
   // Memoize filtered error codes for dropdown to prevent lag
   const filteredErrorCodes = useMemo(() => {
     const filtered = availableErrorCodes
-      .filter((c) => !selectedErrorCodes.includes(c))
       .filter((c) => !errorCodeQuery || c.toLowerCase().includes(errorCodeQuery.toLowerCase()));
     
     // Limit to first 100 items for performance
     return filtered.slice(0, 100);
-  }, [availableErrorCodes, selectedErrorCodes, errorCodeQuery]);
+  }, [availableErrorCodes, errorCodeQuery]);
   // Collapse/Expand All is computed from current part's instruction blocks
 
   const [videoEnabled, setVideoEnabled] = useState(
@@ -222,19 +222,73 @@ export function HybridContentEditor({
     updateContent({ ...content, blocks: newBlocks });
   };
 
-  const addObjectiveBlock = () => {
+  const openQuestionTypeModal = () => {
+    setQuestionTypeModal({ open: true, selectedType: "true-false" });
+  };
+
+  const closeQuestionTypeModal = () => {
+    setQuestionTypeModal({ open: false, selectedType: "true-false" });
+  };
+
+  const confirmAddObjectiveBlock = () => {
+    const questionType = questionTypeModal.selectedType;
+    const objectiveCount = blocks.filter((b) => b.type === "objective").length + 1;
+    
+    const getDefaultQuestionData = (type) => {
+      switch (type) {
+        case "true-false":
+          return { correct_answer: null };
+        case "multiple-choice":
+          return { 
+            options: [
+              { text: "", image_url: "", image: "" },
+              { text: "", image_url: "", image: "" },
+              { text: "", image_url: "", image: "" },
+              { text: "", image_url: "", image: "" },
+            ], 
+            correct_answer: null 
+          };
+        case "multiple-select":
+          return { 
+            options: [
+              { text: "", image_url: "", image: "" },
+              { text: "", image_url: "", image: "" },
+              { text: "", image_url: "", image: "" },
+              { text: "", image_url: "", image: "" },
+            ], 
+            correct_answer: [] 
+          };
+        case "short-answer":
+          return { correct_answer: "" };
+        case "fill-in-the-blank":
+          return { blanks: [{ answer: "", position: 0 }] };
+        default:
+          return {};
+      }
+    };
+
+    const newQuestion = {
+      id: `question-${Date.now()}`,
+      objective_type: questionType,
+      natural_text: "",
+      ...getDefaultQuestionData(questionType),
+    };
+
     const newBlock = {
       id: `objective-${Date.now()}`,
       type: "objective",
-      name: "Add Objective Question",
+      name: `Question ${objectiveCount}`,
       content: {
-        questions: [],
+        questions: [newQuestion],
+        weightage: 10,
       },
       isCollapsed: false,
     };
     const newBlocks = [...blocks, newBlock];
-    setBlocks(newBlocks);
-    updateContent({ ...content, blocks: newBlocks });
+    const renumbered = renumberInstructionNames(newBlocks);
+    setBlocks(renumbered);
+    updateContent({ ...content, blocks: renumbered });
+    closeQuestionTypeModal();
   };
 
   const updateBlock = (blockId, newContent) => {
@@ -377,14 +431,12 @@ export function HybridContentEditor({
       // Concatenate new codes with existing ones instead of replacing
       setAvailableErrorCodes((prev) => {
         const combined = [...prev, ...codes];
-        // Remove duplicates
-        return [...new Set(combined)];
+        return combined;
       });
-      // Add new codes to selected if they're not already selected
+      // Add new codes to selected
       setSelectedErrorCodes((prev) => {
         const combined = [...prev, ...codes];
-        // Remove duplicates
-        return [...new Set(combined)];
+        return combined;
       });
       setErrorCodeQuery("");
     } catch (e) {
@@ -398,12 +450,17 @@ export function HybridContentEditor({
   const addSelectedCode = (code) => {
     if (!code) return;
     if (!availableErrorCodes.includes(code)) return;
-    if (selectedErrorCodes.includes(code)) return;
     setSelectedErrorCodes((prev) => [...prev, code]);
   };
 
   const removeSelectedCode = (code) => {
-    setSelectedErrorCodes((prev) => prev.filter((c) => c !== code));
+    setSelectedErrorCodes((prev) => {
+      const index = prev.indexOf(code);
+      if (index === -1) return prev;
+      const newCodes = [...prev];
+      newCodes.splice(index, 1);
+      return newCodes;
+    });
   };
 
   const resetErrorCodes = () => {
@@ -543,13 +600,21 @@ export function HybridContentEditor({
 
   const renumberInstructionNames = (list) => {
     let instructionCounter = 0;
-    const defaultPattern = /^Instruction\s+\d+$/i;
+    let objectiveCounter = 0;
+    const defaultInstructionPattern = /^Instruction\s+\d+$/i;
+    const defaultObjectivePattern = /^Question\s+\d+$/i;
     return list.map((block) => {
       if (block.type === "instruction") {
         instructionCounter += 1;
-        const shouldOverride = !block.name || defaultPattern.test(block.name);
+        const shouldOverride = !block.name || defaultInstructionPattern.test(block.name);
         if (shouldOverride) {
           return { ...block, name: `Instruction ${instructionCounter}` };
+        }
+      } else if (block.type === "objective") {
+        objectiveCounter += 1;
+        const shouldOverride = !block.name || defaultObjectivePattern.test(block.name);
+        if (shouldOverride) {
+          return { ...block, name: `Question ${objectiveCounter}` };
         }
       }
       return block;
@@ -559,6 +624,12 @@ export function HybridContentEditor({
   const getInstructionNumber = (blockId) => {
     const instructionBlocks = blocks.filter((b) => b.type === "instruction");
     const idx = instructionBlocks.findIndex((b) => b.id === blockId);
+    return idx >= 0 ? idx + 1 : 0;
+  };
+
+  const getObjectiveNumber = (blockId) => {
+    const objectiveBlocks = blocks.filter((b) => b.type === "objective");
+    const idx = objectiveBlocks.findIndex((b) => b.id === blockId);
     return idx >= 0 ? idx + 1 : 0;
   };
 
@@ -768,7 +839,7 @@ export function HybridContentEditor({
 
               <div className="flex items-center gap-2">
 
-              {block.type === "instruction" && (
+              {(block.type === "instruction" || block.type === "objective") && (
               <div className="ml-2 flex items-center gap-2">
                 {editingWeightageFor === block.id ? (
                   <div className="flex items-center gap-1 mt-1 mr-2">
@@ -798,7 +869,7 @@ export function HybridContentEditor({
                 ) : (
                   <div className="flex items-center gap-1 group/weight mt-1 mr-2">
                     <span className="text-sm font-semibold mr-1">Weightage :</span>
-                    <span className="text-xs font-semibold text-gray-900 mt-1">
+                    <span className="text-xs font-semibold text-gray-900 mt-0.2">
                       {typeof block.content?.weightage === "number"
                         ? block.content.weightage
                         : typeof block.content?.errorWeightage === "number"
@@ -1227,6 +1298,8 @@ export function HybridContentEditor({
                     }
                     isCollapsed={false}
                     onToggleCollapse={() => toggleBlockCollapse(block.id)}
+                    singleQuestionMode={true}
+                    questionNumber={getObjectiveNumber(block.id)}
                   />
                 )}
               </div>
@@ -1258,8 +1331,8 @@ export function HybridContentEditor({
         </div>
 
         <div
-          onClick={addObjectiveBlock}
-          className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-700 hover:bg-green-50 bg-transparent rounded-lg transition-colors"
+          onClick={openQuestionTypeModal}
+          className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-700 hover:bg-green-50 bg-transparent rounded-lg transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <Target className="w-4 h-4" />
@@ -1281,6 +1354,55 @@ export function HybridContentEditor({
         onClose={() => setTimestampPreview({ open: false, timestamp: null })}
         videoUrl={video}
       />
+
+      {/* Question Type Selection Modal */}
+      {questionTypeModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={closeQuestionTypeModal}
+          />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-[90vw]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-blue-200">
+              <div className="text-lg font-semibold text-gray-900">Select Question Type</div>
+              <button className="p-1 border-none bg-transparent hover:bg-gray-100 rounded" onClick={closeQuestionTypeModal}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+                <select
+                  value={questionTypeModal.selectedType}
+                  onChange={(e) => setQuestionTypeModal({ ...questionTypeModal, selectedType: e.target.value })}
+                  className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="true-false">True/False</option>
+                  <option value="multiple-choice">Multiple Choice</option>
+                  <option value="multiple-select">Multiple Select</option>
+                  <option value="short-answer">Short Answer</option>
+                  <option value="fill-in-the-blank">Fill in the Blank</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-blue-200 flex justify-end gap-3">
+              <button
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                onClick={closeQuestionTypeModal}
+              >
+                Cancel
+              </button>
+              <button
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                onClick={confirmAddObjectiveBlock}
+              >
+                <Plus className="w-4 h-4" />
+                Add Question
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error Codes Modal */}
       {errorCodesModal.open && (
@@ -1357,8 +1479,8 @@ export function HybridContentEditor({
                     className="flex flex-wrap items-center gap-1 rounded-lg border border-gray-200 px-2 py-2 focus-within:ring-2 focus-within:ring-blue-500"
                     onClick={() => setErrorDropdownOpen(true)}
                   >
-                    {(selectedErrorCodes || []).map((code) => (
-                      <span key={code} className="flex items-center gap-1 rounded-md border text-xs px-2 py-1 bg-blue-50 text-blue-800 border-blue-200">
+                    {(selectedErrorCodes || []).map((code, idx) => (
+                      <span key={`selected-${idx}-${code}`} className="flex items-center gap-1 rounded-md border text-xs px-2 py-1 bg-blue-50 text-blue-800 border-blue-200">
                         <span className="font-medium">{code}</span>
                         <div
                           className="ml-1 text-gray-500 hover:text-red-600"
@@ -1394,9 +1516,9 @@ export function HybridContentEditor({
                         <div className="px-3 py-2 text-sm text-gray-500">No matching codes found.</div>
                       ) : (
                         <ul className="py-1">
-                          {filteredErrorCodes.map((c) => (
+                          {filteredErrorCodes.map((c, idx) => (
                             <li
-                              key={c}
+                              key={`error-code-${idx}-${c}`}
                               className="px-3 py-2 text-sm hover:bg-gray-50 border-1 border-b-gray-500 cursor-pointer"
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => addSelectedCode(c)}
@@ -1404,7 +1526,7 @@ export function HybridContentEditor({
                               {c}
                             </li>
                           ))}
-                          {availableErrorCodes.filter((c) => !selectedErrorCodes.includes(c)).length > 100 && (
+                          {availableErrorCodes.length > 100 && (
                             <li className="px-3 py-2 text-sm text-gray-500 italic">
                               Showing first 100 results. Use search to filter.
                             </li>

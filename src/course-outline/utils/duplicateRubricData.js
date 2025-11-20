@@ -64,6 +64,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
           if (item.block_type === "objective") {
             return {
               ...baseItem,
+              weightage: item.weightage || 10,
               objective_json: item.objective_json || {},
             };
           } else if (item.block_type === "text") {

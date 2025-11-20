@@ -58,10 +58,15 @@ export default function RightSidebar({
       .filter((block) => block.type === "instruction")
       .reduce((instructionSum, block) => instructionSum + getInstructionWeight(block), 0);
 
+    const objectiveWeight = (part.content?.blocks || [])
+      .filter((block) => block.type === "objective")
+      .reduce((objectiveSum, block) => objectiveSum + getInstructionWeight(block), 0);
+
     return {
       id: part.id,
       title: part.title || `Part ${index + 1}`,
       instructionWeight,
+      objectiveWeight,
       partWeight: getPartWeight(part),
     };
   });
@@ -142,6 +147,12 @@ export default function RightSidebar({
                     <span>Instruction Weightage:</span>
                     <span className="font-semibold text-gray-900">
                       {formatPercent(summary.instructionWeight)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Objective Weightage:</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatPercent(summary.objectiveWeight)}
                     </span>
                   </div>
                 </div>

@@ -102,6 +102,7 @@ export default function LessonBuilder() {
                   ...item.objective_json,
                 },
               ],
+              weightage: item.weightage || 10,
             },
           });
         } else if (item.block_type === "text") {
@@ -175,7 +176,6 @@ export default function LessonBuilder() {
       return;
     }
     try {
-      
       if (showLoading) {
         setInitialLoading(true);
       }
@@ -204,7 +204,7 @@ export default function LessonBuilder() {
   };
 
   useEffect(() => {
-      loadRubricFromApi(true);  
+    loadRubricFromApi(true); // Show loading on initial load only
   }, [blockId]);
 
   const addToast = ({ title, message, variant = "info", duration = 3500 }) => {
@@ -496,6 +496,7 @@ export default function LessonBuilder() {
                 block_type: block.type,
                 item_type: "g",
                 objective_json: question,
+                weightage: block.content.weightage || 10,
               }));
             } else if (block.type === "text") {
               return [
