@@ -15,11 +15,11 @@ const messages = defineMessages({
   },
   description1: {
     id: 'course-authoring.import.description1',
-    defaultMessage: 'Be sure you want to import a course before continuing. The contents of the imported course will replace the contents of the existing course. You cannot undo a course import. Before you proceed, we recommend that you export the current course, so that you have a backup copy of it.',
+    defaultMessage: 'Be sure you want to import a course before continuing. The contents of the imported course will replace the contents of the existing course. You cannot undo a course import.',
   },
   description2: {
     id: 'course-authoring.import.description2',
-    defaultMessage: 'The course that you import must be in a .tar.gz file (that is, a .tar file compressed with GNU Zip). This .tar.gz file must contain a course.xml file. It may also contain other files.',
+    defaultMessage: 'The course that you import must be having files, a .json file (metadata) and in a .tar.gz file (that is, a .tar file compressed with GNU Zip). This .tar.gz file must contain a course.xml file. It may also contain other files.',
   },
   description3: {
     id: 'course-authoring.import.description3',

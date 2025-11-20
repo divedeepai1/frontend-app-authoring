@@ -27,7 +27,7 @@ const messages = defineMessages({
   },
   stepperUnpackingDescription: {
     id: 'course-authoring.import.stepper.description.unpacking',
-    defaultMessage: 'Expanding and preparing folder/file structure (You can now leave this page safely, but avoid making drastic changes to content until this import is complete)',
+    defaultMessage: 'Expanding and preparing folder/file structure (Wait and avoid making drastic changes to content until this import is complete)',
   },
   stepperVerifyingDescription: {
     id: 'course-authoring.import.stepper.description.verifying',

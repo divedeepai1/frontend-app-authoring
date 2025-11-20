@@ -10,6 +10,7 @@ const initialState = {
   loadingStatus: '',
   savingStatus: '',
   successDate: null,
+  exportedLessonMetadata: null, // Store JSON metadata directly in Redux (no sessionStorage needed)
 };
 
 const slice = createSlice({
@@ -33,7 +34,14 @@ const slice = createSlice({
     updateFileName: (state, { payload }) => {
       state.fileName = payload;
     },
-    reset: () => initialState,
+    reset: (state) => {
+      // Preserve exportedLessonMetadata across resets so it's available during import processing
+      const preservedMetadata = state.exportedLessonMetadata;
+      return {
+        ...initialState,
+        exportedLessonMetadata: preservedMetadata,
+      };
+    },
     updateLoadingStatus: (state, { payload }) => {
       state.loadingStatus = payload;
     },
@@ -42,6 +50,9 @@ const slice = createSlice({
     },
     updateSuccessDate: (state, { payload }) => {
       state.successDate = payload;
+    },
+    updateExportedLessonMetadata: (state, { payload }) => {
+      state.exportedLessonMetadata = payload;
     },
   },
 });
@@ -56,6 +67,7 @@ export const {
   updateLoadingStatus,
   updateSavingStatus,
   updateSuccessDate,
+  updateExportedLessonMetadata,
 } = slice.actions;
 
 export const {

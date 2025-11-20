@@ -35,6 +35,7 @@ describe('<FileSection />', () => {
     const { getByText } = render(<RootWrapper />);
     await waitFor(() => {
       expect(getByText(messages.headingTitle.defaultMessage)).toBeInTheDocument();
+      expect(getByText(messages.metadataInstructions.defaultMessage)).toBeInTheDocument();
     });
   });
   it('should displays Dropzone when import is not triggered or in success stage or has an error', async () => {

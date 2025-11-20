@@ -25,6 +25,25 @@ import { updateExportTriggered, updateSavingStatus, updateSuccessDate } from './
 import ExportModalError from './export-modal-error/ExportModalError';
 import ExportFooter from './export-footer/ExportFooter';
 import ExportStepper from './export-stepper/ExportStepper';
+import { exportLessonDataMapping } from './utils/exportLessonData';
+import { getCourseOutlineIndex } from '../course-outline/data/api';
+
+const downloadJsonFile = (data, filename) => {
+  try {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn('Failed to download metadata file:', error);
+  }
+};
 
 const CourseExportPage = ({ intl, courseId }) => {
   const dispatch = useDispatch();
@@ -43,7 +62,6 @@ const CourseExportPage = ({ intl, courseId }) => {
     const cookieData = cookies.get(LAST_EXPORT_COOKIE_NAME);
     if (cookieData) {
       dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
-      dispatch(updateExportTriggered(true));
       dispatch(updateSuccessDate(cookieData.date));
     }
   }, []);
@@ -87,7 +105,28 @@ const CourseExportPage = ({ intl, courseId }) => {
                         size="lg"
                         block
                         className="mb-4"
-                        onClick={() => dispatch(startExportingCourse(courseId))}
+                        onClick={async () => {
+                          try {
+                            const outlineIndex = await getCourseOutlineIndex(courseId);
+                            if (outlineIndex && outlineIndex.courseStructure) {
+                              const courseBlockId = outlineIndex.courseStructure.id;
+                              const courseDisplayName = outlineIndex.courseStructure.displayName || courseDetails?.name || 'Course Export';
+                              const lessonResult = await exportLessonDataMapping(courseId, courseBlockId, { skipSessionStorage: false });
+                              if (lessonResult?.success && lessonResult.exportData) {
+                                const exportMeta = {
+                                  ...lessonResult.exportData,
+                                  courseDisplayName,
+                                };
+                                const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
+                                downloadJsonFile(exportMeta, `course-export-metadata-${safeCourseId}.json`);
+                              }
+                            }
+                          } catch (error) {
+                            // eslint-disable-next-line no-console
+                            console.warn('Failed to export lesson data mapping:', error);
+                          }
+                          dispatch(startExportingCourse(courseId));
+                        }}
                         iconBefore={ArrowCircleDownIcon}
                       >
                         {intl.formatMessage(messages.buttonTitle)}

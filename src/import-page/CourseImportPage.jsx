@@ -1,12 +1,11 @@
 /* eslint-disable max-len */
-import React, { useEffect } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
 import {
   Container, Layout,
 } from '@openedx/paragon';
-import Cookies from 'universal-cookie';
 import { Helmet } from 'react-helmet';
 
 import SubHeader from '../generic/sub-header/SubHeader';
@@ -18,14 +17,12 @@ import {
 } from './data/slice';
 import ImportStepper from './import-stepper/ImportStepper';
 import { getImportTriggered, getLoadingStatus, getSavingStatus } from './data/selectors';
-import { LAST_IMPORT_COOKIE_NAME } from './data/constants';
 import ImportSidebar from './import-sidebar/ImportSidebar';
 import FileSection from './file-section/FileSection';
 import messages from './messages';
 
 const CourseImportPage = ({ intl, courseId }) => {
   const dispatch = useDispatch();
-  const cookies = new Cookies();
   const courseDetails = useModel('courseDetails', courseId);
   const importTriggered = useSelector(getImportTriggered);
   const savingStatus = useSelector(getSavingStatus);
@@ -33,15 +30,16 @@ const CourseImportPage = ({ intl, courseId }) => {
   const anyRequestFailed = savingStatus === RequestStatus.FAILED || loadingStatus === RequestStatus.FAILED;
   const anyRequestInProgress = savingStatus === RequestStatus.PENDING || loadingStatus === RequestStatus.IN_PROGRESS;
 
-  useEffect(() => {
-    const cookieData = cookies.get(LAST_IMPORT_COOKIE_NAME);
-    if (cookieData) {
-      dispatch(updateSavingStatus(RequestStatus.SUCCESSFUL));
-      dispatch(updateImportTriggered(true));
-      dispatch(updateFileName(cookieData.fileName));
-      dispatch(updateSuccessDate(cookieData.date));
-    }
-  }, []);
+  // Auto-import via cookie disabled per request; users must import manually.
+  // useEffect(() => {
+  //   const cookieData = cookies.get(LAST_IMPORT_COOKIE_NAME);
+  //   if (cookieData) {
+  //     dispatch(updateSavingStatus(RequestStatus.SUCCESSFUL));
+  //     dispatch(updateImportTriggered(true));
+  //     dispatch(updateFileName(cookieData.fileName));
+  //     dispatch(updateSuccessDate(cookieData.date));
+  //   }
+  // }, []);
 
   return (
     <>
