@@ -64,7 +64,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
           if (item.block_type === "objective") {
             return {
               ...baseItem,
-              weightage: item.weightage || 10,
+              weightage: typeof item.weightage === 'number' ? item.weightage : 10,
               objective_json: item.objective_json || {},
             };
           } else if (item.block_type === "text") {
@@ -77,7 +77,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
               ...baseItem,
               natural_text: item.natural_text || "",
               error_codes: item.error_codes || [],
-              weightage: item.weightage || 10,
+              weightage: typeof item.weightage === 'number' ? item.weightage : 10,
               images: Array.isArray(item.image_name) ? item.image_name : (Array.isArray(item.images) ? item.images : []),
               videos: Array.isArray(item.video_name) ? item.video_name : (Array.isArray(item.videos) ? item.videos : []),
               video_timestamp: item.video_timestamp || null,

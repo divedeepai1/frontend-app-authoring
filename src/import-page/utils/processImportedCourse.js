@@ -1,6 +1,6 @@
 import { base_url } from '../../compugrade-constants';
 import { getCourseItem } from '../../course-outline/data/api';
-import { duplicateRubricData } from '../../course-outline/utils/duplicateRubricData';
+// import { duplicateRubricData } from '../../course-outline/utils/duplicateRubricData';
 
 /**
  * Extracts course ID from course block ID
@@ -15,75 +15,6 @@ function extractCourseIdFromBlockId(courseBlockId) {
     return `course-v1:${match[1]}+${match[2]}+${match[3]}`;
   }
   return null;
-}
-
-/**
- * Extracts course data (org, number, run) from course ID
- * @param {string} courseId - e.g., "course-v1:org+number+run"
- * @returns {Object} - { org, number, run } or null
- */
-function extractCourseDataFromId(courseId) {
-  if (!courseId) return null;
-  // Extract from course-v1:org+number+run
-  const match = courseId.match(/course-v1:([^+]+)\+([^+]+)\+([^+]+)/);
-  if (match) {
-    return {
-      org: match[1],
-      number: match[2],
-      run: match[3],
-    };
-  }
-  return null;
-}
-
-/**
- * Ensures course exists in integrated backend, creates it if it doesn't
- * @param {string} courseId - The course ID (e.g., "course-v1:org+number+run")
- * @param {string} courseName - The course display name
- * @returns {Promise<boolean>} - True if course exists or was created successfully
- */
-async function ensureCourseExists(courseId, courseName) {
-  try {
-    // Extract course data (org, number, run) from course ID
-    const courseData = extractCourseDataFromId(courseId);
-    
-    if (!courseData) {
-      console.warn(`Could not extract course data from course ID: ${courseId}`);
-      return true; // Continue anyway
-    }
-
-    // Build courseData object with all required fields
-    const coursePayload = {
-      displayName: courseName || 'Imported Course',
-      org: courseData.org,
-      number: courseData.number,
-      run: courseData.run,
-      course_type: sessionStorage.getItem('courseType') || 'ms-word',
-      openedx_based_id: courseId,
-    };
-
-    // Try to create/update course in integrated backend
-    const courseResponse = await fetch(base_url + "/api/course/create_course", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(coursePayload),
-    });
-
-    if (courseResponse.ok) {
-      return true;
-    } else {
-      const errorText = await courseResponse.text();
-      console.warn(`Failed to create/update course ${courseId}:`, errorText);
-      // Continue anyway - course might already exist
-      return true;
-    }
-  } catch (error) {
-    console.error(`Error ensuring course exists ${courseId}:`, error);
-    // Continue anyway - course might already exist
-    return true;
-  }
 }
 
 /**
@@ -151,16 +82,33 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
       return exportedUnitQueue.shift();
     };
 
+ 
+
     const duplicateLessonOnly = async (currentUnitId) => {
       const entry = getNextMetadataEntry();
-      if (!entry || !entry.originalUnitId) {
+      if (!entry || !entry.rubricData) {
         return;
       }
 
-      const result = await duplicateRubricData(entry.originalUnitId, currentUnitId);
-      if (!result.success) {
-        // eslint-disable-next-line no-console
-        console.error(`Failed to duplicate lesson data from ${entry.originalUnitId} to ${currentUnitId}:`, result.error);
+      const savePayload = {
+        rubric_id: currentUnitId,
+        ...entry.rubricData,
+      };
+
+      try {
+        const saveResponse = await fetch(
+          `${base_url}/api/openedx/create_base_lesson_from_scratch`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(savePayload),
+          }
+        );
+
+        if (!saveResponse.ok) {
+          const errorText = await saveResponse.text();
+        }
+      } catch (error) {
       }
     };
 

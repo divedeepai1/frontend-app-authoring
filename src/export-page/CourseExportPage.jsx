@@ -28,22 +28,6 @@ import ExportStepper from './export-stepper/ExportStepper';
 import { exportLessonDataMapping } from './utils/exportLessonData';
 import { getCourseOutlineIndex } from '../course-outline/data/api';
 
-const downloadJsonFile = (data, filename) => {
-  try {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn('Failed to download metadata file:', error);
-  }
-};
 
 const CourseExportPage = ({ intl, courseId }) => {
   const dispatch = useDispatch();
@@ -54,6 +38,9 @@ const CourseExportPage = ({ intl, courseId }) => {
   const loadingStatus = useSelector(getLoadingStatus);
   const savingStatus = useSelector(getSavingStatus);
   const cookies = new Cookies();
+  const [isExportingMetadata, setIsExportingMetadata] = React.useState(false);
+  const [exportProgress, setExportProgress] = React.useState({ current: 0, total: 0 });
+  const [exportedMetadata, setExportedMetadata] = React.useState(null);
   const isShowExportButton = !exportTriggered || errorMessage || currentStage === EXPORT_STAGES.SUCCESS;
   const anyRequestFailed = savingStatus === RequestStatus.FAILED || loadingStatus === RequestStatus.FAILED;
   const anyRequestInProgress = savingStatus === RequestStatus.PENDING || loadingStatus === RequestStatus.IN_PROGRESS;
@@ -105,36 +92,55 @@ const CourseExportPage = ({ intl, courseId }) => {
                         size="lg"
                         block
                         className="mb-4"
+                        disabled={isExportingMetadata}
                         onClick={async () => {
+                          setIsExportingMetadata(true);
+                          setExportProgress({ current: 0, total: 0 });
+                          dispatch(updateExportTriggered(true));
                           try {
                             const outlineIndex = await getCourseOutlineIndex(courseId);
                             if (outlineIndex && outlineIndex.courseStructure) {
                               const courseBlockId = outlineIndex.courseStructure.id;
                               const courseDisplayName = outlineIndex.courseStructure.displayName || courseDetails?.name || 'Course Export';
-                              const lessonResult = await exportLessonDataMapping(courseId, courseBlockId, { skipSessionStorage: false });
+                              const lessonResult = await exportLessonDataMapping(courseId, courseBlockId, { 
+                                skipSessionStorage: false,
+                                onProgress: (current, total) => {
+                                  setExportProgress({ current, total });
+                                }
+                              });
                               if (lessonResult?.success && lessonResult.exportData) {
                                 const exportMeta = {
                                   ...lessonResult.exportData,
                                   courseDisplayName,
                                 };
+                                setExportedMetadata(exportMeta);
+                                
                                 const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
-                                downloadJsonFile(exportMeta, `course-export-metadata-${safeCourseId}.json`);
+                                const blob = new Blob([JSON.stringify(exportMeta, null, 2)], { type: 'application/json' });
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = `course-export-metadata-${safeCourseId}.json`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                window.URL.revokeObjectURL(url);
                               }
                             }
                           } catch (error) {
-                            // eslint-disable-next-line no-console
-                            console.warn('Failed to export lesson data mapping:', error);
+                            setIsExportingMetadata(false);
                           }
                           dispatch(startExportingCourse(courseId));
+                          setIsExportingMetadata(false);
                         }}
                         iconBefore={ArrowCircleDownIcon}
                       >
-                        {intl.formatMessage(messages.buttonTitle)}
+                        {isExportingMetadata ? `Exporting rubric data (${exportProgress.current}/${exportProgress.total})...` : intl.formatMessage(messages.buttonTitle)}
                       </Button>
                     </Card.Section>
                   )}
                 </Card>
-                {exportTriggered && <ExportStepper courseId={courseId} />}
+                {exportTriggered && <ExportStepper courseId={courseId} isExportingMetadata={isExportingMetadata} exportProgress={exportProgress} />}
                 <ExportFooter />
               </article>
             </Layout.Element>

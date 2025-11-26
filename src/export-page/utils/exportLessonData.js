@@ -1,29 +1,28 @@
 import { base_url } from '../../compugrade-constants';
 import { getCourseItem } from '../../course-outline/data/api';
 
-/**
- * Exports lesson/rubric data for all units in a course
- * Stores the mapping in sessionStorage so it can be retrieved during import
- * @param {string} courseId - The course ID
- * @param {string} courseBlockId - The course block ID
- * @returns {Promise<{success: boolean, exportedUnits: number, error?: string}>}
- */
 export async function exportLessonDataMapping(courseId, courseBlockId, options = {}) {
   try {
     if (!courseBlockId) {
       throw new Error('Course Block ID is required');
     }
 
-    // Fetch the course structure
     const course = await getCourseItem(courseBlockId);
     if (!course || !course.childInfo || !course.childInfo.children) {
       throw new Error('Invalid course structure');
     }
 
-    const lessonDataMapping = {}; // Map unit displayName -> unit ID for matching during import
+    const lessonDataMapping = {};
     let exportedUnits = 0;
+    let processedUnits = 0;
 
-    // Recursively collect all units and their lesson data references
+    const getAppName = () => {
+      const courseType = sessionStorage.getItem('courseType');
+      if (courseType === 'ms-word') return "word";
+      if (courseType === "powerpoint") return "powerpoint";
+      return "excel";
+    };
+
     const collectUnits = async (sections, sectionPath = '') => {
       for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
         const section = sections[sectionIdx];
@@ -39,12 +38,87 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                 const unit = subsection.childInfo.children[unitIdx];
                 const unitPathKey = `${subsectionPathKey}.${unitIdx}`;
                 
-                // Store unit mapping with multiple keys for flexible matching
+                let rubricData = null;
+                try {
+                  const encodedUnitId = encodeURIComponent(unit.id);
+                  const getResponse = await fetch(
+                    `${base_url}/api/openedx/get_rubric?openedx_based_id=${encodedUnitId}`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name: "Hello" }),
+                    }
+                  );
+
+                  if (getResponse.ok) {
+                    const result = await getResponse.json();
+                    const originalRubric = result?.rubric;
+
+                    if (originalRubric) {
+                      rubricData = {
+                        skills: originalRubric.skills || [],
+                        app_name: originalRubric.app_name || getAppName(),
+                        source_document: originalRubric.source_document || null,
+                        answer_key: originalRubric.answer_key || null,
+                        video: originalRubric.video || null,
+                        lessons: (originalRubric.lessons || []).map((lesson) => ({
+                          id: lesson.id,
+                          title: lesson.title,
+                          weightage: lesson.weightage || 0,
+                          source_document: lesson.source_document || null,
+                          answer_key: lesson.answer_key || null,
+                          items: (lesson.items || []).map((item) => {
+                            const baseItem = {
+                              id: item.block_type + item.id,
+                              block_name: item.block_name || "",
+                              instruction_category: item.instruction_category || "",
+                              block_type: item.block_type || "",
+                              item_type: item.item_type || "u",
+                            };
+
+                            if (item.block_type === "objective") {
+                              return {
+                                ...baseItem,
+                                weightage: typeof item.weightage === 'number' ? item.weightage : 10,
+                                objective_json: item.objective_json || {},
+                              };
+                            } else if (item.block_type === "text") {
+                              return {
+                                ...baseItem,
+                                natural_text: item.natural_text || "",
+                              };
+                            } else if (item.block_type === "instruction") {
+                              return {
+                                ...baseItem,
+                                natural_text: item.natural_text || "",
+                                error_codes: item.error_codes || [],
+                                weightage: typeof item.weightage === 'number' ? item.weightage : 10,
+                                images: Array.isArray(item.image_name) ? item.image_name : (Array.isArray(item.images) ? item.images : []),
+                                videos: Array.isArray(item.video_name) ? item.video_name : (Array.isArray(item.videos) ? item.videos : []),
+                                video_timestamp: item.video_timestamp || null,
+                              };
+                            } else if (item.block_type === "doc-comparison") {
+                              return {
+                                ...baseItem,
+                                comparison_mode: item.comparison_mode || "",
+                                answer_key: item.answer_key || null,
+                              };
+                            }
+                            return baseItem;
+                          }),
+                        })),
+                      };
+                    }
+                  }
+                } catch (error) {
+                  rubricData = null;
+                }
+
                 const mappingKey = unit.displayName || `Unit at ${unitPathKey}`;
                 lessonDataMapping[mappingKey] = {
                   originalUnitId: unit.id,
                   displayName: unit.displayName,
-                  path: unitPathKey, // For position-based matching
+                  path: unitPathKey,
                   sectionId: section.id,
                   subsectionId: subsection.id,
                   sectionDisplayName: section.displayName || section.name || '',
@@ -52,8 +126,14 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                   sectionIndex: sectionIdx,
                   subsectionIndex: subsectionIdx,
                   unitIndex: unitIdx,
+                  rubricData,
                 };
                 exportedUnits++;
+                processedUnits++;
+                
+                if (options.onProgress) {
+                  options.onProgress(processedUnits, exportedUnits);
+                }
               }
             }
           }
@@ -71,8 +151,6 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
       exportedUnits,
     };
 
-    // Store in sessionStorage with a generic key that can be retrieved during import
-    // Use both courseId-specific and generic keys for flexibility unless disabled
     if (!options.skipSessionStorage) {
       const courseSpecificKey = `exported_lesson_data_${courseId}`;
       const genericKey = 'exported_lesson_data_latest';
@@ -86,7 +164,6 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
       exportData,
     };
   } catch (error) {
-    console.error('Error exporting lesson data mapping:', error);
     return {
       success: false,
       error: error.message,

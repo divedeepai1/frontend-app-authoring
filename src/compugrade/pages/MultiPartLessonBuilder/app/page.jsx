@@ -102,7 +102,7 @@ export default function LessonBuilder() {
                   ...item.objective_json,
                 },
               ],
-              weightage: item.weightage || 10,
+              weightage: typeof item.weightage === 'number' ? item.weightage : 10,
             },
           });
         } else if (item.block_type === "text") {
@@ -123,7 +123,7 @@ export default function LessonBuilder() {
             content: {
               html: item.natural_text || "",
               errorCodes: item.error_codes || [],
-              weightage: item.weightage || 10,
+              weightage: typeof item.weightage === 'number' ? item.weightage : 10,
               attachments: {
                 images: Array.isArray(item.image_name) ? item.image_name : [],
                 videos: [
@@ -496,7 +496,7 @@ export default function LessonBuilder() {
                 block_type: block.type,
                 item_type: "g",
                 objective_json: question,
-                weightage: block.content.weightage || 10,
+                weightage: typeof block.content.weightage === 'number' ? block.content.weightage : 10,
               }));
             } else if (block.type === "text") {
               return [
@@ -547,7 +547,7 @@ export default function LessonBuilder() {
                   item_type: block.content.item_type || "no-skill",
                   natural_text: block.content.html || "",
                   error_codes: block.content.errorCodes || [],
-                  weightage: block.content.weightage || 10,
+                  weightage: typeof block.content.weightage === 'number' ? block.content.weightage : 10,
                   images: imagesBase64,
                   videos: videosBase64,
                   video_timestamp: timestamp, 

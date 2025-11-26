@@ -327,6 +327,54 @@ export function HybridContentEditor({
     setEditingWeightageFor(null);
   };
 
+  const getInstructionWeightage = (block) => {
+    if (!block?.content) return 10;
+    if (typeof block.content.weightage === "number") return block.content.weightage;
+    if (typeof block.content.errorWeightage === "number") return block.content.errorWeightage;
+    return 10;
+  };
+
+  const isInstructionNonGraded = (block) => {
+    if (block.type !== "instruction") return false;
+    const weight = getInstructionWeightage(block);
+    const errorCodes = Array.isArray(block.content?.errorCodes) ? block.content.errorCodes : [];
+    return weight === 0 && errorCodes.length === 0;
+  };
+
+  const setInstructionGrading = (block, shouldBeGraded) => {
+    if (block.type !== "instruction") return;
+
+    if (shouldBeGraded) {
+      const restoredWeight =
+        typeof block.content?.lastGradedWeightage === "number" && block.content.lastGradedWeightage > 0
+          ? block.content.lastGradedWeightage
+          : 10;
+      const nextContent = {
+        ...block.content,
+        weightage: restoredWeight,
+        errorWeightage: restoredWeight,
+      };
+      if ("lastGradedWeightage" in nextContent) {
+        delete nextContent.lastGradedWeightage;
+      }
+      updateBlock(block.id, nextContent);
+    } else {
+      const currentWeight = getInstructionWeightage(block);
+      updateBlock(block.id, {
+        ...block.content,
+        lastGradedWeightage:
+          currentWeight > 0
+            ? currentWeight
+            : typeof block.content?.lastGradedWeightage === "number"
+              ? block.content.lastGradedWeightage
+              : 10,
+        weightage: 0,
+        errorWeightage: 0,
+        errorCodes: [],
+      });
+    }
+  };
+
   const openErrorCodesModal = (block) => {
     const currentSelected = Array.isArray(block.content?.errorCodes)
       ? block.content.errorCodes
@@ -724,12 +772,15 @@ export function HybridContentEditor({
             </div>
           </div>
         )}
-        {blocks.map((block, index) => (
-          <div
-            key={block.id}
-            className="relative group  border-blue-200 rounded-lg shadow-sm bg-white"
-            draggable={true}
-            onMouseDownCapture={(e) => {
+        {blocks.map((block, index) => {
+          const instructionNonGraded = isInstructionNonGraded(block);
+          const effectiveWeightage = getInstructionWeightage(block);
+          return (
+            <div
+              key={block.id}
+              className="relative group  border-blue-200 rounded-lg shadow-sm bg-white"
+              draggable={true}
+              onMouseDownCapture={(e) => {
               // Use capture phase to run first, before child handlers
               // Track where the mouse down happened
               const target = e.target;
@@ -777,32 +828,32 @@ export function HybridContentEditor({
               
               handleBlockDragStart(e, index);
             }}
-            onDragEnd={() => {
-              // Reset drag start tracking
-              dragStartRef.current = { blockId: null, fromHeader: false };
-            }}
-            onDragOver={(e) => {
-              // Don't allow drop if dragging from editor
-              const editorContainer = e.target.closest('[id^="editor-"]') || 
-                                     e.target.closest('.jodit-container') ||
-                                     e.target.closest('.jodit-wysiwyg') ||
-                                     e.target.closest('.jodit-workplace');
-              if (!editorContainer) {
-                e.preventDefault();
-              }
-            }}
-            onDrop={(e) => {
-              // Don't handle drop if it's from editor
-              const editorContainer = e.target.closest('[id^="editor-"]') || 
-                                     e.target.closest('.jodit-container') ||
-                                     e.target.closest('.jodit-wysiwyg') ||
-                                     e.target.closest('.jodit-workplace');
-              if (!editorContainer) {
-                e.stopPropagation();
-                handleBlockDrop(index);
-              }
-            }}
-          >
+              onDragEnd={() => {
+                // Reset drag start tracking
+                dragStartRef.current = { blockId: null, fromHeader: false };
+              }}
+              onDragOver={(e) => {
+                // Don't allow drop if dragging from editor
+                const editorContainer = e.target.closest('[id^="editor-"]') || 
+                                       e.target.closest('.jodit-container') ||
+                                       e.target.closest('.jodit-wysiwyg') ||
+                                       e.target.closest('.jodit-workplace');
+                if (!editorContainer) {
+                  e.preventDefault();
+                }
+              }}
+              onDrop={(e) => {
+                // Don't handle drop if it's from editor
+                const editorContainer = e.target.closest('[id^="editor-"]') || 
+                                       e.target.closest('.jodit-container') ||
+                                       e.target.closest('.jodit-wysiwyg') ||
+                                       e.target.closest('.jodit-workplace');
+                if (!editorContainer) {
+                  e.stopPropagation();
+                  handleBlockDrop(index);
+                }
+              }}
+            >
             {/* Block Header */}
             <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-gray-50 to-blue-50">
               <div className="flex items-center gap-3">
@@ -839,54 +890,71 @@ export function HybridContentEditor({
 
               <div className="flex items-center gap-2">
 
-              {(block.type === "instruction" || block.type === "objective") && (
-              <div className="ml-2 flex items-center gap-2">
-                {editingWeightageFor === block.id ? (
-                  <div className="flex items-center gap-1 mt-1 mr-2">
-                    <span className="text-sm font-semibold">Weightage</span>
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900"
-                      value={tempWeightage}
-                      onChange={(e) => setTempWeightage(e.target.value)}
-                    />
-                    <button
-                      className="p-1 border-none bg-transparent text-green-600 hover:bg-green-50 rounded"
-                      onClick={() => saveEditWeightage(block)}
-                      title="Save"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="p-1 border-none bg-transparent text-gray-600 hover:bg-gray-100 rounded"
-                      onClick={cancelEditWeightage}
-                      title="Cancel"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 group/weight mt-1 mr-2">
-                    <span className="text-sm font-semibold mr-1">Weightage :</span>
-                    <span className="text-xs font-semibold text-gray-900 mt-0.2">
-                      {typeof block.content?.weightage === "number"
-                        ? block.content.weightage
-                        : typeof block.content?.errorWeightage === "number"
-                          ? block.content.errorWeightage
-                          : 10}
-                    </span>
-                    <button
-                      className="p-1 border-none bg-transparent opacity-0 group-hover/weight:opacity-100 hover:bg-blue-50 rounded"
-                      onClick={() => startEditWeightage(block)}
-                      title="Edit weightage"
-                    >
-                      <Pencil className="w-4 h-4 mb-1" />
-                    </button>
+                {(block.type === "instruction" || block.type === "objective") && (
+                  <div className="ml-2 flex items-center gap-3">
+                    {block.type === "instruction" && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-medium text-gray-700">Graded</span>
+                        <div
+                          onClick={() => setInstructionGrading(block, instructionNonGraded)}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
+                            !instructionNonGraded ? "bg-blue-600" : "bg-gray-200"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                              !instructionNonGraded ? "translate-x-[1.125rem]" : "translate-x-0.5"
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {!(block.type === "instruction" && instructionNonGraded) && (
+                      <>
+                        {editingWeightageFor === block.id ? (
+                          <div className="flex items-center gap-1 mt-1 mr-1">
+                            <span className="text-sm font-semibold">Weightage</span>
+                            <input
+                              type="number"
+                              min={0}
+                              className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-gray-900"
+                              value={tempWeightage}
+                              onChange={(e) => setTempWeightage(e.target.value)}
+                            />
+                            <button
+                              className="p-1 border-none bg-transparent text-green-600 hover:bg-green-50 rounded"
+                              onClick={() => saveEditWeightage(block)}
+                              title="Save"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              className="p-1 border-none bg-transparent text-gray-600 hover:bg-gray-100 rounded"
+                              onClick={cancelEditWeightage}
+                              title="Cancel"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 group/weight mt-1 mr-1">
+                            <span className="text-sm font-semibold mr-1">Weightage :</span>
+                            <span className="text-xs font-semibold text-gray-900 mt-0.5">
+                              {effectiveWeightage}
+                            </span>
+                            <button
+                              className="p-1 border-none bg-transparent hover:bg-blue-50 rounded opacity-0 group-hover/weight:opacity-100"
+                              onClick={() => startEditWeightage(block)}
+                              title="Edit weightage"
+                            >
+                              <Pencil className="w-4 h-4 mb-1" />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
                 {/* Move Up/Down controls */}
                 <div
                   onClick={() => moveBlock(index, index - 1)}
@@ -951,57 +1019,53 @@ export function HybridContentEditor({
                       <div className="px-2 py-0.5  text-indigo-700">
                         Instruction {getInstructionNumber(block.id)}
                       </div>
+                      {!instructionNonGraded && (
+                        <div className="flex items-center gap-2 mr-2">
+                          <select
+                            defaultValue="no-skill"
+                            value={block.content.item_type || "no-skill"}
+                            className="px-2 py-1 text-xs rounded text-gray-950 border-green-200 border bg-transparent"
+                            onChange={(e) => {
+                              const newType = e.target.value;
+                              updateBlock(block.id, {
+                                ...block.content,
+                                item_type: newType,
+                              });
+                            }}
+                          >
+                            <option value="certification">Certification Skill</option>
+                            <option value="foundation">Foundation Skill</option>
+                            <option value="no-skill">No Skill</option>
+                          </select>
 
-                    <div className="flex items-center gap-2 mr-2">
-                        <select
-                          defaultValue="no-skill"
-                          value={block.content.item_type || "no-skill"}
-                          className="px-2 py-1 text-xs rounded  text-gray-950 border-green-200 border bg-transparent"
-                          onChange={(e) => {
-                            const newType = e.target.value;
-                            updateBlock(block.id, {
-                              ...block.content,
-                              item_type: newType,
-                            });
-                          }}
-                        >
-                          <option value="certification">
-                            Certification Skill
-                          </option>
-                          <option value="foundation">Foundation Skill</option>
-                          <option value="no-skill">No Skill</option>
-                        </select>
+                          <button
+                            onClick={() => triggerHiddenInput(`instr-img-${block.id}`)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"
+                          >
+                            <ImageIcon className="w-4 h-4" /> Image
+                          </button>
 
-                        <button
-                          onClick={() =>
-                            triggerHiddenInput(`instr-img-${block.id}`)
-                          }
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"
-                        >
-                          <ImageIcon className="w-4 h-4" /> Image
-                        </button>
+                          <button
+                            onClick={() => triggerHiddenInput(`instr-vid-${block.id}`)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 border-purple-200 border bg-transparent rounded"
+                          >
+                            <Video className="w-4 h-4" /> Video
+                          </button>
 
-                        <button
-                          onClick={() =>
-                            triggerHiddenInput(`instr-vid-${block.id}`)
-                          }
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 border-purple-200 border bg-transparent rounded"
-                        >
-                          <Video className="w-4 h-4" /> Video
-                        </button>
-
-                      {/* Error Codes button */}
-                      <button
-                        onClick={() => openErrorCodesModal(block)}
-                        className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                          block.content?.errorCodes && Array.isArray(block.content.errorCodes) && block.content.errorCodes.length > 0
-                            ? "text-green-700 bg-green-50 border border-green-200 hover:bg-green-100"
-                            : "text-gray-700 bg-transparent border border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                       Add Error Codes
-                      </button>
-                      </div>
+                          <button
+                            onClick={() => openErrorCodesModal(block)}
+                            className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                              block.content?.errorCodes &&
+                              Array.isArray(block.content.errorCodes) &&
+                              block.content.errorCodes.length > 0
+                                ? "text-green-700 bg-green-50 border border-green-200 hover:bg-green-100"
+                                : "text-gray-700 bg-transparent border border-gray-200 hover:bg-gray-50"
+                            }`}
+                          >
+                            Add Error Codes
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-2">
@@ -1305,7 +1369,8 @@ export function HybridContentEditor({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
         
       </div>

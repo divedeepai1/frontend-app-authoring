@@ -62,12 +62,18 @@ export default function RightSidebar({
       .filter((block) => block.type === "objective")
       .reduce((objectiveSum, block) => objectiveSum + getInstructionWeight(block), 0);
 
+    const partWeight = getPartWeight(part);
+    const totalBlockWeight = instructionWeight + objectiveWeight;
+    const isOverweight = totalBlockWeight > partWeight;
+
     return {
       id: part.id,
       title: part.title || `Part ${index + 1}`,
       instructionWeight,
       objectiveWeight,
-      partWeight: getPartWeight(part),
+      partWeight,
+      totalBlockWeight,
+      isOverweight,
     };
   });
 
@@ -132,7 +138,7 @@ export default function RightSidebar({
               <span className="font-semibold text-gray-900">{lessonParts.length}</span>
             </div>
             {partSummaries.map((summary, idx) => (
-              <div key={summary.id} className="border border-blue-100 rounded-md px-3 py-2 bg-white/90">
+              <div key={summary.id} className={`border rounded-md px-3 py-2 bg-white/90 ${summary.isOverweight ? 'border-red-300 bg-red-50/50' : 'border-blue-100'}`}>
                 <p className="text-xs font-semibold text-gray-500 mb-1">
                   Part {idx + 1}{summary.title ? ` (${summary.title})` : ""}
                 </p>
@@ -145,16 +151,23 @@ export default function RightSidebar({
                   </div>
                   <div className="flex justify-between">
                     <span>Instruction Weightage:</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className={`font-semibold ${summary.isOverweight ? 'text-red-600' : 'text-gray-900'}`}>
                       {formatPercent(summary.instructionWeight)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Objective Weightage:</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className={`font-semibold ${summary.isOverweight ? 'text-red-600' : 'text-gray-900'}`}>
                       {formatPercent(summary.objectiveWeight)}
                     </span>
                   </div>
+                  {summary.isOverweight && (
+                    <div className="pt-1 border-t border-red-200 mt-2">
+                      <p className="text-xs text-red-600 font-medium">
+                        ⚠️ Block weightages ({formatPercent(summary.totalBlockWeight)}) exceed part weightage ({formatPercent(summary.partWeight)})
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

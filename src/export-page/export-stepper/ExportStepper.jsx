@@ -17,7 +17,7 @@ import { EXPORT_STAGES } from '../data/constants';
 import { RequestStatus } from '../../data/constants';
 import messages from './messages';
 
-const ExportStepper = ({ intl, courseId }) => {
+const ExportStepper = ({ intl, courseId, isExportingMetadata, exportProgress }) => {
   const currentStage = useSelector(getCurrentStage);
   const downloadPath = useSelector(getDownloadPath);
   const successDate = useSelector(getSuccessDate);
@@ -62,7 +62,7 @@ const ExportStepper = ({ intl, courseId }) => {
 
   const steps = [
     {
-      title: intl.formatMessage(messages.stepperPreparingTitle),
+      title: isExportingMetadata ? `Exporting rubric data (${exportProgress.current}/${exportProgress.total})` : intl.formatMessage(messages.stepperPreparingTitle),
       description: intl.formatMessage(messages.stepperPreparingDescription),
       key: EXPORT_STAGES.PREPARING,
     }, {
@@ -80,6 +80,7 @@ const ExportStepper = ({ intl, courseId }) => {
     },
   ];
 
+
   return (
     <div>
       <h3 className="mt-4">{intl.formatMessage(messages.stepperHeaderTitle)}</h3>
@@ -90,7 +91,11 @@ const ExportStepper = ({ intl, courseId }) => {
         errorMessage={errorMessage}
         hasError={!!errorMessage}
       />
-      {downloadPath && currentStage === EXPORT_STAGES.SUCCESS && <Button className="ml-5.5 mt-n2.5" href={downloadPath} download>{intl.formatMessage(messages.downloadCourseButtonTitle)}</Button>}
+      {downloadPath && currentStage === EXPORT_STAGES.SUCCESS && (
+        <Button className="ml-5.5 mt-n2.5" href={downloadPath} download>
+          {intl.formatMessage(messages.downloadCourseButtonTitle)}
+        </Button>
+      )}
     </div>
   );
 };
@@ -98,6 +103,16 @@ const ExportStepper = ({ intl, courseId }) => {
 ExportStepper.propTypes = {
   intl: intlShape.isRequired,
   courseId: PropTypes.string.isRequired,
+  isExportingMetadata: PropTypes.bool,
+  exportProgress: PropTypes.shape({
+    current: PropTypes.number,
+    total: PropTypes.number,
+  }),
+};
+
+ExportStepper.defaultProps = {
+  isExportingMetadata: false,
+  exportProgress: { current: 0, total: 0 },
 };
 
 export default injectIntl(ExportStepper);
