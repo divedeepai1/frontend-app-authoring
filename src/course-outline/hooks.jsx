@@ -288,12 +288,14 @@ const useCourseOutline = ({ courseId }) => {
     prevSectionId,
     subsectionListIds,
     restoreSectionList,
+    postSuccessCallback,
   ) => {
     dispatch(setSubsectionOrderListQuery(
       sectionId,
       prevSectionId,
       subsectionListIds,
       restoreSectionList,
+      postSuccessCallback,
     ));
   };
 

@@ -410,8 +410,6 @@ export function configureCourseUnitQuery(
 }
 
 export function editCourseItemQuery(itemId, sectionId, displayName,namePrefix) {
-  
-  
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
     dispatch(showProcessingNotification(NOTIFICATION_MESSAGES.saving));
@@ -1104,7 +1102,8 @@ export function setSubsectionOrderListQuery(
   sectionId,
   prevSectionId,
   subsectionListIds,
-  restoreCallback
+  restoreCallback,
+  postSuccessCallback
 ) {
   return async (dispatch) => {
     dispatch(
@@ -1113,12 +1112,15 @@ export function setSubsectionOrderListQuery(
         subsectionListIds,
         setCourseItemOrderList,
         restoreCallback,
-        () => {
+        async () => {
           const sectionIds = [sectionId];
           if (prevSectionId && prevSectionId !== sectionId) {
             sectionIds.push(prevSectionId);
           }
-          dispatch(fetchCourseSectionQuery(sectionIds));
+          await dispatch(fetchCourseSectionQuery(sectionIds));
+          if (typeof postSuccessCallback === 'function') {
+            postSuccessCallback();
+          }
         }
       )
     );

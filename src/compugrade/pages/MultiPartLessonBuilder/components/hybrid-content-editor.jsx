@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor";
-import { FileDiffIcon, Image as ImageIcon, Video, Label } from "lucide-react";
+import { FileDiffIcon, Image as ImageIcon, Video, Tag } from "lucide-react";
 import { base_url } from "../../../../compugrade-constants";
 import { ObjectiveEditor } from "./objective-editor";
 import EditableBlockName from "./ui/input-name";
@@ -21,6 +21,7 @@ import { get } from "lodash";
 import downloadFile from "../utils/downloadFile";
 import TimestampModal from "./ui/timestamp";
 import DocumentPreviewDialog from "./ui/DocumentPreviewDialog";
+import ProgrammaticErrorCodeModal from "./ProgrammaticErrorCodeModal";
 
 export function HybridContentEditor({
   video,
@@ -47,6 +48,7 @@ export function HybridContentEditor({
     open: false,
     timestamp: null,
   });
+  const [programmaticModalOpen, setProgrammaticModalOpen] = useState(false);
 
   // Memoize filtered error codes for dropdown to prevent lag
   const filteredErrorCodes = useMemo(() => {
@@ -384,6 +386,7 @@ export function HybridContentEditor({
     setAvailableErrorCodes([]);
     setErrorCodesInput(block.content?.errorCodesText || "");
     setErrorCodesModal({ open: true, blockId: block.id });
+    setProgrammaticModalOpen(false);
   };
 
   const closeErrorCodesModal = () => {
@@ -391,6 +394,15 @@ export function HybridContentEditor({
     setErrorCodesInput("");
     setAvailableErrorCodes([]);
     setSelectedErrorCodes([]);
+    setProgrammaticModalOpen(false);
+  };
+
+  const openProgrammaticModal = () => {
+    setProgrammaticModalOpen(true);
+  };
+
+  const closeProgrammaticModal = () => {
+    setProgrammaticModalOpen(false);
   };
 
   const fileToBase64 = async (input) => {
@@ -495,10 +507,22 @@ export function HybridContentEditor({
     }
   };
 
-  const addSelectedCode = (code) => {
+  const addSelectedCode = (code, options = {}) => {
     if (!code) return;
-    if (!availableErrorCodes.includes(code)) return;
+    const { allowCustom = false } = options;
+    const existsInAvailable = availableErrorCodes.includes(code);
+    if (!allowCustom && !existsInAvailable) return;
+    if (allowCustom && !existsInAvailable) {
+      setAvailableErrorCodes((prev) => [...prev, code]);
+    }
     setSelectedErrorCodes((prev) => [...prev, code]);
+  };
+
+  const handleProgrammaticPatternSave = (pattern) => {
+    if (!pattern) return;
+    addSelectedCode(pattern, { allowCustom: true });
+    setErrorDropdownOpen(false);
+    closeProgrammaticModal();
   };
 
   const removeSelectedCode = (code) => {
@@ -1494,7 +1518,7 @@ export function HybridContentEditor({
                   placeholder="Paste or type text to generate error codes from..."
                 />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => handleGenerateCodes(true)}
@@ -1508,6 +1532,12 @@ export function HybridContentEditor({
                   disabled={errorGenLoadingFor !== null}
                 >
                   <Wand2 className="w-4 h-4" /> {errorGenLoadingFor === "notext" ? "Generating..." : "Generate error codes without text"}
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-slate-600  rounded-md border border-transparent hover:bg-slate-700 transition-colors focus:outline-none"
+                  onClick={openProgrammaticModal}
+                >
+                  <Tag className="w-4 h-4" /> Add Programmatic Error Code
                 </button>
               </div>
               {errorGenMessage && (
@@ -1620,6 +1650,11 @@ export function HybridContentEditor({
           </div>
         </div>
       )}
+      <ProgrammaticErrorCodeModal
+        open={programmaticModalOpen && errorCodesModal.open}
+        onClose={closeProgrammaticModal}
+        onSave={handleProgrammaticPatternSave}
+      />
 
       {/* Preview Modal */}
       {previewState.open && (
