@@ -1,6 +1,7 @@
-import { FileText, Video, Eye, X, Download, Settings } from "lucide-react";
+import { FileText, Video, Eye, X, Download, Settings, Pencil } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { base_url } from "../../../../compugrade-constants";
+import RichTextEditorModal from "./RichTextEditorModal";
 
 export default function LessonConfigModal({
   open,
@@ -14,6 +15,49 @@ export default function LessonConfigModal({
   videoObjectUrlRef,
 }) {
   if (!open) return null;
+
+  const [editorState, setEditorState] = useState({ open: false, target: null });
+
+  const cleanHtml = (html = "") =>
+    (html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+  const handleEditorOpen = (target) => setEditorState({ open: true, target });
+  const handleEditorClose = () => setEditorState({ open: false, target: null });
+  const handleEditorSave = (value) => {
+    if (!editorState.target) {
+      handleEditorClose();
+      return;
+    }
+    const key = editorState.target === "after" ? "text_after_video" : "text_before_video";
+    setLessonConfig((c) => ({ ...c, [key]: value }));
+    handleEditorClose();
+  };
+
+  const editorInitialValue =
+    editorState.target === "after"
+      ? lessonConfig?.text_after_video || ""
+      : lessonConfig?.text_before_video || "";
+
+  const VideoTextButton = ({ target }) => {
+    const isAfter = target === "after";
+    const label = isAfter ? "Edit text after video" : "Edit text before video";
+    const tooltip = cleanHtml(
+      isAfter ? lessonConfig?.text_after_video : lessonConfig?.text_before_video
+    );
+    return (
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => handleEditorOpen(target)}
+          title={tooltip || (isAfter ? "Add after-video text" : "Add before-video text")}
+          className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 focus:outline-none focus-visible:ring-0 border-transparent focus-visible:outline-none"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          {label}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 pt-[3%] flex items-center justify-center">
@@ -89,7 +133,8 @@ export default function LessonConfigModal({
             </div>
 
             {lessonConfig.videoEnabled && (
-              <div className="space-y-2 pt-3 border-t border-gray-100">
+              <div className="space-y-3 pt-3 border-t border-gray-100">
+                <VideoTextButton target="before" />
                 {lessonConfig.videos?.[0] ? (
                   <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
                     <div className="flex items-center gap-3">
@@ -159,11 +204,21 @@ export default function LessonConfigModal({
                     </label>
                   </div>
                 )}
+                <VideoTextButton target="after" />
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <RichTextEditorModal
+        open={editorState.open}
+        title={editorState.target === "after" ? "Text After Video" : "Text Before Video"}
+        initialValue={editorInitialValue}
+        onSave={handleEditorSave}
+        onClose={handleEditorClose}
+        saveLabel="Save Text"
+      />
     </div>
   );
 }

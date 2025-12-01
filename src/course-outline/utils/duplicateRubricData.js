@@ -43,6 +43,8 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
       rubric_id: newRubricId,
       skills: originalRubric.skills || [],
       app_name: originalRubric.app_name || getAppName(),
+      text_before_video: originalRubric.text_before_video || "",
+      text_after_video: originalRubric.text_after_video || "",
       source_document: originalRubric.source_document || null,
       answer_key: originalRubric.answer_key || null,
       video: originalRubric.video || null,

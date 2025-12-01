@@ -60,6 +60,8 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                         app_name: originalRubric.app_name || getAppName(),
                         source_document: originalRubric.source_document || null,
                         answer_key: originalRubric.answer_key || null,
+                        text_before_video: originalRubric.text_before_video || "",
+                        text_after_video: originalRubric.text_after_video || "",
                         video: originalRubric.video || null,
                         lessons: (originalRubric.lessons || []).map((lesson) => ({
                           id: lesson.id,
