@@ -88,7 +88,7 @@ export default function ProgrammaticErrorCodeModal({
       setPatternError("Add at least one segment to build a pattern.");
       return;
     }
-    const patternLabel = `Pattern: ${serializeSegments()}`;
+    const patternLabel = serializeSegments();
     onSave(patternLabel);
     clearBuilder();
   };
@@ -131,7 +131,7 @@ export default function ProgrammaticErrorCodeModal({
                       key={`seg-${index}`}
                       className="px-3 py-1 text-xs rounded-full bg-slate-200 text-slate-800"
                     >
-                      Text: "{seg.value}"
+                      "{seg.value}"
                     </span>
                   );
                 }
