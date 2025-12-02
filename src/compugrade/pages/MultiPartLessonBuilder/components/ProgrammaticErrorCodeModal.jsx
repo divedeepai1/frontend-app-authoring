@@ -80,7 +80,7 @@ export default function ProgrammaticErrorCodeModal({
         return "";
       })
       .filter(Boolean)
-      .join(" + ");
+      .join(" ");
   };
 
   const handleSave = () => {
