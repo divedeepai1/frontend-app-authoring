@@ -69,10 +69,10 @@ export default function ProgrammaticErrorCodeModal({
     return segments
       .map((seg) => {
         if (seg.type === "text") {
-          return `"${seg.value}"`;
+          return seg.value;
         }
         if (seg.type === "any") {
-          return "[ANY]";
+          return "[any]";
         }
         if (seg.type === "number_range") {
           return `[NOT ${seg.min} <= x <= ${seg.max}]`;
@@ -131,7 +131,7 @@ export default function ProgrammaticErrorCodeModal({
                       key={`seg-${index}`}
                       className="px-3 py-1 text-xs rounded-full bg-slate-200 text-slate-800"
                     >
-                      "{seg.value}"
+                      {seg.value}
                     </span>
                   );
                 }
@@ -141,7 +141,7 @@ export default function ProgrammaticErrorCodeModal({
                       key={`seg-${index}`}
                       className="px-3 py-1 text-xs rounded-full bg-amber-100 text-amber-800"
                     >
-                      [ANY]
+                      [any]
                     </span>
                   );
                 }
