@@ -75,7 +75,7 @@ export default function ProgrammaticErrorCodeModal({
           return "[any]";
         }
         if (seg.type === "number_range") {
-          return `[NOT ${seg.min} <= x <= ${seg.max}]`;
+          return `[${seg.min}<=x>=${seg.max}]`;
         }
         return "";
       })
@@ -150,7 +150,7 @@ export default function ProgrammaticErrorCodeModal({
                     key={`seg-${index}`}
                     className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-800"
                   >
-                    {`[NOT ${seg.min} <= x <= ${seg.max}]`}
+                    {`[${seg.min}<=x>=${seg.max}]`}
                   </span>
                 );
               })
