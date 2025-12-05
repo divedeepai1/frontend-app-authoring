@@ -32,8 +32,8 @@ export default function RichTextEditorModal({
       <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b px-5 py-3">
           <div className="space-y-0">
-            <p className="text-sm font-semibold text-gray-900 p-0">{title}</p>
-            <p className="text-xs  text-gray-500 p-0">Use rich text to describe context around the video.</p>
+            <p className="text-sm font-semibold text-gray-900 p-0 m-0">{title}</p>
+            <p className="text-xs text-gray-500 p-0 m-0 mt-1">Use rich text to describe context around the video.</p>
           </div>
           <div
             type="button"
