@@ -15,6 +15,11 @@ import { ArrowUp, ArrowDown } from "lucide-react";
 import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor";
 import { FileDiffIcon, Image as ImageIcon, Video, Tag } from "lucide-react";
 import { base_url } from "../../../../compugrade-constants";
+import {
+  comparePartialKey,
+  filterErrorCodes,
+  getInstructionStatus,
+} from "../utils/partialKeyComparison";
 import { ObjectiveEditor } from "./objective-editor";
 import EditableBlockName from "./ui/input-name";
 import { get } from "lodash";
@@ -49,6 +54,15 @@ export function HybridContentEditor({
     timestamp: null,
   });
   const [programmaticModalOpen, setProgrammaticModalOpen] = useState(false);
+  const [partialKeyFile, setPartialKeyFile] = useState(null);
+  const [matchedCodesCollapsed, setMatchedCodesCollapsed] = useState(true);
+  const [associatedCodesCollapsed, setAssociatedCodesCollapsed] = useState(true);
+  const [comparisonCodesCollapsed, setComparisonCodesCollapsed] = useState(true);
+  const [instructionStatus, setInstructionStatus] = useState("No comparison run yet");
+  const [filteredCodes, setFilteredCodes] = useState(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState("");
+  const [partialKeyCheckerCollapsed, setPartialKeyCheckerCollapsed] = useState(true);
 
   // Memoize filtered error codes for dropdown to prevent lag
   const filteredErrorCodes = useMemo(() => {
@@ -172,6 +186,24 @@ export function HybridContentEditor({
     setSourceDocument(content?.sourceDocument || null);
     setAnswerKey(content?.answerKey || null);
   }, [content, selectedPart]);
+
+  // Auto-expand dropdowns when they receive data
+  useEffect(() => {
+    if (filteredCodes) {
+      // Auto-expand matched codes if it has data
+      if (filteredCodes.matchedCodes && filteredCodes.matchedCodes.length > 0) {
+        setMatchedCodesCollapsed(false);
+      }
+      // Auto-expand associated codes not seen if it has data
+      if (filteredCodes.associatedCodesNotSeen && filteredCodes.associatedCodesNotSeen.length > 0) {
+        setAssociatedCodesCollapsed(false);
+      }
+      // Auto-expand comparison codes not associated if it has data
+      if (filteredCodes.comparisonCodesNotAssociated && filteredCodes.comparisonCodesNotAssociated.length > 0) {
+        setComparisonCodesCollapsed(false);
+      }
+    }
+  }, [filteredCodes]);
 
   const addTextBlock = () => {
     const newBlock = {
@@ -395,6 +427,14 @@ export function HybridContentEditor({
     setAvailableErrorCodes([]);
     setSelectedErrorCodes([]);
     setProgrammaticModalOpen(false);
+    setPartialKeyFile(null);
+    setMatchedCodesCollapsed(true);
+    setAssociatedCodesCollapsed(true);
+    setComparisonCodesCollapsed(true);
+    setInstructionStatus("No comparison run yet");
+    setFilteredCodes(null);
+    setComparisonError("");
+    setPartialKeyCheckerCollapsed(false);
   };
 
   const openProgrammaticModal = () => {
@@ -533,6 +573,92 @@ export function HybridContentEditor({
       newCodes.splice(index, 1);
       return newCodes;
     });
+  };
+
+  const handleComparePartialKey = async () => {
+    try {
+      setComparisonError("");
+      setComparisonLoading(true);
+      
+      if (!partialKeyFile) {
+        setComparisonError("Please upload a partial key first.");
+        setComparisonLoading(false);
+        return;
+      }
+
+      const ans = selectedPart?.answerKey;
+      if (!ans) {
+        setComparisonError("Please attach Answer Key in Part Configuration before comparing.");
+        setComparisonLoading(false);
+        return;
+      }
+
+      const workingSkill = (lessonSkills || []).find((skill) => {
+        const normalizedStatus = (skill?.status || "").trim().toLowerCase();
+        return normalizedStatus === "working" || normalizedStatus === "working a2";
+      });
+      const skillStatus = workingSkill ? (workingSkill.status || "").trim() : "";
+
+      // Get original error codes list (selectedErrorCodes)
+      const originalCodes = [...selectedErrorCodes];
+
+      // Call comparison API with partial key as source document (no filter text)
+      const comparisonCodes = await comparePartialKey(
+        partialKeyFile,
+        ans,
+        "", // Don't send filter text for comparison
+        skillStatus
+      );
+
+      // Filter the codes into three categories
+      const filtered = filterErrorCodes(originalCodes, comparisonCodes);
+      setFilteredCodes(filtered);
+
+      // Determine instruction status
+      const status = getInstructionStatus(filtered);
+      setInstructionStatus(status);
+    } catch (e) {
+      setComparisonError(e?.message || "Failed to compare partial key.");
+      setFilteredCodes(null);
+      setInstructionStatus("No comparison run yet");
+    } finally {
+      setComparisonLoading(false);
+    }
+  };
+
+  // Handle selecting from matched codes dropdown - remove from main list
+  const handleSelectMatchedCode = (code) => {
+    removeSelectedCode(code);
+    // Update filtered codes to remove this code from matched list
+    if (filteredCodes) {
+      setFilteredCodes({
+        ...filteredCodes,
+        matchedCodes: filteredCodes.matchedCodes.filter((c) => c !== code),
+      });
+    }
+  };
+
+  // Handle selecting from comparison codes not associated dropdown - add to main list
+  const handleSelectComparisonCode = (code) => {
+    addSelectedCode(code, { allowCustom: true });
+    // Update filtered codes to remove this code from comparison list
+    if (filteredCodes) {
+      setFilteredCodes({
+        ...filteredCodes,
+        comparisonCodesNotAssociated: filteredCodes.comparisonCodesNotAssociated.filter(
+          (c) => c !== code
+        ),
+      });
+      // Recalculate status after adding code
+      const updatedFiltered = {
+        ...filteredCodes,
+        comparisonCodesNotAssociated: filteredCodes.comparisonCodesNotAssociated.filter(
+          (c) => c !== code
+        ),
+      };
+      const status = getInstructionStatus(updatedFiltered);
+      setInstructionStatus(status);
+    }
   };
 
   const resetErrorCodes = () => {
@@ -1537,7 +1663,7 @@ export function HybridContentEditor({
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-slate-600  rounded-md border border-transparent hover:bg-slate-700 transition-colors focus:outline-none"
                   onClick={openProgrammaticModal}
                 >
-                  <Tag className="w-4 h-4" /> Add Programmatic Error Code
+                  <Tag className="w-4 h-4" /> Add Custom Error Code
                 </button>
               </div>
               {errorGenMessage && (
@@ -1631,6 +1757,222 @@ export function HybridContentEditor({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Partial Key Upload and Compare Section */}
+              <div className="pt-2 px-2.5 py-3 bg-transparent border border-gray-200 rounded-md">
+                {/* Partial Key Checker Header */}
+                <div
+                  onClick={() => setPartialKeyCheckerCollapsed(!partialKeyCheckerCollapsed)}
+                  className="w-full flex items-start justify-between gap-4 p-2 rounded transition-colors"
+                >
+                  <div className="flex-1 text-left">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1.5">Partial key checker</h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      This tool compares a partial key to the final answer key using the current associated error codes for this instruction.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Instruction Status Tag - will be dynamic from backend */}
+                   
+                    {partialKeyCheckerCollapsed ? (
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+
+                {!partialKeyCheckerCollapsed && (
+                  <div className="space-y-4 mt-4">
+                    {/* Partial Key Input and Compare Button - Side by Side */}
+                    <div className="flex justify-end">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                        instructionStatus === "right"
+                          ? "bg-green-100 text-green-700"
+                          : instructionStatus === "wrong"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {instructionStatus === "right"
+                        ? "Instruction Status : Right"
+                        : instructionStatus === "wrong"
+                        ? "Instruction Status : Wrong"
+                        : "No comparison run yet"}
+                    </span>
+                    </div>
+                    <div className="flex items-stretch gap-2">
+                  <div className="flex-1 min-w-0">
+                    {partialKeyFile ? (
+                      <div className="flex items-center gap-2 px-3 py-2 h-[38px] border border-gray-300 rounded-md bg-white">
+                        <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 truncate flex-1 min-w-0" title={partialKeyFile.name || "Uploaded"}>
+                          {partialKeyFile.name || "Uploaded"}
+                        </span>
+                        <div
+                          onClick={() => setPartialKeyFile(null)}
+                          className="p-0.5 rounded transition-colors flex-shrink-0"
+                          type="button"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative h-full">
+                        <input
+                          type="file"
+                          accept={getFileConfig().accept}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setPartialKeyFile(file);
+                            e.target.value = "";
+                          }}
+                          className="hidden"
+                          id="partial-key-upload"
+                        />
+                        <label
+                          htmlFor="partial-key-upload"
+                          className="flex items-center gap-2 px-3 py-2 h-[38px] border border-gray-300 rounded-md bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="text-sm text-gray-600">Upload partial key</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleComparePartialKey}
+                    disabled={comparisonLoading || !partialKeyFile}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 h-[38px] text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors whitespace-nowrap flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {comparisonLoading ? "Comparing..." : "Compare with Answer Key"}
+                  </button>
+                </div>
+
+                {comparisonError && (
+                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                    {comparisonError}
+                  </div>
+                )}
+
+                {/* Three Collapsible Sections */}
+                <div className="space-y-2.5 pt-1">
+                  {/* 1. Matched Codes */}
+                  <div className="rounded-md overflow-hidden border border-gray-200">
+                    <div
+                      onClick={() => setMatchedCodesCollapsed(!matchedCodesCollapsed)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="text-sm font-medium text-gray-700">1. Matched codes</span>
+                      {matchedCodesCollapsed ? (
+                        <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      )}
+                    </div>
+                    {!matchedCodesCollapsed && (
+                      <div className="px-3 py-2.5 border-t border-gray-20">
+                        <p className="text-xs text-gray-600 mb-2">Codes that appear in both comparison result and associated list</p>
+                        {filteredCodes && filteredCodes.matchedCodes.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {filteredCodes.matchedCodes.map((code, idx) => (
+                              <div
+                                key={`matched-${idx}-${code}`}
+                                onClick={() => handleSelectMatchedCode(code)}
+                                className="flex items-center justify-between px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-700 cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
+                              >
+                                <span className="flex-1">{code}</span>
+                                <X className="w-3.5 h-3.5 text-gray-400 hover:text-red-600 flex-shrink-0 ml-2" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">
+                            {filteredCodes ? "No matched codes." : "Run a comparison to see matches."}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Associated Codes Not Seen */}
+                  <div className="rounded-md overflow-hidden border border-gray-200">
+                    <div
+                      onClick={() => setAssociatedCodesCollapsed(!associatedCodesCollapsed)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="text-sm font-medium text-gray-700">2. Associated codes not seen</span>
+                      {associatedCodesCollapsed ? (
+                        <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      )}
+                    </div>
+                    {!associatedCodesCollapsed && (
+                      <div className="px-3 py-2.5 border-t">
+                        <p className="text-xs text-gray-600 mb-2">Codes associated with instruction that did not appear for this partial key</p>
+                        {filteredCodes && filteredCodes.associatedCodesNotSeen.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {filteredCodes.associatedCodesNotSeen.map((code, idx) => (
+                              <div
+                                key={`associated-${idx}-${code}`}
+                                className="px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-700"
+                              >
+                                {code}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">
+                            {filteredCodes ? "No unused associated codes." : "Run a comparison to see unused associated codes."}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Comparison Codes Not Associated */}
+                  <div className="rounded-md overflow-hidden border border-gray-200">
+                    <div
+                      onClick={() => setComparisonCodesCollapsed(!comparisonCodesCollapsed)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="text-sm font-medium text-gray-700">3. Comparison codes not associated</span>
+                      {comparisonCodesCollapsed ? (
+                        <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      )}
+                    </div>
+                    {!comparisonCodesCollapsed && (
+                      <div className="px-3 py-2.5 border-t border-gray-200">
+                        <p className="text-xs text-gray-600 mb-2">Codes from comparison that are not yet associated with this instruction</p>
+                        {filteredCodes && filteredCodes.comparisonCodesNotAssociated.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {filteredCodes.comparisonCodesNotAssociated.map((code, idx) => (
+                              <div
+                                key={`comparison-${idx}-${code}`}
+                                onClick={() => handleSelectComparisonCode(code)}
+                                className="flex items-center justify-between px-2.5 py-1.5 bg-white border border-gray-200 rounded text-sm text-gray-700 cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors"
+                              >
+                                <span className="flex-1">{code}</span>
+                                <Plus className="w-3.5 h-3.5 text-gray-400 hover:text-green-600 flex-shrink-0 ml-2" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">
+                            {filteredCodes ? "No extra comparison codes." : "Run a comparison to see extra comparison codes."}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="px-4 py-4 border-t flex justify-center gap-3">

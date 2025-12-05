@@ -34,7 +34,7 @@ export default function ProgrammaticErrorCodeModal({
       setPatternError("Enter a string before adding a string segment.");
       return;
     }
-    setSegments((prev) => [...prev, { type: "text", value: textSegment.trim() }]);
+    setSegments((prev) => [...prev, { type: "text", value: textSegment }]);
     setTextSegment("");
     setPatternError("");
   };
@@ -80,7 +80,7 @@ export default function ProgrammaticErrorCodeModal({
         return "";
       })
       .filter(Boolean)
-      .join(" ");
+      .join("");
   };
 
   const handleSave = () => {
@@ -101,7 +101,7 @@ export default function ProgrammaticErrorCodeModal({
       <div className="relative w-full max-w-2xl mx-auto bg-white rounded-lg shadow-2xl p-5 space-y-2">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Add Programmatic Error Code</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Add Custom Error Code</h3>
             <p className="text-sm text-slate-500">
               Build a structured pattern to append to the selected error code.
             </p>
