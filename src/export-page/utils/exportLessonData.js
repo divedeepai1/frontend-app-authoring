@@ -62,6 +62,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                         answer_key: originalRubric.answer_key || null,
                         text_before_video: originalRubric.text_before_video || "",
                         text_after_video: originalRubric.text_after_video || "",
+                        lesson_overview: originalRubric.lesson_overview || "",
                         video: originalRubric.video || null,
                         lessons: (originalRubric.lessons || []).map((lesson) => ({
                           id: lesson.id,

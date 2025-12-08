@@ -51,6 +51,7 @@ export default function LessonBuilder() {
     lessonParts: [],
     text_before_video: "",
     text_after_video: "",
+    lesson_overview: "",
   });
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
@@ -170,6 +171,7 @@ export default function LessonBuilder() {
       videoEnabled: !!backendData.video,
       text_before_video: backendData.text_before_video || "",
       text_after_video: backendData.text_after_video || "",
+      lesson_overview: backendData.lesson_overview || "",
       lessonParts: lessons || [],
     };
   }
@@ -606,6 +608,7 @@ export default function LessonBuilder() {
       video: videoBase64,
       text_before_video: currentLessonConfig.text_before_video || "",
       text_after_video: currentLessonConfig.text_after_video || "",
+      lesson_overview: currentLessonConfig.lesson_overview || "",
       lessons: lesson_parts,
     };
   }

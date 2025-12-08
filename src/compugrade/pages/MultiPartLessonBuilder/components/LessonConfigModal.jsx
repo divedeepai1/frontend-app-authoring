@@ -28,7 +28,14 @@ export default function LessonConfigModal({
       handleEditorClose();
       return;
     }
-    const key = editorState.target === "after" ? "text_after_video" : "text_before_video";
+    let key;
+    if (editorState.target === "after") {
+      key = "text_after_video";
+    } else if (editorState.target === "overview") {
+      key = "lesson_overview";
+    } else {
+      key = "text_before_video";
+    }
     setLessonConfig((c) => ({ ...c, [key]: value }));
     handleEditorClose();
   };
@@ -36,6 +43,8 @@ export default function LessonConfigModal({
   const editorInitialValue =
     editorState.target === "after"
       ? lessonConfig?.text_after_video || ""
+      : editorState.target === "overview"
+      ? lessonConfig?.lesson_overview || ""
       : lessonConfig?.text_before_video || "";
 
   const VideoTextButton = ({ target }) => {
@@ -83,6 +92,19 @@ export default function LessonConfigModal({
             Lesson Documents (commented out for now, kept for potential future use)
             <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm"> ... </div>
           */}
+
+          {/* Lesson Overview button - outside skills div */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => handleEditorOpen("overview")}
+              title={cleanHtml(lessonConfig?.lesson_overview) || "Add lesson overview"}
+              className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 focus:outline-none focus-visible:ring-0 border-transparent focus-visible:outline-none"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Lesson Overview
+            </button>
+          </div>
 
           {/* Skills multi-select input */}
           <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
@@ -213,7 +235,13 @@ export default function LessonConfigModal({
 
       <RichTextEditorModal
         open={editorState.open}
-        title={editorState.target === "after" ? "Text After Video" : "Text Before Video"}
+        title={
+          editorState.target === "after"
+            ? "Text After Video"
+            : editorState.target === "overview"
+            ? "Lesson Overview"
+            : "Text Before Video"
+        }
         initialValue={editorInitialValue}
         onSave={handleEditorSave}
         onClose={handleEditorClose}
