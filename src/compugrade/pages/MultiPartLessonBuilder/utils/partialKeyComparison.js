@@ -120,16 +120,12 @@ export const filterErrorCodes = (originalCodes, comparisonCodes) => {
 export const getInstructionStatus = (filteredCodes) => {
   if (!filteredCodes) return "No comparison run yet";
   
-  const { associatedCodesNotSeen, comparisonCodesNotAssociated } = filteredCodes;
+  const { matchedCodes } = filteredCodes;
   
-  // Instruction is right if both lists are empty
-  if (
-    (!associatedCodesNotSeen || associatedCodesNotSeen.length === 0) &&
-    (!comparisonCodesNotAssociated || comparisonCodesNotAssociated.length === 0)
-  ) {
-    return "right";
+  if (matchedCodes && matchedCodes.length > 0) {
+    return "wrong";
   }
   
-  return "wrong";
+  return "right";
 };
 

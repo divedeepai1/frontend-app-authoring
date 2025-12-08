@@ -626,39 +626,67 @@ export function HybridContentEditor({
     }
   };
 
-  // Handle selecting from matched codes dropdown - remove from main list
   const handleSelectMatchedCode = (code) => {
     removeSelectedCode(code);
-    // Update filtered codes to remove this code from matched list
     if (filteredCodes) {
-      setFilteredCodes({
+      const updatedFiltered = {
         ...filteredCodes,
         matchedCodes: filteredCodes.matchedCodes.filter((c) => c !== code),
-      });
+      };
+      setFilteredCodes(updatedFiltered);
+      const status = getInstructionStatus(updatedFiltered);
+      setInstructionStatus(status);
     }
   };
 
   // Handle selecting from comparison codes not associated dropdown - add to main list
   const handleSelectComparisonCode = (code) => {
     addSelectedCode(code, { allowCustom: true });
-    // Update filtered codes to remove this code from comparison list
     if (filteredCodes) {
-      setFilteredCodes({
-        ...filteredCodes,
-        comparisonCodesNotAssociated: filteredCodes.comparisonCodesNotAssociated.filter(
-          (c) => c !== code
-        ),
-      });
-      // Recalculate status after adding code
       const updatedFiltered = {
         ...filteredCodes,
         comparisonCodesNotAssociated: filteredCodes.comparisonCodesNotAssociated.filter(
           (c) => c !== code
         ),
       };
+      setFilteredCodes(updatedFiltered);
       const status = getInstructionStatus(updatedFiltered);
       setInstructionStatus(status);
     }
+  };
+
+  const handleRemoveAllMatchedCodes = () => {
+    if (!filteredCodes || !filteredCodes.matchedCodes) return;
+    filteredCodes.matchedCodes.forEach((code) => {
+      removeSelectedCode(code);
+    });
+    setFilteredCodes({
+      ...filteredCodes,
+      matchedCodes: [],
+    });
+    const updatedFiltered = {
+      ...filteredCodes,
+      matchedCodes: [],
+    };
+    const status = getInstructionStatus(updatedFiltered);
+    setInstructionStatus(status);
+  };
+
+  const handleAddAllComparisonCodes = () => {
+    if (!filteredCodes || !filteredCodes.comparisonCodesNotAssociated) return;
+    filteredCodes.comparisonCodesNotAssociated.forEach((code) => {
+      addSelectedCode(code, { allowCustom: true });
+    });
+    setFilteredCodes({
+      ...filteredCodes,
+      comparisonCodesNotAssociated: [],
+    });
+    const updatedFiltered = {
+      ...filteredCodes,
+      comparisonCodesNotAssociated: [],
+    };
+    const status = getInstructionStatus(updatedFiltered);
+    setInstructionStatus(status);
   };
 
   const resetErrorCodes = () => {
@@ -1873,8 +1901,18 @@ export function HybridContentEditor({
                       )}
                     </div>
                     {!matchedCodesCollapsed && (
-                      <div className="px-3 py-2.5 border-t border-gray-20">
-                        <p className="text-xs text-gray-600 mb-2">Codes that appear in both comparison result and associated list</p>
+                      <div className="px-3 py-2.5 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-gray-600">Codes that appear in both comparison result and associated list</p>
+                          {filteredCodes && filteredCodes.matchedCodes.length > 0 && (
+                            <button
+                              onClick={handleRemoveAllMatchedCodes}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                            >
+                              Remove All
+                            </button>
+                          )}
+                        </div>
                         {filteredCodes && filteredCodes.matchedCodes.length > 0 ? (
                           <div className="space-y-1.5">
                             {filteredCodes.matchedCodes.map((code, idx) => (
@@ -1948,7 +1986,17 @@ export function HybridContentEditor({
                     </div>
                     {!comparisonCodesCollapsed && (
                       <div className="px-3 py-2.5 border-t border-gray-200">
-                        <p className="text-xs text-gray-600 mb-2">Codes from comparison that are not yet associated with this instruction</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-gray-600">Codes from comparison that are not yet associated with this instruction</p>
+                          {filteredCodes && filteredCodes.comparisonCodesNotAssociated.length > 0 && (
+                            <button
+                              onClick={handleAddAllComparisonCodes}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                            >
+                              Add All
+                            </button>
+                          )}
+                        </div>
                         {filteredCodes && filteredCodes.comparisonCodesNotAssociated.length > 0 ? (
                           <div className="space-y-1.5">
                             {filteredCodes.comparisonCodesNotAssociated.map((code, idx) => (

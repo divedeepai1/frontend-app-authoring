@@ -10,6 +10,7 @@ export default function ProgrammaticErrorCodeModal({
   const [textSegment, setTextSegment] = useState("");
   const [minValue, setMinValue] = useState("");
   const [maxValue, setMaxValue] = useState("");
+  const [rangeInBound, setRangeInBound] = useState(true);
   const [patternError, setPatternError] = useState("");
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function ProgrammaticErrorCodeModal({
     setTextSegment("");
     setMinValue("");
     setMaxValue("");
+    setRangeInBound(true);
     setPatternError("");
   }, [open]);
 
@@ -26,6 +28,7 @@ export default function ProgrammaticErrorCodeModal({
     setTextSegment("");
     setMinValue("");
     setMaxValue("");
+    setRangeInBound(true);
     setPatternError("");
   };
 
@@ -59,7 +62,7 @@ export default function ProgrammaticErrorCodeModal({
       setPatternError("Minimum cannot be greater than maximum.");
       return;
     }
-    setSegments((prev) => [...prev, { type: "number_range", min, max }]);
+    setSegments((prev) => [...prev, { type: "number_range", min, max, inBound: rangeInBound }]);
     setMinValue("");
     setMaxValue("");
     setPatternError("");
@@ -75,7 +78,13 @@ export default function ProgrammaticErrorCodeModal({
           return "[any]";
         }
         if (seg.type === "number_range") {
-          return `[${seg.min}<=x>=${seg.max}]`;
+          if (seg.inBound !== false) {
+            // In bound: [min<=x>=max]
+            return `[${seg.min}<=x>=${seg.max}]`;
+          } else {
+            // Out bound: [min<!=x>=!max]
+            return `[${seg.min}<!=x>=!${seg.max}]`;
+          }
         }
         return "";
       })
@@ -145,12 +154,15 @@ export default function ProgrammaticErrorCodeModal({
                     </span>
                   );
                 }
+                const rangeDisplay = seg.inBound !== false
+                  ? `[${seg.min}<=x>=${seg.max}]`
+                  : `[${seg.min}<!=x>=!${seg.max}]`;
                 return (
                   <span
                     key={`seg-${index}`}
                     className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-800"
                   >
-                    {`[${seg.min}<=x>=${seg.max}]`}
+                    {rangeDisplay}
                   </span>
                 );
               })
@@ -194,6 +206,20 @@ export default function ProgrammaticErrorCodeModal({
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Add numeric segment with tolerance
             </label>
+            <div className="flex items-center  gap-3 mb-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!rangeInBound}
+                  onChange={(e) => setRangeInBound(!e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-slate-700">Out bound range</span>
+              </label>
+              <span className="text-xs text-slate-500 mb-2">
+                {rangeInBound ? "(In bound: values within range)" : "(Out bound: values outside range)"}
+              </span>
+            </div>
             <div className="flex flex-wrap gap-2">
               <input
                 type="number"
