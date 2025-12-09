@@ -87,45 +87,38 @@ export const comparePartialKey = async (partialKey, answerKey, filterText = "", 
 };
 
 /**
- * Filters error codes into three categories
- * @param {Array<string>} originalCodes - Original error codes list
- * @param {Array<string>} comparisonCodes - New error codes from comparison
- * @returns {Object} Object with matchedCodes, associatedCodesNotSeen, comparisonCodesNotAssociated
+ * Matches error codes using backend API
+ * @param {Array<string>} oldErrorCodes - Original error codes list
+ * @param {Array<string>} newErrorCodes - New error codes from comparison
+ * @returns {Promise<Object>} Object with matched, associated_not_seen, comparison_not_associated, status
  */
-export const filterErrorCodes = (originalCodes, comparisonCodes) => {
-  const originalSet = new Set(originalCodes || []);
-  const comparisonSet = new Set(comparisonCodes || []);
+export const matchErrorCodes = async (oldErrorCodes, newErrorCodes) => {
+  try {
+    const payload = {
+      old_error_codes: oldErrorCodes || [],
+      new_error_codes: newErrorCodes || [],
+    };
 
-  // Matched codes: codes that exist in both lists
-  const matchedCodes = originalCodes.filter((code) => comparisonSet.has(code));
+    const res = await fetch(base_url + "/api/openedx/match_error_codes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  // Associated codes not seen: codes in original but not in comparison
-  const associatedCodesNotSeen = originalCodes.filter((code) => !comparisonSet.has(code));
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`Failed to match error codes: ${res.status} ${t}`);
+    }
 
-  // Comparison codes not associated: codes in comparison but not in original
-  const comparisonCodesNotAssociated = comparisonCodes.filter((code) => !originalSet.has(code));
-
-  return {
-    matchedCodes,
-    associatedCodesNotSeen,
-    comparisonCodesNotAssociated,
-  };
-};
-
-/**
- * Determines instruction status based on filtered codes
- * @param {Object} filteredCodes - Object from filterErrorCodes
- * @returns {string} Status: "right", "wrong", or "No comparison run yet"
- */
-export const getInstructionStatus = (filteredCodes) => {
-  if (!filteredCodes) return "No comparison run yet";
-  
-  const { matchedCodes } = filteredCodes;
-  
-  if (matchedCodes && matchedCodes.length > 0) {
-    return "wrong";
+    const data = await res.json();
+    return {
+      matchedCodes: Array.isArray(data?.matched) ? data.matched : [],
+      associatedCodesNotSeen: Array.isArray(data?.associated_not_seen) ? data.associated_not_seen : [],
+      comparisonCodesNotAssociated: Array.isArray(data?.comparison_not_associated) ? data.comparison_not_associated : [],
+      status: data?.status === true || data?.status === false ? data.status : false,
+    };
+  } catch (error) {
+    throw error;
   }
-  
-  return "right";
 };
 

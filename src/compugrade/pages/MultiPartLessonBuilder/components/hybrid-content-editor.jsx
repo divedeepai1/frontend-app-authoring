@@ -17,8 +17,7 @@ import { FileDiffIcon, Image as ImageIcon, Video, Tag } from "lucide-react";
 import { base_url } from "../../../../compugrade-constants";
 import {
   comparePartialKey,
-  filterErrorCodes,
-  getInstructionStatus,
+  matchErrorCodes,
 } from "../utils/partialKeyComparison";
 import { ObjectiveEditor } from "./objective-editor";
 import EditableBlockName from "./ui/input-name";
@@ -58,7 +57,7 @@ export function HybridContentEditor({
   const [matchedCodesCollapsed, setMatchedCodesCollapsed] = useState(true);
   const [associatedCodesCollapsed, setAssociatedCodesCollapsed] = useState(true);
   const [comparisonCodesCollapsed, setComparisonCodesCollapsed] = useState(true);
-  const [instructionStatus, setInstructionStatus] = useState("No comparison run yet");
+  const [instructionStatus, setInstructionStatus] = useState(null);
   const [filteredCodes, setFilteredCodes] = useState(null);
   const [comparisonLoading, setComparisonLoading] = useState(false);
   const [comparisonError, setComparisonError] = useState("");
@@ -431,7 +430,7 @@ export function HybridContentEditor({
     setMatchedCodesCollapsed(true);
     setAssociatedCodesCollapsed(true);
     setComparisonCodesCollapsed(true);
-    setInstructionStatus("No comparison run yet");
+    setInstructionStatus(null);
     setFilteredCodes(null);
     setComparisonError("");
     setPartialKeyCheckerCollapsed(false);
@@ -547,6 +546,15 @@ export function HybridContentEditor({
     }
   };
 
+  const isCustomPatternCode = (code) => {
+    if (!code || typeof code !== "string") return false;
+    return (
+      code.includes("[any]") ||
+      /\[[^\]]*[<>=!]+[^\]]*x[^\]]*[<>=!]+[^\]]*\]/.test(code) ||
+      /\[[^\]]*x[^\]]*[<>=!]+[^\]]*[<>=!]+[^\]]*\]/.test(code)
+    );
+  };
+
   const addSelectedCode = (code, options = {}) => {
     if (!code) return;
     const { allowCustom = false } = options;
@@ -599,28 +607,22 @@ export function HybridContentEditor({
       });
       const skillStatus = workingSkill ? (workingSkill.status || "").trim() : "";
 
-      // Get original error codes list (selectedErrorCodes)
       const originalCodes = [...selectedErrorCodes];
 
-      // Call comparison API with partial key as source document (no filter text)
       const comparisonCodes = await comparePartialKey(
         partialKeyFile,
         ans,
-        "", // Don't send filter text for comparison
+        "",
         skillStatus
       );
 
-      // Filter the codes into three categories
-      const filtered = filterErrorCodes(originalCodes, comparisonCodes);
-      setFilteredCodes(filtered);
-
-      // Determine instruction status
-      const status = getInstructionStatus(filtered);
-      setInstructionStatus(status);
+      const matched = await matchErrorCodes(originalCodes, comparisonCodes);
+      setFilteredCodes(matched);
+      setInstructionStatus(matched.status);
     } catch (e) {
       setComparisonError(e?.message || "Failed to compare partial key.");
       setFilteredCodes(null);
-      setInstructionStatus("No comparison run yet");
+      setInstructionStatus(null);
     } finally {
       setComparisonLoading(false);
     }
@@ -629,13 +631,13 @@ export function HybridContentEditor({
   const handleSelectMatchedCode = (code) => {
     removeSelectedCode(code);
     if (filteredCodes) {
+      const updatedMatched = filteredCodes.matchedCodes.filter((c) => c !== code);
       const updatedFiltered = {
         ...filteredCodes,
-        matchedCodes: filteredCodes.matchedCodes.filter((c) => c !== code),
+        matchedCodes: updatedMatched,
       };
       setFilteredCodes(updatedFiltered);
-      const status = getInstructionStatus(updatedFiltered);
-      setInstructionStatus(status);
+      setInstructionStatus(updatedMatched.length > 0 ? false : true);
     }
   };
 
@@ -643,15 +645,16 @@ export function HybridContentEditor({
   const handleSelectComparisonCode = (code) => {
     addSelectedCode(code, { allowCustom: true });
     if (filteredCodes) {
+      const updatedComparison = filteredCodes.comparisonCodesNotAssociated.filter(
+        (c) => c !== code
+      );
       const updatedFiltered = {
         ...filteredCodes,
-        comparisonCodesNotAssociated: filteredCodes.comparisonCodesNotAssociated.filter(
-          (c) => c !== code
-        ),
+        comparisonCodesNotAssociated: updatedComparison,
       };
       setFilteredCodes(updatedFiltered);
-      const status = getInstructionStatus(updatedFiltered);
-      setInstructionStatus(status);
+      const hasMatched = filteredCodes.matchedCodes && filteredCodes.matchedCodes.length > 0;
+      setInstructionStatus(hasMatched ? false : true);
     }
   };
 
@@ -664,12 +667,7 @@ export function HybridContentEditor({
       ...filteredCodes,
       matchedCodes: [],
     });
-    const updatedFiltered = {
-      ...filteredCodes,
-      matchedCodes: [],
-    };
-    const status = getInstructionStatus(updatedFiltered);
-    setInstructionStatus(status);
+    setInstructionStatus(true);
   };
 
   const handleAddAllComparisonCodes = () => {
@@ -681,12 +679,8 @@ export function HybridContentEditor({
       ...filteredCodes,
       comparisonCodesNotAssociated: [],
     });
-    const updatedFiltered = {
-      ...filteredCodes,
-      comparisonCodesNotAssociated: [],
-    };
-    const status = getInstructionStatus(updatedFiltered);
-    setInstructionStatus(status);
+    const hasMatched = filteredCodes.matchedCodes && filteredCodes.matchedCodes.length > 0;
+    setInstructionStatus(hasMatched ? false : true);
   };
 
   const resetErrorCodes = () => {
@@ -1728,21 +1722,31 @@ export function HybridContentEditor({
                     className="flex flex-wrap items-center gap-1 rounded-lg border border-gray-200 px-2 py-2 focus-within:ring-2 focus-within:ring-blue-500"
                     onClick={() => setErrorDropdownOpen(true)}
                   >
-                    {(selectedErrorCodes || []).map((code, idx) => (
-                      <span key={`selected-${idx}-${code}`} className="flex items-center gap-1 rounded-md border text-xs px-2 py-1 bg-blue-50 text-blue-800 border-blue-200">
-                        <span className="font-medium">{code}</span>
-                        <div
-                          className="ml-1 text-gray-500 hover:text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeSelectedCode(code);
-                          }}
-                          aria-label="Remove"
+                    {(selectedErrorCodes || []).map((code, idx) => {
+                      const isCustom = isCustomPatternCode(code);
+                      return (
+                        <span
+                          key={`selected-${idx}-${code}`}
+                          className={`flex items-center gap-1 rounded-md border text-xs px-2 py-1 ${
+                            isCustom
+                              ? "bg-gray-400/30 text-gray-700 border-gray-300"
+                              : "bg-blue-50 text-blue-800 border-blue-200"
+                          }`}
                         >
-                          <X className="w-3 h-3" />
-                        </div>
-                      </span>
-                    ))}
+                          <span className="font-medium">{code}</span>
+                          <div
+                            className="ml-1 text-gray-500 hover:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeSelectedCode(code);
+                            }}
+                            aria-label="Remove"
+                          >
+                            <X className="w-3 h-3" />
+                          </div>
+                        </span>
+                      );
+                    })}
                     <input
                       value={errorCodeQuery}
                       onChange={(e) => setErrorCodeQuery(e.target.value)}
@@ -1817,16 +1821,16 @@ export function HybridContentEditor({
                     <div className="flex justify-end">
                     <span
                       className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                        instructionStatus === "right"
+                        instructionStatus === true
                           ? "bg-green-100 text-green-700"
-                          : instructionStatus === "wrong"
+                          : instructionStatus === false
                           ? "bg-red-100 text-red-700"
                           : "bg-gray-100 text-gray-700"
                       }`}
                     >
-                      {instructionStatus === "right"
+                      {instructionStatus === true
                         ? "Instruction Status : Right"
-                        : instructionStatus === "wrong"
+                        : instructionStatus === false
                         ? "Instruction Status : Wrong"
                         : "No comparison run yet"}
                     </span>
