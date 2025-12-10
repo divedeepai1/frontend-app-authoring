@@ -5,7 +5,7 @@ import { getConfig } from '@edx/frontend-platform';
 import { useNavigate } from "react-router";
 
 
-const SingleStudentForm = ({ setSelectedOption ,setAddStudents, isNewStudent}) => {
+const SingleStudentForm = ({ setSelectedOption ,setAddStudents, isNewStudent, onStudentAdded}) => {
   const navigate= useNavigate();
   const [studentData, setStudentData] = useState({
     username: "",
@@ -59,7 +59,11 @@ const SingleStudentForm = ({ setSelectedOption ,setAddStudents, isNewStudent}) =
                   navigate(-1)
                 }
                 else{
-                setAddStudents(false);
+                  if (onStudentAdded) {
+                    onStudentAdded();
+                  } else {
+                    setAddStudents(false);
+                  }
                 }
               } catch (error) {
                 console.error('Error in adding:', error.message);

@@ -14,7 +14,7 @@ const AssignCourses = ({
     {courses.length > 0 ?<>
     <h3 className="primary-text mb-3">Assign Courses</h3>
     <p className="mb-4">
-      These are your purchased courses and you can assign multiple courses to
+      These are your courses and you can assign multiple courses to
       any class.
     </p>
 
@@ -69,11 +69,11 @@ const AssignCourses = ({
 </div>
 
 
-    <button className="btn btn-outline-primary mb-4"
+    {/* <button className="btn btn-outline-primary mb-4"
     //  onClick={(e)=> navigate("/curriculum")}
      >
       View Course Library
-    </button>
+    </button> */}
     </>:
     <>
     <h4 className="primary-text text-center py-4">No courses found for this teacher</h4>

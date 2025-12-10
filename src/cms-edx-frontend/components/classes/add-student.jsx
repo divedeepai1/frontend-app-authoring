@@ -6,6 +6,7 @@ import SelfJoinLinkForm from "../student-feed/forms/self-joining-students";
 import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../../cms-csrftoken";
 import StudentTable from "./students-table";
+import SaveInformationForLater from "./save-information-for-later";
 
 const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
   const [addStudents,setAddStudents] = useState(false)
@@ -43,14 +44,20 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
     }
   };
 
+  const handleStudentAdded = async () => {
+    setSelectedOption(null);
+    setAddStudents(false);
+    await fetchStudents();
+  };
+
   const renderForm = () => {
     switch (selectedOption) {
       case "single":
-        return <SingleStudentForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
+        return <SingleStudentForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} onStudentAdded={handleStudentAdded} />;
       case "bulk":
         return <BulkStudentForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
       case "csv":
-        return <CsvImportForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
+        return <CsvImportForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} onStudentAdded={handleStudentAdded} />;
       case "link":
         return <SelfJoinLinkForm setSelectedOption={setSelectedOption} isNewStudent={isNewStudent} setAddStudents={setAddStudents} />;
       default:
@@ -60,7 +67,7 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
 
   return (
     <>
-      {students.length > 0 && (!addStudents && !isNewStudent )? <StudentTable students={students} setAddStudents={setAddStudents} nextStep={nextStep} prevStep={prevStep} />:
+      {students.length > 0 && (!addStudents && !isNewStudent && !selectedOption)? <StudentTable students={students} setAddStudents={setAddStudents} nextStep={nextStep} prevStep={prevStep} />:
       <div className="p-4 class-div-style">
         <h3 className="primary-text mb-3">Add Students</h3>
         <p className="mb-3">
@@ -77,7 +84,7 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
             </div>
           </div>
 
-          <div className="col-md-3" onClick={() => setSelectedOption("bulk")}>
+          <div className="col-md-3" disabled onClick={() => setSelectedOption("bulk")}>
             <div className="card h-100 text-center clickable">
               <div className="card-body d-flex flex-column justify-content-center align-items-center">
                 <div className="mb-1 fs-1">+</div>
@@ -86,7 +93,7 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
             </div>
           </div>
 
-          <div className="col-md-3" onClick={() => setSelectedOption("link")}>
+          <div className="col-md-3" disabled onClick={() => setSelectedOption("link")}>
             <div className="card h-100 text-center clickable">
               <div className="card-body d-flex flex-column justify-content-center align-items-center">
                 <div className="mb-1 fs-1">+</div>
@@ -119,11 +126,7 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
               Back
             </button>
           </div>
-          <div className="ms-auto">
-            <a href="#" className="primary-text">
-              Save Information for Later
-            </a>
-          </div>
+          <SaveInformationForLater />
         </div>}
       </div>}
     </>

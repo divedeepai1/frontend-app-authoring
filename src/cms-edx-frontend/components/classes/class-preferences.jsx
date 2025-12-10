@@ -1,4 +1,5 @@
 import CustomCheckbox from "./custom-checkbox";
+import SaveInformationForLater from "./save-information-for-later";
 
 const ClassPreferences = ({
   formData,
@@ -65,11 +66,7 @@ const ClassPreferences = ({
           Back
         </button>
       </div>
-      <div className="ms-auto">
-        <a href="#" className="primary-text">
-          Save Information for Later
-        </a>
-      </div>
+      <SaveInformationForLater />
     </div>
   </div>
 );

@@ -4,7 +4,7 @@ import { getConfig } from '@edx/frontend-platform';
 import { useNavigate } from 'react-router';
 
 
-const CsvImportForm = ({setSelectedOption,setAddStudents,isNewStudent}) => {
+const CsvImportForm = ({setSelectedOption,setAddStudents,isNewStudent, onStudentAdded}) => {
   const [csvFile, setCsvFile] = useState(null);
   const navigate = useNavigate();
 
@@ -43,8 +43,12 @@ const CsvImportForm = ({setSelectedOption,setAddStudents,isNewStudent}) => {
           navigate(-1)
         }
         else{
-        setAddStudents(false);
-        setSelectedOption(null);
+          if (onStudentAdded) {
+            onStudentAdded();
+          } else {
+            setAddStudents(false);
+            setSelectedOption(null);
+          }
         }
       
       } else {

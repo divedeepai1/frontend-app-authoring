@@ -8,6 +8,7 @@ import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../../cms-csrftoken";
+import SaveInformationForLater from "./save-information-for-later";
 
 
 export default function StudentTable({students,setAddStudents, nextStep, prevStep , fromTeachers , selectedIds, handleDeleteStudents, handleSelectAllStudents, handleSelectStudents,classId}) {
@@ -200,11 +201,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
               Back
             </button>
           </div>
-          <div className="ms-auto">
-            <a href="#" className="primary-text">
-              Save Information for Later
-            </a>
-          </div>
+          <SaveInformationForLater />
         </div>}
     </>
   )

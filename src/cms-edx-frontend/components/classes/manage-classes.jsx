@@ -200,36 +200,38 @@ const ClassManagementForm = ({isNewStudent}) => {
     }
 
     if (activeStep == 5) {
-      const token = await fetchCsrfToken();
+      // Only call announcement API if announcement is provided
+      if (formData.announcement && formData.announcement.trim()) {
+        const token = await fetchCsrfToken();
 
-      const data = JSON.stringify({
-        announcement: formData.announcement,
-       
-      });
-      try {
-        const response = await fetch(
-          `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/announcements/`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": token,
-            },
-            body: data,
+        const data = JSON.stringify({
+          announcement: formData.announcement,
+         
+        });
+        try {
+          const response = await fetch(
+            `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/announcements/`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": token,
+              },
+              body: data,
+            }
+          );
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to add: ${response.status} ${errorText}`);
           }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to add: ${response.status} ${errorText}`);
+          const result = await response.json();
+        } catch (error) {
+          console.error("Error in adding:", error.message);
         }
-        const result = await response.json();
-        navigate("/classes")
-
-      } catch (error) {
-        console.error("Error in adding:", error.message);
       }
+      navigate("/classes");
     }
    if(step < 5 ){
     setActiveStep((prev) => prev + 1);
@@ -241,7 +243,7 @@ const ClassManagementForm = ({isNewStudent}) => {
     const token = await fetchCsrfToken();
     try {
       const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/courses/`,
+        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/`,
         {
           method: "GET",
           credentials: "include",
@@ -257,7 +259,7 @@ const ClassManagementForm = ({isNewStudent}) => {
         throw new Error(`Failed to get: ${response.status} ${errorText}`);
       }
       const result = await response.json();
-      setCourses(result?.courses);
+      setCourses(result);
     } catch (error) {
       console.error("Error:", error.message);
     }
