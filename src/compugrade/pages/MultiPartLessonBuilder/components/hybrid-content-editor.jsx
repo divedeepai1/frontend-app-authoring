@@ -1191,8 +1191,8 @@ export function HybridContentEditor({
                       <div className="px-2 py-0.5  text-indigo-700">
                         Instruction {getInstructionNumber(block.id)}
                       </div>
-                      {!instructionNonGraded && (
-                        <div className="flex items-center gap-2 mr-2">
+                      <div className="flex items-center gap-2">
+                        {!instructionNonGraded && (
                           <select
                             defaultValue="no-skill"
                             value={block.content.item_type || "no-skill"}
@@ -1209,21 +1209,20 @@ export function HybridContentEditor({
                             <option value="foundation">Foundation Skill</option>
                             <option value="no-skill">No Skill</option>
                           </select>
-
-                          <button
-                            onClick={() => triggerHiddenInput(`instr-img-${block.id}`)}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"
-                          >
-                            <ImageIcon className="w-4 h-4" /> Image
-                          </button>
-
-                          <button
-                            onClick={() => triggerHiddenInput(`instr-vid-${block.id}`)}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 border-purple-200 border bg-transparent rounded"
-                          >
-                            <Video className="w-4 h-4" /> Video
-                          </button>
-
+                        )}
+                        <button
+                          onClick={() => triggerHiddenInput(`instr-img-${block.id}`)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"
+                        >
+                          <ImageIcon className="w-4 h-4" /> Image
+                        </button>
+                        <button
+                          onClick={() => triggerHiddenInput(`instr-vid-${block.id}`)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 border-purple-200 border bg-transparent rounded"
+                        >
+                          <Video className="w-4 h-4" /> Video
+                        </button>
+                        {!instructionNonGraded && (
                           <button
                             onClick={() => openErrorCodesModal(block)}
                             className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
@@ -1236,8 +1235,8 @@ export function HybridContentEditor({
                           >
                             Add Error Codes
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     <div className="p-2">
