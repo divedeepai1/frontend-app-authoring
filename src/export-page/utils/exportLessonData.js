@@ -252,7 +252,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
 
     return {
       success: true,
-      exportedUnits,
+      exportedUnits: processedUnits,
       exportData,
     };
   } catch (error) {
