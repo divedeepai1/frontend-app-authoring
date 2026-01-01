@@ -13,7 +13,6 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
     }
 
     const lessonDataMapping = {};
-    let exportedUnits = 0;
     let processedUnits = 0;
 
     const getAppName = () => {
@@ -22,6 +21,28 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
       if (courseType === "powerpoint") return "powerpoint";
       return "excel";
     };
+
+    // First, count total units for accurate progress tracking
+    const countTotalUnits = (sections) => {
+      let total = 0;
+      for (const section of sections) {
+        if (section.childInfo && section.childInfo.children) {
+          for (const subsection of section.childInfo.children) {
+            if (subsection.childInfo && subsection.childInfo.children) {
+              total += subsection.childInfo.children.length;
+            }
+          }
+        }
+      }
+      return total;
+    };
+
+    const totalUnits = countTotalUnits(course.childInfo.children || []);
+    
+    // Report initial progress
+    if (options.onProgress && totalUnits > 0) {
+      options.onProgress(0, totalUnits);
+    }
 
     const collectUnits = async (sections, sectionPath = '') => {
       for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
@@ -131,11 +152,10 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                   unitIndex: unitIdx,
                   rubricData,
                 };
-                exportedUnits++;
                 processedUnits++;
                 
                 if (options.onProgress) {
-                  options.onProgress(processedUnits, exportedUnits);
+                  options.onProgress(processedUnits, totalUnits);
                 }
               }
             }
@@ -151,7 +171,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
       courseBlockId,
       exportedAt: Date.now(),
       lessonDataMapping,
-      exportedUnits,
+      exportedUnits: processedUnits,
     };
 
     if (!options.skipSessionStorage) {

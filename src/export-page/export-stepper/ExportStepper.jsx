@@ -91,7 +91,7 @@ const ExportStepper = ({ intl, courseId, isExportingMetadata, exportProgress }) 
         errorMessage={errorMessage}
         hasError={!!errorMessage}
       />
-      {downloadPath && currentStage === EXPORT_STAGES.SUCCESS && (
+      {downloadPath && currentStage === EXPORT_STAGES.SUCCESS && !isExportingMetadata && (
         <Button className="ml-5.5 mt-n2.5" href={downloadPath} download>
           {intl.formatMessage(messages.downloadCourseButtonTitle)}
         </Button>
