@@ -174,11 +174,80 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
       exportedUnits: processedUnits,
     };
 
+    // Try to save to sessionStorage, but NEVER let it block the export
+    // The download will always work regardless of sessionStorage success/failure
     if (!options.skipSessionStorage) {
-      const courseSpecificKey = `exported_lesson_data_${courseId}`;
-      const genericKey = 'exported_lesson_data_latest';
-      sessionStorage.setItem(courseSpecificKey, JSON.stringify(exportData));
-      sessionStorage.setItem(genericKey, JSON.stringify(exportData));
+      try {
+        const courseSpecificKey = `exported_lesson_data_${courseId}`;
+        const genericKey = 'exported_lesson_data_latest';
+        
+        // Don't stringify again if we already have the data - just estimate size
+        // We'll stringify in CourseExportPage for the download anyway
+        const estimatedSizeMB = JSON.stringify(exportData).length / (1024 * 1024);
+        
+        // Check if data is too large for sessionStorage (typically 5-10MB limit)
+        const SESSION_STORAGE_LIMIT_MB = 4; // Conservative limit
+        
+        if (estimatedSizeMB > SESSION_STORAGE_LIMIT_MB) {
+          console.warn(`Export data (${estimatedSizeMB.toFixed(2)}MB) is too large for sessionStorage. Skipping storage. Data will only be available in downloaded file.`);
+          // Store a minimal reference instead
+          const minimalData = {
+            courseId,
+            courseBlockId,
+            exportedAt: exportData.exportedAt,
+            exportedUnits: exportData.exportedUnits,
+            dataTooLarge: true,
+            sizeMB: estimatedSizeMB,
+          };
+          sessionStorage.setItem(courseSpecificKey, JSON.stringify(minimalData));
+          sessionStorage.setItem(genericKey, JSON.stringify(minimalData));
+        } else {
+          // Data is small enough, try to save full data
+          try {
+            const jsonString = JSON.stringify(exportData);
+            sessionStorage.setItem(courseSpecificKey, jsonString);
+            sessionStorage.setItem(genericKey, jsonString);
+          } catch (stringifyError) {
+            // If stringify fails, save minimal data
+            console.warn('Failed to stringify for sessionStorage, saving minimal reference:', stringifyError);
+            const minimalData = {
+              courseId,
+              courseBlockId,
+              exportedAt: exportData.exportedAt,
+              exportedUnits: exportData.exportedUnits,
+              dataTooLarge: true,
+            };
+            sessionStorage.setItem(courseSpecificKey, JSON.stringify(minimalData));
+            sessionStorage.setItem(genericKey, JSON.stringify(minimalData));
+          }
+        }
+      } catch (storageError) {
+        // Handle quota exceeded or other storage errors gracefully
+        // IMPORTANT: This error does NOT affect the export - download will still work
+        if (storageError.name === 'QuotaExceededError' || storageError.message.includes('quota')) {
+          console.warn('SessionStorage quota exceeded. Export will continue - data will be available in downloaded JSON file only.');
+          // Try to save minimal reference (this might also fail, but that's OK)
+          try {
+            const minimalData = {
+              courseId,
+              courseBlockId,
+              exportedAt: exportData.exportedAt,
+              exportedUnits: exportData.exportedUnits,
+              dataTooLarge: true,
+            };
+            const courseSpecificKey = `exported_lesson_data_${courseId}`;
+            const genericKey = 'exported_lesson_data_latest';
+            sessionStorage.setItem(courseSpecificKey, JSON.stringify(minimalData));
+            sessionStorage.setItem(genericKey, JSON.stringify(minimalData));
+          } catch (minimalStorageError) {
+            // Even minimal save failed - that's OK, export continues
+            console.warn('Could not save even minimal data to sessionStorage. Export continues - download will work:', minimalStorageError);
+          }
+        } else {
+          // Other storage errors - log but don't block
+          console.warn('Failed to save to sessionStorage (non-critical). Export continues - download will work:', storageError);
+        }
+      }
     }
 
     return {
@@ -208,7 +277,12 @@ export function getExportedLessonDataMapping(courseId = null) {
       const courseSpecificKey = `exported_lesson_data_${courseId}`;
       const stored = sessionStorage.getItem(courseSpecificKey);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        // Check if this is minimal data (data was too large for storage)
+        if (parsed.dataTooLarge) {
+          console.warn('Stored export data is minimal reference only. Full data was too large for sessionStorage and is only available in downloaded file.');
+        }
+        return parsed;
       }
     }
     
@@ -216,7 +290,12 @@ export function getExportedLessonDataMapping(courseId = null) {
     const genericKey = `exported_lesson_data_latest`;
     const latestStored = sessionStorage.getItem(genericKey);
     if (latestStored) {
-      return JSON.parse(latestStored);
+      const parsed = JSON.parse(latestStored);
+      // Check if this is minimal data (data was too large for storage)
+      if (parsed.dataTooLarge) {
+        console.warn('Stored export data is minimal reference only. Full data was too large for sessionStorage and is only available in downloaded file.');
+      }
+      return parsed;
     }
     
     return null;
