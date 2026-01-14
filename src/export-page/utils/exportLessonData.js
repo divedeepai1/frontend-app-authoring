@@ -38,7 +38,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
     };
 
     const totalUnits = countTotalUnits(course.childInfo.children || []);
-    
+
     // Report initial progress
     if (options.onProgress && totalUnits > 0) {
       options.onProgress(0, totalUnits);
@@ -48,17 +48,17 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
       for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
         const section = sections[sectionIdx];
         const sectionPathKey = sectionPath ? `${sectionPath}.${sectionIdx}` : `${sectionIdx}`;
-        
+
         if (section.childInfo && section.childInfo.children) {
           for (let subsectionIdx = 0; subsectionIdx < section.childInfo.children.length; subsectionIdx++) {
             const subsection = section.childInfo.children[subsectionIdx];
             const subsectionPathKey = `${sectionPathKey}.${subsectionIdx}`;
-            
+
             if (subsection.childInfo && subsection.childInfo.children) {
               for (let unitIdx = 0; unitIdx < subsection.childInfo.children.length; unitIdx++) {
                 const unit = subsection.childInfo.children[unitIdx];
                 const unitPathKey = `${subsectionPathKey}.${unitIdx}`;
-                
+
                 let rubricData = null;
                 try {
                   const encodedUnitId = encodeURIComponent(unit.id);
@@ -78,6 +78,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                     if (originalRubric) {
                       rubricData = {
                         skills: originalRubric.skills || [],
+                        num_of_attempts: originalRubric.num_of_attempts || 3,
                         app_name: originalRubric.app_name || getAppName(),
                         source_document: originalRubric.source_document || null,
                         answer_key: originalRubric.answer_key || null,
@@ -153,7 +154,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                   rubricData,
                 };
                 processedUnits++;
-                
+
                 if (options.onProgress) {
                   options.onProgress(processedUnits, totalUnits);
                 }
@@ -180,14 +181,14 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
       try {
         const courseSpecificKey = `exported_lesson_data_${courseId}`;
         const genericKey = 'exported_lesson_data_latest';
-        
+
         // Don't stringify again if we already have the data - just estimate size
         // We'll stringify in CourseExportPage for the download anyway
         const estimatedSizeMB = JSON.stringify(exportData).length / (1024 * 1024);
-        
+
         // Check if data is too large for sessionStorage (typically 5-10MB limit)
         const SESSION_STORAGE_LIMIT_MB = 4; // Conservative limit
-        
+
         if (estimatedSizeMB > SESSION_STORAGE_LIMIT_MB) {
           console.warn(`Export data (${estimatedSizeMB.toFixed(2)}MB) is too large for sessionStorage. Skipping storage. Data will only be available in downloaded file.`);
           // Store a minimal reference instead
@@ -285,7 +286,7 @@ export function getExportedLessonDataMapping(courseId = null) {
         return parsed;
       }
     }
-    
+
     // Fall back to latest export (for cross-course imports)
     const genericKey = `exported_lesson_data_latest`;
     const latestStored = sessionStorage.getItem(genericKey);
@@ -297,7 +298,7 @@ export function getExportedLessonDataMapping(courseId = null) {
       }
       return parsed;
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error retrieving exported lesson data mapping:', error);
