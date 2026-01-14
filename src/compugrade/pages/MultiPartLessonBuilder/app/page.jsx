@@ -52,6 +52,7 @@ export default function LessonBuilder() {
     text_before_video: "",
     text_after_video: "",
     lesson_overview: "",
+    num_of_attempts: 3,
   });
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
@@ -173,6 +174,7 @@ export default function LessonBuilder() {
       text_after_video: backendData.text_after_video || "",
       lesson_overview: backendData.lesson_overview || "",
       lessonParts: lessons || [],
+      num_of_attempts: backendData.num_of_attempts || 3,
     };
   }
 
@@ -610,6 +612,7 @@ export default function LessonBuilder() {
       text_after_video: currentLessonConfig.text_after_video || "",
       lesson_overview: currentLessonConfig.lesson_overview || "",
       lessons: lesson_parts,
+      num_of_attempts: currentLessonConfig.num_of_attempts || 3,
     };
   }
 

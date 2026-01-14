@@ -124,6 +124,32 @@ export default function LessonConfigModal({
             />
           </div>
 
+          {/* Number of Attempts Dropdown */}
+          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-50">
+                  <Settings className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-900">Number of Attempts</label>
+                  <p className="text-xs text-gray-500">Set attempts allowed for this lesson</p>
+                </div>
+              </div>
+              <select
+                value={lessonConfig.num_of_attempts || 3}
+                onChange={(e) => setLessonConfig(prev => ({...prev, num_of_attempts: parseInt(e.target.value)}))}
+                className="block w-24 rounded-md border border-gray-300 py-1.5 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm sm:leading-6"
+              >
+                {[...Array(20)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -137,7 +163,7 @@ export default function LessonConfigModal({
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-600">
-                  {lessonConfig.videoEnabled ? "Enabled" : "Disabled"}
+                {lessonConfig.videoEnabled ? "Enabled" : "Disabled"}
                 </span>
                 <div
                   onClick={() => setLessonConfig((c) => ({ ...c, videoEnabled: !c.videoEnabled }))}
@@ -153,6 +179,7 @@ export default function LessonConfigModal({
                 </div>
               </div>
             </div>
+
 
             {lessonConfig.videoEnabled && (
               <div className="space-y-3 pt-3 border-t border-gray-100">
