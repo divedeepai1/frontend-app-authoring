@@ -137,10 +137,17 @@ export default function LessonConfigModal({
                 </div>
               </div>
               <select
-                value={lessonConfig.num_of_attempts || 3}
-                onChange={(e) => setLessonConfig(prev => ({...prev, num_of_attempts: parseInt(e.target.value)}))}
+                value={lessonConfig.num_of_attempts === null ? "infinity" : (lessonConfig.num_of_attempts || 3)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setLessonConfig(prev => ({
+                    ...prev, 
+                    num_of_attempts: val === "infinity" ? null : parseInt(val)
+                  }));
+                }}
                 className="block w-24 rounded-md border border-gray-300 py-1.5 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm sm:leading-6"
               >
+                <option value="infinity">Infinity</option>
                 {[...Array(20)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>
                     {i + 1}
