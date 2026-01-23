@@ -326,7 +326,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
         const mapped = (data?.skills || []).map((item) => ({
           id: item.id,
           name: item.customer_facing_name,
-          status: item.comparison_status, // keep original casing from API
+          status: item.skill_type, // keep original casing from API
         }));
         setAllSkills(mapped);
       } catch (err) {
@@ -357,7 +357,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
 
   const statusColorClasses = (status) => {
     const s = (status || "").trim();
-    if (s === "Working") return "bg-blue-100 text-blue-700 ring-1 ring-blue-200";
+    if (s === "AB" || s === "Working") return "bg-blue-100 text-blue-700 ring-1 ring-blue-200";
     if (s === "Working A2") return "bg-amber-100 text-amber-700 ring-1 ring-amber-200";
     return "bg-gray-100 text-gray-700 ring-1 ring-gray-200";
   };
@@ -366,7 +366,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
     const courseType = sessionStorage.getItem("courseType");
     if (courseType !== "ms-word") return "bg-gray-50 text-gray-800 border-gray-200";
     const s = (status || "").trim();
-    if (s === "Working") return "bg-blue-50 text-blue-800 border-blue-200";
+    if (s === "AB" || s === "Working") return "bg-blue-50 text-blue-800 border-blue-200";
     if (s === "Working A2") return "bg-amber-50 text-amber-800 border-amber-200";
     return "bg-gray-50 text-gray-800 border-gray-200";
   };
@@ -449,7 +449,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
                     >
                       <span className="font-medium text-gray-800">{s.name}</span>
                       {showStatus && (
-                        <span className={`ml-2 rounded px-2 py-0.5 text-xs ${statusColorClasses(s.status)}`}>{s.status === "Working" ? "A1" : s.status === "Working A2" ? "A2" : "OB"}</span>
+                        <span className={`ml-2 rounded px-2 py-0.5 text-xs ${statusColorClasses(s.status)}`}>{s.status}</span>
                       )}
                     </li>
                   );

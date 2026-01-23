@@ -5,12 +5,13 @@ import { useIntl } from '@edx/frontend-platform/i18n';
 import messages from '../messages';
 import AddComponentIcon from './AddComponentIcon';
 
-const AddComponentButton = ({ border,background,boxshadow,type, displayName, onClick,icon }) => {
+const AddComponentButton = ({ disabled, border,background,boxshadow,type, displayName, onClick,icon }) => {
   const intl = useIntl();
   const highlightTypes = ["engine", "text", "skills", "tools", "overview","new"];
 
   return (
     <Button
+    
     style={{
       border: highlightTypes.includes(type) && border,
       background: highlightTypes.includes(type) && background,
@@ -18,7 +19,7 @@ const AddComponentButton = ({ border,background,boxshadow,type, displayName, onC
     }}
       variant="outline-primary"
       className="add-component-button flex-column rounded-sm"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
     >
       {icon ? <img src={icon} /> :<AddComponentIcon type={type} />}
       <span className="sr-only">{intl.formatMessage(messages.buttonText)}</span>
