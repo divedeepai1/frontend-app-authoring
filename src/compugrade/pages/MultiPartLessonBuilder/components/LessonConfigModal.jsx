@@ -357,8 +357,8 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
 
   const statusColorClasses = (status) => {
     const s = (status || "").trim();
-    if (s === "AB" || s === "Working") return "bg-blue-100 text-blue-700 ring-1 ring-blue-200";
-    if (s === "Working A2") return "bg-amber-100 text-amber-700 ring-1 ring-amber-200";
+    if (s === "AB" || s === "Working" || s === "Working A2") return "bg-blue-100 text-blue-700 ring-1 ring-blue-200";
+    // if (s === "Working A2") return "bg-amber-100 text-amber-700 ring-1 ring-amber-200";
     return "bg-gray-100 text-gray-700 ring-1 ring-gray-200";
   };
 
@@ -366,8 +366,8 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
     const courseType = sessionStorage.getItem("courseType");
     if (courseType !== "ms-word") return "bg-gray-50 text-gray-800 border-gray-200";
     const s = (status || "").trim();
-    if (s === "AB" || s === "Working") return "bg-blue-50 text-blue-800 border-blue-200";
-    if (s === "Working A2") return "bg-amber-50 text-amber-800 border-amber-200";
+    if (s === "AB" || s === "Working" || s === "Working A2") return "bg-blue-50 text-blue-800 border-blue-200";
+    // if (s === "Working A2") return "bg-amber-50 text-amber-800 border-amber-200";
     return "bg-gray-50 text-gray-800 border-gray-200";
   };
 
