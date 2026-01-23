@@ -78,7 +78,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                     if (originalRubric) {
                       rubricData = {
                         skills: originalRubric.skills || [],
-                        num_of_attempts: originalRubric.num_of_attempts || 3,
+                        num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
                         app_name: originalRubric.app_name || getAppName(),
                         source_document: originalRubric.source_document || null,
                         answer_key: originalRubric.answer_key || null,

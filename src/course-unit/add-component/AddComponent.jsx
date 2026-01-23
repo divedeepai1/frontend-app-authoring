@@ -121,6 +121,7 @@ box-shadow="0px 1px 2px 0px rgba(37, 90, 113, 0.05)"
             onClick={() => handleCreateCompugradeXBlock("skills")}
             displayName={"Skills"}
             border="1px solid #B878BE"
+            disabled={true}
             background="rgba(184, 120, 190, 0.50)"
             boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
             icon={skills}
@@ -133,6 +134,7 @@ box-shadow="0px 1px 2px 0px rgba(37, 90, 113, 0.05)"
             onClick={() => handleCreateCompugradeXBlock("text")}
             displayName={"Document Text"}
             border="1px solid #FF5959"
+            disabled={true}
             icon={text}
             background="rgba(255, 89, 89, 0.30)"
             boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
@@ -144,6 +146,7 @@ box-shadow="0px 1px 2px 0px rgba(37, 90, 113, 0.05)"
             border="1px solid #285491"
             background="rgba(79, 179, 223, 0.30)"
             boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+            disabled={true}
             onClick={() => handleCreateCompugradeXBlock("engine")}
             icon={writer}
             displayName={"Compugrade Writer Engine"}

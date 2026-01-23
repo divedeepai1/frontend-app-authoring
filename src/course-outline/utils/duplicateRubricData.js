@@ -42,7 +42,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
     const savePayload = {
       rubric_id: newRubricId,
       skills: originalRubric.skills || [],
-      num_of_attempts: originalRubric.num_of_attempts || 3,
+      num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
       app_name: originalRubric.app_name || getAppName(),
       text_before_video: originalRubric.text_before_video || "",
       lesson_overview: originalRubric.lesson_overview || "",
