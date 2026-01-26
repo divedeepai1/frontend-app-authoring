@@ -364,7 +364,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
 
   const chipColorClasses = (status) => {
     const courseType = sessionStorage.getItem("courseType");
-    if (courseType !== "ms-word") return "bg-gray-50 text-gray-800 border-gray-200";
+    // if (courseType !== "ms-word") return "bg-gray-50 text-gray-800 border-gray-200";
     const s = (status || "").trim();
     if (s === "AB" || s === "Working" || s === "Working A2") return "bg-blue-50 text-blue-800 border-blue-200";
     // if (s === "Working A2") return "bg-amber-50 text-amber-800 border-amber-200";
@@ -448,9 +448,9 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
                       onClick={() => addSkill(s)}
                     >
                       <span className="font-medium text-gray-800">{s.name}</span>
-                      {showStatus && (
+                      
                         <span className={`ml-2 rounded px-2 py-0.5 text-xs ${statusColorClasses(s.status)}`}>{s.status}</span>
-                      )}
+                      
                     </li>
                   );
                 })}
