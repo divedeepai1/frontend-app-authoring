@@ -3,19 +3,22 @@
 import { useState } from "react"
 import { Trash2, Plus, X } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
+import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
 
 export function CategorizingQuestion({ question, onQuestionChange, onDelete }) {
-  const [questionText, setQuestionText] = useState(question.text || "")
+  const [questionContent, setQuestionContent] = useState({ html: question.text || "" })
   const [categories, setCategories] = useState(question.categories || ["Category 1", "Category 2"])
   const [items, setItems] = useState(question.items || [{ text: "", category: 0 }])
-  const questionError = !questionText || !questionText.trim() ? 'Question is required.' : null
+  const plainQuestionText = (questionContent?.html || "").replace(/<[^>]+>/g, "").trim()
+  const questionError = !plainQuestionText ? 'Question is required.' : null
   const categoriesError = categories.length < 1 ? 'Add at least one category.' : null
   const emptyCategoryError = categories.some((c) => !c || !c.toString().trim()) ? 'Category names cannot be empty.' : null
   const itemsError = items.length < 1 ? 'Add at least one item.' : null
   const emptyItemError = items.some((it) => !it.text || !it.text.toString().trim()) ? 'Item text cannot be empty.' : null
 
-  const handleTextChange = (text) => {
-    setQuestionText(text)
+  const handleContentChange = (newContent) => {
+    setQuestionContent(newContent)
+    const text = newContent?.html || ""
     onQuestionChange({ ...question, text })
   }
 
@@ -86,13 +89,11 @@ export function CategorizingQuestion({ question, onQuestionChange, onDelete }) {
           <label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">
             Question
           </label>
-          <input
-            id="question-text"
-            type="text"
-            placeholder="Enter instructions for categorizing..."
-            value={questionText}
-            onChange={(e) => handleTextChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          <EnhancedRichTextEditor
+            id={`question-editor-${question.id}`}
+            content={questionContent}
+            onContentChange={handleContentChange}
+            lines={2}
           />
           {questionError && (
             <div className="mt-1 text-xs text-red-600">{questionError}</div>

@@ -3,17 +3,20 @@
 import { useState } from "react"
 import { Trash2, Plus, X, GripVertical } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
+import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
 
 export function ReorderingQuestion({ question, onQuestionChange, onDelete }) {
-  const [questionText, setQuestionText] = useState(question.text || "")
+  const [questionContent, setQuestionContent] = useState({ html: question.text || "" })
   const [items, setItems] = useState(question.items || ["Item 1", "Item 2", "Item 3"])
   const [draggedIndex, setDraggedIndex] = useState(null)
-  const questionError = !questionText || !questionText.trim() ? 'Question is required.' : null
+  const plainQuestionText = (questionContent?.html || "").replace(/<[^>]+>/g, "").trim()
+  const questionError = !plainQuestionText ? 'Question is required.' : null
   const itemsError = items.length < 2 ? 'Add at least two items.' : null
   const emptyItemError = items.some((it) => !it || !it.toString().trim()) ? 'Items cannot be empty.' : null
 
-  const handleTextChange = (text) => {
-    setQuestionText(text)
+  const handleContentChange = (newContent) => {
+    setQuestionContent(newContent)
+    const text = newContent?.html || ""
     onQuestionChange({ ...question, text })
   }
 
@@ -84,13 +87,11 @@ export function ReorderingQuestion({ question, onQuestionChange, onDelete }) {
           <label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">
             Question
           </label>
-          <input
-            id="question-text"
-            type="text"
-            placeholder="Enter instructions for reordering..."
-            value={questionText}
-            onChange={(e) => handleTextChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          <EnhancedRichTextEditor
+            id={`question-editor-${question.id}`}
+            content={questionContent}
+            onContentChange={handleContentChange}
+            lines={2}
           />
           {questionError && (
             <div className="mt-1 text-xs text-red-600">{questionError}</div>

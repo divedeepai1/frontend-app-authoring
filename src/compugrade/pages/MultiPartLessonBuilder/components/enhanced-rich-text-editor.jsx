@@ -1,14 +1,15 @@
 import React, { useRef, useMemo, useEffect } from "react"
 import JoditEditor from "jodit-react"
 
-export function EnhancedRichTextEditor({ content, onContentChange, id }) {
+export function EnhancedRichTextEditor({ content, onContentChange, id, lines }) {
   const editorRef = useRef(null)
   const uniqueId = useRef(id || `editor-${Math.random().toString(36).substr(2, 9)}`)
 
   const config = useMemo(
     () => ({
       readonly: false,
-      height: 250,
+      // Allow overriding height by specifying number of visible lines
+      height: lines ? Math.max(40, lines * 22) : 250,
       placeholder: "",
       showXPathInStatusbar: false,
       showCharsCounter: false,
