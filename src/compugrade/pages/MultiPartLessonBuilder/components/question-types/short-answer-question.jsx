@@ -3,16 +3,19 @@
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
+import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
 
 export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
-  const [questionText, setQuestionText] = useState(question.natural_text || "")
+  const [questionContent, setQuestionContent] = useState({ html: question.natural_text || "" })
   const [sampleAnswer, setSampleAnswer] = useState(question.correct_answer || "")
-  const questionError = !questionText || !questionText.trim() ? 'Question is required.' : null
+  const plainQuestionText = (questionContent?.html || "").replace(/<[^>]+>/g, "").trim()
+  const questionError = !plainQuestionText ? 'Question is required.' : null
   const answerError = !sampleAnswer || !sampleAnswer.trim() ? 'Answer is required.' : null
 
-  const handleTextChange = (text) => {
-    setQuestionText(text)
-    onQuestionChange({ ...question, natural_text:text })
+  const handleContentChange = (newContent) => {
+    setQuestionContent(newContent)
+    const text = newContent?.html || ""
+    onQuestionChange({ ...question, natural_text: text })
   }
 
   const handleSampleAnswerChange = (answer) => {
@@ -37,13 +40,11 @@ export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
           <label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">
             Question
           </label>
-          <input
-            id="question-text"
-            type="text"
-            placeholder="Enter your short answer question..."
-            value={questionText}
-            onChange={(e) => handleTextChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          <EnhancedRichTextEditor
+            id={`question-editor-${question.id}`}
+            content={questionContent}
+            onContentChange={handleContentChange}
+            lines={2}
           />
           {questionError && (
             <div className="mt-1 text-xs text-red-600">{questionError}</div>
