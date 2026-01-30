@@ -169,9 +169,68 @@ export function HybridContentEditor({
   const updateContent = (newContent) => {
     onContentChange(newContent);
   };
+
+  // Helper function to renumber instruction and objective blocks with unified counter
+  const renumberInstructionNames = (list) => {
+    let unifiedCounter = 0;
+    const defaultInstructionPattern = /^Instruction\s+\d+$/i;
+    const defaultObjectivePattern = /^Question\s+\d+$/i;
+    return list.map((block) => {
+      if (block.type === "instruction") {
+        unifiedCounter += 1;
+        const shouldOverride = !block.name || defaultInstructionPattern.test(block.name);
+        if (shouldOverride) {
+          return { ...block, name: `Instruction ${unifiedCounter}` };
+        }
+      } else if (block.type === "objective") {
+        unifiedCounter += 1;
+        const shouldOverride = !block.name || defaultObjectivePattern.test(block.name);
+        if (shouldOverride) {
+          return { ...block, name: `Question ${unifiedCounter}` };
+        }
+      }
+      return block;
+    });
+  };
+
+  const previousBlocksRef = useRef(null);
   useEffect(() => {
     // Sync local editor state when switching parts or content updates externally
-    setBlocks(content?.blocks || []);
+    const initialBlocks = content?.blocks || [];
+    
+    // Automatically renumber instruction and objective blocks on load
+    // Only renumber if blocks exist and haven't been processed yet
+    if (initialBlocks.length > 0) {
+      const renumberedBlocks = renumberInstructionNames(initialBlocks);
+      
+      // Check if renumbering actually changed any block names
+      const blocksChanged = renumberedBlocks.some((block, index) => {
+        const original = initialBlocks[index];
+        return original && block.name !== original.name;
+      });
+      
+      if (blocksChanged) {
+        // Only update if this is a new set of blocks (different from previous)
+        const blocksKey = JSON.stringify(initialBlocks.map(b => b.id));
+        const previousKey = previousBlocksRef.current;
+        
+        if (blocksKey !== previousKey) {
+          previousBlocksRef.current = blocksKey;
+          setBlocks(renumberedBlocks);
+          // Update content with renumbered blocks
+          updateContent({ ...content, blocks: renumberedBlocks });
+        } else {
+          setBlocks(renumberedBlocks);
+        }
+      } else {
+        setBlocks(initialBlocks);
+        previousBlocksRef.current = JSON.stringify(initialBlocks.map(b => b.id));
+      }
+    } else {
+      setBlocks(initialBlocks);
+      previousBlocksRef.current = null;
+    }
+    
     // setVideoEnabled(content?.videos || false)
     // setDocumentComparisonEnabled(content?.documentComparison?.mode || false)
     setDocumentComparisonMode(
@@ -818,39 +877,30 @@ export function HybridContentEditor({
     updateContent({ ...content, blocks: renumbered });
   };
 
-  const renumberInstructionNames = (list) => {
-    let instructionCounter = 0;
-    let objectiveCounter = 0;
-    const defaultInstructionPattern = /^Instruction\s+\d+$/i;
-    const defaultObjectivePattern = /^Question\s+\d+$/i;
-    return list.map((block) => {
-      if (block.type === "instruction") {
-        instructionCounter += 1;
-        const shouldOverride = !block.name || defaultInstructionPattern.test(block.name);
-        if (shouldOverride) {
-          return { ...block, name: `Instruction ${instructionCounter}` };
-        }
-      } else if (block.type === "objective") {
-        objectiveCounter += 1;
-        const shouldOverride = !block.name || defaultObjectivePattern.test(block.name);
-        if (shouldOverride) {
-          return { ...block, name: `Question ${objectiveCounter}` };
+  const getInstructionNumber = (blockId) => {
+    let unifiedCounter = 0;
+    for (const block of blocks) {
+      if (block.type === "instruction" || block.type === "objective") {
+        unifiedCounter += 1;
+        if (block.id === blockId && block.type === "instruction") {
+          return unifiedCounter;
         }
       }
-      return block;
-    });
-  };
-
-  const getInstructionNumber = (blockId) => {
-    const instructionBlocks = blocks.filter((b) => b.type === "instruction");
-    const idx = instructionBlocks.findIndex((b) => b.id === blockId);
-    return idx >= 0 ? idx + 1 : 0;
+    }
+    return 0;
   };
 
   const getObjectiveNumber = (blockId) => {
-    const objectiveBlocks = blocks.filter((b) => b.type === "objective");
-    const idx = objectiveBlocks.findIndex((b) => b.id === blockId);
-    return idx >= 0 ? idx + 1 : 0;
+    let unifiedCounter = 0;
+    for (const block of blocks) {
+      if (block.type === "instruction" || block.type === "objective") {
+        unifiedCounter += 1;
+        if (block.id === blockId && block.type === "objective") {
+          return unifiedCounter;
+        }
+      }
+    }
+    return 0;
   };
 
   const triggerHiddenInput = (inputId) => {
@@ -1127,27 +1177,31 @@ export function HybridContentEditor({
                     )}
                   </div>
                 )}
-                {/* Move Up/Down controls */}
-                <div
-                  onClick={() => moveBlock(index, index - 1)}
-                  className={`p-1 rounded transition-colors ${
-                    index === 0
-                      ? "opacity-30 cursor-not-allowed"
-                      : "cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-                  }`}
-                >
-                  <ArrowUp className="w-4 h-4" />
-                </div>
-                <div
-                  onClick={() => moveBlock(index, index + 1)}
-                  className={`p-1 rounded transition-colors ${
-                    index === blocks.length - 1
-                      ? "opacity-30 cursor-not-allowed"
-                      : "cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-                  }`}
-                >
-                  <ArrowDown className="w-4 h-4" />
-                </div>
+                {/* Move Up/Down controls - hidden for instruction and objective blocks */}
+                {block.type !== "instruction" && block.type !== "objective" && (
+                  <>
+                    <div
+                      onClick={() => moveBlock(index, index - 1)}
+                      className={`p-1 rounded transition-colors ${
+                        index === 0
+                          ? "opacity-30 cursor-not-allowed"
+                          : "cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                      }`}
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                    </div>
+                    <div
+                      onClick={() => moveBlock(index, index + 1)}
+                      className={`p-1 rounded transition-colors ${
+                        index === blocks.length - 1
+                          ? "opacity-30 cursor-not-allowed"
+                          : "cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                      }`}
+                    >
+                      <ArrowDown className="w-4 h-4" />
+                    </div>
+                  </>
+                )}
                 <div
                   onClick={() => toggleBlockCollapse(block.id)}
                   className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
@@ -1189,7 +1243,7 @@ export function HybridContentEditor({
                   <div className="border rounded-lg overflow-hidden">
                     <div className="flex items-center justify-between p-2 bg-indigo-50 border-b border-indigo-200">
                       <div className="px-2 py-0.5  text-indigo-700">
-                        Instruction {getInstructionNumber(block.id)}
+                        {getInstructionNumber(block.id)}
                       </div>
                       <div className="flex items-center gap-2">
                         {!instructionNonGraded && (
@@ -1526,16 +1580,25 @@ export function HybridContentEditor({
                 )}
 
                 {block.type === "objective" && (
-                  <ObjectiveEditor
-                    content={block.content}
-                    onContentChange={(newContent) =>
-                      updateBlock(block.id, newContent)
-                    }
-                    isCollapsed={false}
-                    onToggleCollapse={() => toggleBlockCollapse(block.id)}
-                    singleQuestionMode={true}
-                    questionNumber={getObjectiveNumber(block.id)}
-                  />
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between p-2 bg-indigo-50 border-b border-indigo-200">
+                      <div className="px-2 py-0.5 text-indigo-700">
+                        {getObjectiveNumber(block.id)}
+                      </div>
+                    </div>
+                    <div className="p-2">
+                      <ObjectiveEditor
+                        content={block.content}
+                        onContentChange={(newContent) =>
+                          updateBlock(block.id, newContent)
+                        }
+                        isCollapsed={false}
+                        onToggleCollapse={() => toggleBlockCollapse(block.id)}
+                        singleQuestionMode={true}
+                        questionNumber={getObjectiveNumber(block.id)}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             )}

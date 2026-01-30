@@ -188,6 +188,7 @@ export function ObjectiveEditor({ content, onContentChange, singleQuestionMode =
         onDrop={handleQuestionDrop}
         hideDelete={singleQuestionMode}
         hideGrip={singleQuestionMode}
+        hideNumber={singleQuestionMode}
         questionNumber={singleQuestionMode ? questionNumber : index + 1}
       >
         {questionComponent}

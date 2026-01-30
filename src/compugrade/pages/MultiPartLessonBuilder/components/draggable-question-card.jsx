@@ -14,6 +14,7 @@ export function DraggableQuestionCard({
   children,
   hideDelete = false,
   hideGrip = false,
+  hideNumber = false,
   questionNumber = null,
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
@@ -47,9 +48,11 @@ export function DraggableQuestionCard({
       <div className="flex items-center justify-between mb-2 border-b bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="flex items-center gap-2 text-gray-400 cursor-grab active:cursor-grabbing">
           {!hideGrip && <GripVertical className="w-4 h-4" />}
-          <span className="text-sm font-medium text-gray-600">Question {questionNumber !== null ? questionNumber : index + 1}</span>
+          {!hideNumber && (
+            <span className="text-sm font-medium text-gray-600">{questionNumber !== null ? questionNumber : index + 1}</span>
+          )}
         </div>
-        <div className="flex items-center gap-2 ">
+        {/* <div className="flex items-center gap-2 ">
           <div
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors cursor-pointer"
@@ -66,7 +69,7 @@ export function DraggableQuestionCard({
               <Trash2 className="w-4 h-4" />
             </div>
           )}
-        </div>
+        </div> */}
       </div>
 
       {!isCollapsed && (
