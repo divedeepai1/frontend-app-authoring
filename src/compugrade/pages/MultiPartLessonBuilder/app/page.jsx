@@ -95,6 +95,43 @@ export default function LessonBuilder() {
 
       lesson.items?.forEach((item) => {
         if (item.block_type === "objective") {
+          // Handle image_url and image_name as array or string from backend
+          const objectiveJson = item.objective_json || {};
+          let questionData = { ...objectiveJson };
+          
+          // If backend returns image_url as array, use it directly
+          // If it's a string, convert to array for consistency
+          if (Array.isArray(objectiveJson.image_url) && objectiveJson.image_url.length > 0) {
+            // Keep as array - use first one for display compatibility
+            questionData.image_url = objectiveJson.image_url; // First for display
+            questionData.image_urls = objectiveJson.image_url; // Keep array for backward compat
+            if (Array.isArray(objectiveJson.image_name)) {
+              questionData.image_name = objectiveJson.image_name; // First for display
+              questionData.image_names = objectiveJson.image_name; // Keep array for backward compat
+            }
+          }
+          if (Array.isArray(objectiveJson.images) && objectiveJson.images.length > 0) {
+            // Keep as array - use first one for display compatibility
+            questionData.image_url = objectiveJson.images; // First for display
+            questionData.image_urls = objectiveJson.image_url; // Keep array for backward compat
+            if (Array.isArray(objectiveJson.image_name)) {
+              questionData.image_name = objectiveJson.image_name; // First for display
+              questionData.image_names = objectiveJson.image_name; // Keep array for backward compat
+            }
+          }
+           else if (typeof objectiveJson.image_url === 'string' && objectiveJson.image_url) {
+            // Single string - convert to array for consistency
+            questionData.image_url = objectiveJson.image_url; // Keep string for display
+            questionData.image_urls = [objectiveJson.image_url]; // Also as array
+            if (typeof objectiveJson.image_name === 'string') {
+              questionData.image_name = objectiveJson.image_name;
+              questionData.image_names = [objectiveJson.image_name];
+            } else if (Array.isArray(objectiveJson.image_name)) {
+              questionData.image_name = objectiveJson.image_name;
+              questionData.image_names = objectiveJson.image_name;
+            }
+          }
+          
           blocks.push({
             id: "objective-block-" + item.id,
             name: item.block_name,
@@ -103,7 +140,7 @@ export default function LessonBuilder() {
               questions: [
                 {
                   id: "objective-question-" + item.id,
-                  ...item.objective_json,
+                  ...questionData,
                 },
               ],
               weightage: typeof item.weightage === 'number' ? item.weightage : 10,
@@ -497,14 +534,95 @@ export default function LessonBuilder() {
         const items = await Promise.all(
           (lesson.content.blocks || []).map(async (block) => {
             if (block.type === "objective") {
-              return block.content.questions.map((question) => ({
-                id: question.id,
-                instruction_category: "OB",
-                block_name: block.name,
-                block_type: block.type,
-                item_type: "g",
-                objective_json: question,
-                weightage: typeof block.content.weightage === 'number' ? block.content.weightage : 10,
+              return await Promise.all(block.content.questions.map(async (question) => {
+                // Get question images from question.image_url array (already updated when images are removed)
+                // This array contains only the images that are still in the UI (removed ones are already filtered out)
+                let questionImageUrls = [];
+                let questionImageNames = [];
+                
+                if (Array.isArray(question.image_url) && question.image_url.length > 0) {
+                  // Get image files from images context for this question
+                  const imageObject = images?.find((img) => img.questionId == question.id);
+                  
+                  // Get image names array (should match image_url array length)
+                  const imageNames = Array.isArray(question.image_name) 
+                    ? question.image_name 
+                    : (question.image_name ? [question.image_name] : []);
+                  
+                  // Convert each image URL to base64 and track names
+                  const imageData = await Promise.all(
+                    question.image_url.map(async (url, index) => {
+                      let base64Url = null;
+                      let imageName = imageNames[index] || `image-${index + 1}`;
+                      
+                      // If it's a blob URL, get the file from images context and convert to base64
+                      if (typeof url === 'string' && url.startsWith('blob:')) {
+                        // Try to find the file in images context by matching URL
+                        if (imageObject?.question) {
+                          const matchingImage = imageObject.question.find((img) => img.url === url);
+                          if (matchingImage?.file) {
+                            base64Url = await fileToBase64(matchingImage.file);
+                            imageName = matchingImage.file.name || imageName;
+                          }
+                        }
+                        
+                        // If file not found in context, try getQuestionImagesByQuestionId as fallback
+                        if (!base64Url) {
+                          const questionImageFiles = getQuestionImagesByQuestionId(question.id);
+                          const matchingFile = questionImageFiles.find((file) => {
+                            if (file instanceof File || file instanceof Blob) {
+                              return true; // Will use first available file as fallback
+                            }
+                            return false;
+                          });
+                          
+                          if (matchingFile instanceof File || matchingFile instanceof Blob) {
+                            base64Url = await fileToBase64(matchingFile);
+                            imageName = matchingFile.name || imageName;
+                          }
+                        }
+                      } else {
+                        // If it's already a base64 string or regular URL, use as-is
+                        base64Url = url;
+                      }
+                      
+                      return { url: base64Url, name: imageName };
+                    })
+                  );
+                  
+                  // Filter out null values (removed images or images without files) and extract arrays
+                  const validImages = imageData.filter(img => img.url !== null);
+                  questionImageUrls = validImages.map(img => img.url);
+                  questionImageNames = validImages.map(img => img.name);
+                } else if (question.image_url && typeof question.image_url === 'string' && !question.image_url.startsWith('blob:')) {
+                  // Single string (not blob) - use as-is
+                  questionImageUrls = [question.image_url];
+                  questionImageNames = [
+                    (Array.isArray(question.image_name) ? question.image_name[0] : question.image_name) || 'image'
+                  ];
+                }
+
+                // Create objective_json with images and image_name arrays (remove image_url, image_urls, image_names)
+                const { image_url, image_urls, image_names, ...questionWithoutImageFields } = question;
+                
+                const objectiveJson = {
+                  ...questionWithoutImageFields,
+                  // Send images array (base64 strings) and image_name array
+                  ...(questionImageUrls.length > 0 && { 
+                    images: questionImageUrls,
+                    image_name: questionImageNames 
+                  }),
+                };
+
+                return {
+                  id: question.id,
+                  instruction_category: "OB",
+                  block_name: block.name,
+                  block_type: block.type,
+                  item_type: "g",
+                  objective_json: objectiveJson,
+                  weightage: typeof block.content.weightage === 'number' ? block.content.weightage : 10,
+                };
               }));
             } else if (block.type === "text") {
               return [
@@ -622,19 +740,10 @@ export default function LessonBuilder() {
 
       const files = getFilesByItemId(item.temporary_item_id);
       if (!files || files.length === 0) return [];
-      const mainFileUploads = files
-        .map((file) => {
-          if (!file?.file) return null;
-
-          const uploadUrl = item?.image_url[0];
-          if (!uploadUrl) return null;
-          return fetch(uploadUrl, {
-            method: "PUT",
-            body: file.file,
-            headers: { "Content-Type": file.type || "image/jpeg" },
-          });
-        })
-        .filter(Boolean);
+      
+      // Skip question images - they are sent as base64 in objective_json
+      // Only upload option/answer images to S3
+      const mainFileUploads = []; // Question images are now excluded - sent as base64 instead
       const optionFileUploads = files.flatMap((file) => {
         if (
           !file?.option ||
@@ -694,6 +803,15 @@ export default function LessonBuilder() {
       });
     }
     return files;
+  };
+
+  // Helper to get question images (excluding option images) for base64 conversion
+  const getQuestionImagesByQuestionId = (questionId) => {
+    const imageObject = images?.find((img) => img.questionId == questionId);
+    if (imageObject && Array.isArray(imageObject.question)) {
+      return imageObject.question.map((img) => img.file).filter(Boolean);
+    }
+    return [];
   };
 
   const mergeLessonItems = async (result) => {

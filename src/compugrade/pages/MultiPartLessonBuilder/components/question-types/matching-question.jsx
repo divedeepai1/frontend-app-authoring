@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Trash2, Plus, X } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
 import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
+import { useQuestionImages } from "./useQuestionImages"
 
 export function MatchingQuestion({ question, onQuestionChange, onDelete }) {
   const [questionContent, setQuestionContent] = useState({ html: question.text || "" })
@@ -13,6 +14,7 @@ export function MatchingQuestion({ question, onQuestionChange, onDelete }) {
       { left: "", right: "" },
     ],
   )
+  const { questionImages, handleQuestionImageSelect, handleQuestionImageRemoveAt } = useQuestionImages(question)
   const plainQuestionText = (questionContent?.html || "").replace(/<[^>]+>/g, "").trim()
   const questionError = !plainQuestionText ? 'Question is required.' : null
   const pairsError = pairs.length < 1 ? 'Add at least one pair.' : null
@@ -62,18 +64,15 @@ export function MatchingQuestion({ question, onQuestionChange, onDelete }) {
           <label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">
             Question
           </label>
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2">
             <ImageAttach
-              image={question.image_url ? { url: question.image_url } : null}
-              onSelect={(file) => {
-                const url = URL.createObjectURL(file)
-                onQuestionChange({ ...question, image_url: url, image_name: file.name })
-              }}
-              onRemove={() => onQuestionChange({ ...question, image_url: "", image_name: "" })}
-              label="Attach question image"
+              images={questionImages}
+              onSelect={(file, record) => handleQuestionImageSelect(file, record, onQuestionChange)}
+              onRemoveAt={(index) => handleQuestionImageRemoveAt(index, onQuestionChange)}
+              label="Attach question images"
               scope={{ questionId: question.id, kind: 'question' }}
               showPreview={false}
-              fileName={question.image_name}
+              multiple={true}
             />
           </div>
           </div>
