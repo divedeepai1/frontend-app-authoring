@@ -1178,7 +1178,7 @@ export function HybridContentEditor({
                   </div>
                 )}
                 {/* Move Up/Down controls - hidden for instruction and objective blocks */}
-                {block.type !== "instruction" && block.type !== "objective" && (
+                
                   <>
                     <div
                       onClick={() => moveBlock(index, index - 1)}
@@ -1201,7 +1201,7 @@ export function HybridContentEditor({
                       <ArrowDown className="w-4 h-4" />
                     </div>
                   </>
-                )}
+                
                 <div
                   onClick={() => toggleBlockCollapse(block.id)}
                   className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
