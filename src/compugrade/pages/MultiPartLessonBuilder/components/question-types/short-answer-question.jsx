@@ -4,10 +4,12 @@ import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
 import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
+import { useQuestionImages } from "./useQuestionImages"
 
 export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
   const [questionContent, setQuestionContent] = useState({ html: question.natural_text || "" })
   const [sampleAnswer, setSampleAnswer] = useState(question.correct_answer || "")
+  const { questionImages, handleQuestionImageSelect, handleQuestionImageRemoveAt } = useQuestionImages(question)
   const plainQuestionText = (questionContent?.html || "").replace(/<[^>]+>/g, "").trim()
   const questionError = !plainQuestionText ? 'Question is required.' : null
   const answerError = !sampleAnswer || !sampleAnswer.trim() ? 'Answer is required.' : null
@@ -49,21 +51,17 @@ export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
           {questionError && (
             <div className="mt-1 text-xs text-red-600">{questionError}</div>
           )}
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2">
             <ImageAttach
-              image={question.image_url ? { url: question.image_url } : null}
-              onSelect={(file) => {
-                const url = URL.createObjectURL(file)
-                onQuestionChange({ ...question, image_url: url, image_name: file.name })
-              }}
-              onRemove={() => onQuestionChange({ ...question, image_url: "", image_name: "" })}
-              label="Attach question image"
+              images={questionImages}
+              onSelect={(file, record) => handleQuestionImageSelect(file, record, onQuestionChange)}
+              onRemoveAt={(index) => handleQuestionImageRemoveAt(index, onQuestionChange)}
+              label="Attach question images"
               scope={{ questionId: question.id, kind: 'question' }}
-              fileName={question.image_name}
               showPreview={false}
+              multiple={true}
             />
           </div>
-          {/* No inline preview; preview shown in dialog via ImageAttach */}
         </div>
         </div>
 

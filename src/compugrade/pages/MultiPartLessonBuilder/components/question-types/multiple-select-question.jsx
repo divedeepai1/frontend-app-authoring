@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Trash2, Plus, X } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
 import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
+import { useQuestionImages } from "./useQuestionImages"
 
 export function MultipleSelectQuestion({ question, onQuestionChange, onDelete }) {
   const [questionContent, setQuestionContent] = useState({ html: question.natural_text || "" })
@@ -13,6 +14,7 @@ export function MultipleSelectQuestion({ question, onQuestionChange, onDelete })
   }
   const [options, setOptions] = useState(normalizeOptions(question.options))
   const [correctAnswers, setCorrectAnswers] = useState(question.correct_answer || [])
+  const { questionImages, handleQuestionImageSelect, handleQuestionImageRemoveAt } = useQuestionImages(question)
   const plainQuestionText = (questionContent?.html || "").replace(/<[^>]+>/g, "").trim()
   const questionError = !plainQuestionText ? 'Question is required.' : null
   const optionsError = options.length < 2 ? 'Add at least two options.' : null
@@ -28,14 +30,6 @@ export function MultipleSelectQuestion({ question, onQuestionChange, onDelete })
   const emitOptions = (newOptions) => {
     setOptions(newOptions)
     onQuestionChange({ ...question, options: newOptions })
-  }
-
-  const handleQuestionImageSelect = (file) => {
-    const url = URL.createObjectURL(file)
-    onQuestionChange({ ...question, image_url: url, image_name: file.name })
-  }
-  const handleQuestionImageRemove = () => {
-    onQuestionChange({ ...question, image_url: "", image_name: "" })
   }
 
   const handleOptionChange = (index, value) => {
@@ -110,18 +104,17 @@ export function MultipleSelectQuestion({ question, onQuestionChange, onDelete })
           {(!questionContent?.html || !(questionContent.html || "").replace(/<[^>]+>/g, "").trim()) && (
             <div className="mt-1 text-xs text-red-600">Question is required.</div>
           )}
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2">
             <ImageAttach
-              image={question.image_url ? { url: question.image_url } : null}
-              onSelect={(file) => handleQuestionImageSelect(file)}
-              onRemove={() => handleQuestionImageRemove()}
-              label="Attach question image"
+              images={questionImages}
+              onSelect={(file, record) => handleQuestionImageSelect(file, record, onQuestionChange)}
+              onRemoveAt={(index) => handleQuestionImageRemoveAt(index, onQuestionChange)}
+              label="Attach question images"
               scope={{ questionId: question.id, kind: 'question' }}
-              fileName={question.image_name}
               showPreview={false}
+              multiple={true}
             />
           </div>
-          {/* No inline preview; preview shown in dialog via ImageAttach */}
         </div>
 
         <div>
