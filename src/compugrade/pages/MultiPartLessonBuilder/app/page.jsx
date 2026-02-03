@@ -557,26 +557,31 @@ export default function LessonBuilder() {
                       
                       // If it's a blob URL, get the file from images context and convert to base64
                       if (typeof url === 'string' && url.startsWith('blob:')) {
-                        // Try to find the file in images context by matching URL
-                        if (imageObject?.question) {
+                        // Try to find the file in images context by matching URL first (most reliable)
+                        if (imageObject?.question && Array.isArray(imageObject.question)) {
                           const matchingImage = imageObject.question.find((img) => img.url === url);
                           if (matchingImage?.file) {
                             base64Url = await fileToBase64(matchingImage.file);
                             imageName = matchingImage.file.name || imageName;
+                          } else {
+                            // If URL match fails, try matching by index in images context
+                            // (in case URLs don't match exactly but order is preserved)
+                            const imageByIndex = imageObject.question[index];
+                            if (imageByIndex?.file) {
+                              base64Url = await fileToBase64(imageByIndex.file);
+                              imageName = imageByIndex.file.name || imageName;
+                            }
                           }
                         }
                         
-                        // If file not found in context, try getQuestionImagesByQuestionId as fallback
+                        // If file still not found in context, try getQuestionImagesByQuestionId as fallback
+                        // Match by index to ensure each blob URL gets its corresponding file
                         if (!base64Url) {
                           const questionImageFiles = getQuestionImagesByQuestionId(question.id);
-                          const matchingFile = questionImageFiles.find((file) => {
-                            if (file instanceof File || file instanceof Blob) {
-                              return true; // Will use first available file as fallback
-                            }
-                            return false;
-                          });
+                          // Match by index - files should be in the same order as image_url array
+                          const matchingFile = questionImageFiles[index];
                           
-                          if (matchingFile instanceof File || matchingFile instanceof Blob) {
+                          if (matchingFile && (matchingFile instanceof File || matchingFile instanceof Blob)) {
                             base64Url = await fileToBase64(matchingFile);
                             imageName = matchingFile.name || imageName;
                           }

@@ -61,7 +61,9 @@ export function useQuestionImages(question) {
   }, [question.image_url, question.image_urls, question.image_names, question.image_name])
 
   const handleQuestionImageSelect = (file, record, onQuestionChange) => {
-    const url = URL.createObjectURL(file)
+    // Use the blob URL from images context (record.url) to ensure it matches what's stored in the context
+    // This is critical for matching images correctly when converting to base64
+    const url = record?.url || URL.createObjectURL(file)
     const newImage = {
       url: url,
       name: file.name,
