@@ -534,95 +534,129 @@ export default function LessonBuilder() {
         const items = await Promise.all(
           (lesson.content.blocks || []).map(async (block) => {
            if (block.type === "objective") {
-              return await Promise.all(block.content.questions.map(async (question) => {
-                let questionImageUrls = [];
-                let questionImageNames = [];
-                
-                if (Array.isArray(question.image_url) && question.image_url.length > 0) {
-                  const imageNames = Array.isArray(question.image_name) 
-                    ? question.image_name 
-                    : (question.image_name ? [question.image_name] : []);
-                  
-                  const imageObject = images?.find((img) => img.questionId == question.id);
-                  
-                  const imageData = await Promise.all(
-                    question.image_url.map(async (url, index) => {
-                      if (!url || (typeof url === 'string' && url.trim() === '')) {
-                        return null;
-                      }
-                      
-                      let imageName = imageNames[index];
-                      let base64Url = null;
-                      let finalImageName = imageName || `image-${index + 1}`;
-                      
-                      if (typeof url === 'string' && url.startsWith('blob:')) {
-                        if (imageObject?.question && Array.isArray(imageObject.question)) {
-                          const matchingImage = imageObject.question.find((img) => img.url === url);
-                          if (matchingImage?.file) {
-                            base64Url = await fileToBase64(matchingImage.file);
-                            finalImageName = matchingImage.file.name || finalImageName;
-                          } else {
-                            const imageByIndex = imageObject.question[index];
-                            if (imageByIndex?.file) {
-                              base64Url = await fileToBase64(imageByIndex.file);
-                              finalImageName = imageByIndex.file.name || finalImageName;
-                            }
-                          }
-                        }
-                        
-                        if (!base64Url) {
-                          const questionImageFiles = getQuestionImagesByQuestionId(question.id);
-                          const matchingFile = questionImageFiles[index];
-                          
-                          if (matchingFile && (matchingFile instanceof File || matchingFile instanceof Blob)) {
-                            base64Url = await fileToBase64(matchingFile);
-                            finalImageName = matchingFile.name || finalImageName;
-                          }
-                        }
-                      } else {
-                        base64Url = url;
-                        if (!imageName || (typeof imageName === 'string' && imageName.trim() === '')) {
-                          finalImageName = `image-${index + 1}`;
-                        }
-                      }
-                      
-                      if (base64Url && finalImageName) {
-                        return { url: base64Url, name: finalImageName };
-                      }
-                      return null;
-                    })
-                  );
-                  
-                  const validImages = imageData.filter(img => img !== null && img.url !== null && img.name);
-                  questionImageUrls = validImages.map(img => img.url);
-                  questionImageNames = validImages.map(img => img.name);
-                } else if (question.image_url && typeof question.image_url === 'string' && !question.image_url.startsWith('blob:')) {
-                  const imageName = Array.isArray(question.image_name) ? question.image_name[0] : question.image_name;
-                  questionImageUrls = [question.image_url];
-                  questionImageNames = [imageName || 'image'];
+  return await Promise.all(
+    block.content.questions.map(async (question) => {
+      let questionImageUrls = [];
+      let questionImageNames = [];
+
+      if (Array.isArray(question.image_url) && question.image_url.length > 0) {
+        const imageNames = Array.isArray(question.image_name)
+          ? question.image_name
+          : question.image_name
+          ? [question.image_name]
+          : [];
+
+        const imageObject = images?.find(
+          (img) => img.questionId == question.id
+        );
+
+        const imageData = await Promise.all(
+          question.image_url.map(async (url, index) => {
+            if (!url || (typeof url === "string" && url.trim() === "")) {
+              return null;
+            }
+
+            const imageName = imageNames[index];
+
+            if (!imageName || imageName.trim() === "") {
+              return null;
+            }
+
+            let base64Url = null;
+            let finalImageName = imageName;
+
+            if (typeof url === "string" && url.startsWith("blob:")) {
+              if (imageObject?.question && Array.isArray(imageObject.question)) {
+                const matchingImage = imageObject.question.find(
+                  (img) => img.url === url
+                );
+
+                if (matchingImage?.file) {
+                  base64Url = await fileToBase64(matchingImage.file);
+                  finalImageName = matchingImage.file.name || finalImageName;
+                } else {
+                  const imageByIndex = imageObject.question[index];
+                  if (imageByIndex?.file) {
+                    base64Url = await fileToBase64(imageByIndex.file);
+                    finalImageName = imageByIndex.file.name || finalImageName;
+                  }
                 }
+              }
 
-                const { image_url, image_urls, image_names, ...questionWithoutImageFields } = question;
-                
-                const objectiveJson = {
-                  ...questionWithoutImageFields,
-                  ...(questionImageUrls.length > 0 && { 
-                    images: questionImageUrls,
-                    image_name: questionImageNames 
-                  }),
-                };
+              if (!base64Url) {
+                const questionImageFiles =
+                  getQuestionImagesByQuestionId(question.id);
+                const matchingFile = questionImageFiles[index];
 
-                return {
-                  id: question.id,
-                  instruction_category: "OB",
-                  block_name: block.name,
-                  block_type: block.type,
-                  item_type: "g",
-                  objective_json: objectiveJson,
-                  weightage: typeof block.content.weightage === 'number' ? block.content.weightage : 10,
-                };
-              }));
-            }  else if (block.type === "text") {
+                if (
+                  matchingFile &&
+                  (matchingFile instanceof File ||
+                    matchingFile instanceof Blob)
+                ) {
+                  base64Url = await fileToBase64(matchingFile);
+                  finalImageName = matchingFile.name || finalImageName;
+                }
+              }
+            } else {
+              base64Url = url;
+            }
+
+            if (base64Url && finalImageName) {
+              return { url: base64Url, name: finalImageName };
+            }
+
+            return null;
+          })
+        );
+
+        const validImages = imageData.filter(
+          (img) => img && img.url && img.name
+        );
+
+        questionImageUrls = validImages.map((img) => img.url);
+        questionImageNames = validImages.map((img) => img.name);
+      } else if (
+        question.image_url &&
+        typeof question.image_url === "string" &&
+        !question.image_url.startsWith("blob:") &&
+        question.image_name &&
+        question.image_name.trim() !== ""
+      ) {
+        questionImageUrls = [question.image_url];
+        questionImageNames = [question.image_name];
+      }
+
+      const {
+        image_url,
+        image_urls,
+        image_names,
+        ...questionWithoutImageFields
+      } = question;
+
+      const objectiveJson = {
+        ...questionWithoutImageFields,
+        ...(questionImageUrls.length > 0 && {
+          images: questionImageUrls,
+          image_name: questionImageNames,
+        }),
+      };
+
+      return {
+        id: question.id,
+        instruction_category: "OB",
+        block_name: block.name,
+        block_type: block.type,
+        item_type: "g",
+        objective_json: objectiveJson,
+        weightage:
+          typeof block.content.weightage === "number"
+            ? block.content.weightage
+            : 10,
+      };
+    })
+  );
+}
+ else if (block.type === "text") {
               return [
                 {
                   id: block.id,
