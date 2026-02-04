@@ -533,86 +533,79 @@ export default function LessonBuilder() {
 
         const items = await Promise.all(
           (lesson.content.blocks || []).map(async (block) => {
-            if (block.type === "objective") {
+           if (block.type === "objective") {
               return await Promise.all(block.content.questions.map(async (question) => {
-                // Get question images from question.image_url array (already updated when images are removed)
-                // This array contains only the images that are still in the UI (removed ones are already filtered out)
                 let questionImageUrls = [];
                 let questionImageNames = [];
                 
                 if (Array.isArray(question.image_url) && question.image_url.length > 0) {
-                  // Get image files from images context for this question
-                  const imageObject = images?.find((img) => img.questionId == question.id);
-                  
-                  // Get image names array (should match image_url array length)
                   const imageNames = Array.isArray(question.image_name) 
                     ? question.image_name 
                     : (question.image_name ? [question.image_name] : []);
                   
-                  // Convert each image URL to base64 and track names
+                  const imageObject = images?.find((img) => img.questionId == question.id);
+                  
                   const imageData = await Promise.all(
                     question.image_url.map(async (url, index) => {
-                      let base64Url = null;
-                      let imageName = imageNames[index] || `image-${index + 1}`;
+                      if (!url || (typeof url === 'string' && url.trim() === '')) {
+                        return null;
+                      }
                       
-                      // If it's a blob URL, get the file from images context and convert to base64
+                      let imageName = imageNames[index];
+                      let base64Url = null;
+                      let finalImageName = imageName || `image-${index + 1}`;
+                      
                       if (typeof url === 'string' && url.startsWith('blob:')) {
-                        // Try to find the file in images context by matching URL first (most reliable)
                         if (imageObject?.question && Array.isArray(imageObject.question)) {
                           const matchingImage = imageObject.question.find((img) => img.url === url);
                           if (matchingImage?.file) {
                             base64Url = await fileToBase64(matchingImage.file);
-                            imageName = matchingImage.file.name || imageName;
+                            finalImageName = matchingImage.file.name || finalImageName;
                           } else {
-                            // If URL match fails, try matching by index in images context
-                            // (in case URLs don't match exactly but order is preserved)
                             const imageByIndex = imageObject.question[index];
                             if (imageByIndex?.file) {
                               base64Url = await fileToBase64(imageByIndex.file);
-                              imageName = imageByIndex.file.name || imageName;
+                              finalImageName = imageByIndex.file.name || finalImageName;
                             }
                           }
                         }
                         
-                        // If file still not found in context, try getQuestionImagesByQuestionId as fallback
-                        // Match by index to ensure each blob URL gets its corresponding file
                         if (!base64Url) {
                           const questionImageFiles = getQuestionImagesByQuestionId(question.id);
-                          // Match by index - files should be in the same order as image_url array
                           const matchingFile = questionImageFiles[index];
                           
                           if (matchingFile && (matchingFile instanceof File || matchingFile instanceof Blob)) {
                             base64Url = await fileToBase64(matchingFile);
-                            imageName = matchingFile.name || imageName;
+                            finalImageName = matchingFile.name || finalImageName;
                           }
                         }
                       } else {
-                        // If it's already a base64 string or regular URL, use as-is
                         base64Url = url;
+                        if (!imageName || (typeof imageName === 'string' && imageName.trim() === '')) {
+                          finalImageName = `image-${index + 1}`;
+                        }
                       }
                       
-                      return { url: base64Url, name: imageName };
+                      if (base64Url && finalImageName) {
+                        return { url: base64Url, name: finalImageName };
+                      }
+                      return null;
                     })
                   );
                   
-                  // Filter out null values (removed images or images without files) and extract arrays
-                  const validImages = imageData.filter(img => img.url !== null);
+                  const validImages = imageData.filter(img => img !== null && img.url !== null && img.name);
                   questionImageUrls = validImages.map(img => img.url);
                   questionImageNames = validImages.map(img => img.name);
                 } else if (question.image_url && typeof question.image_url === 'string' && !question.image_url.startsWith('blob:')) {
-                  // Single string (not blob) - use as-is
+                  const imageName = Array.isArray(question.image_name) ? question.image_name[0] : question.image_name;
                   questionImageUrls = [question.image_url];
-                  questionImageNames = [
-                    (Array.isArray(question.image_name) ? question.image_name[0] : question.image_name) || 'image'
-                  ];
+                  questionImageNames = [imageName || 'image'];
                 }
 
-                // Create objective_json with images and image_name arrays (remove image_url, image_urls, image_names)
                 const { image_url, image_urls, image_names, ...questionWithoutImageFields } = question;
                 
                 const objectiveJson = {
                   ...questionWithoutImageFields,
-                  // Send images array (base64 strings) and image_name array
                   ...(questionImageUrls.length > 0 && { 
                     images: questionImageUrls,
                     image_name: questionImageNames 
@@ -629,7 +622,7 @@ export default function LessonBuilder() {
                   weightage: typeof block.content.weightage === 'number' ? block.content.weightage : 10,
                 };
               }));
-            } else if (block.type === "text") {
+            }  else if (block.type === "text") {
               return [
                 {
                   id: block.id,
