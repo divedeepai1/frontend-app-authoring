@@ -95,41 +95,25 @@ export default function LessonBuilder() {
 
       lesson.items?.forEach((item) => {
         if (item.block_type === "objective") {
-          // Handle image_url and image_name as array or string from backend
           const objectiveJson = item.objective_json || {};
           let questionData = { ...objectiveJson };
           
-          // If backend returns image_url as array, use it directly
-          // If it's a string, convert to array for consistency
-          if (Array.isArray(objectiveJson.image_url) && objectiveJson.image_url.length > 0) {
-            // Keep as array - use first one for display compatibility
-            questionData.image_url = objectiveJson.image_url; // First for display
-            questionData.image_urls = objectiveJson.image_url; // Keep array for backward compat
-            if (Array.isArray(objectiveJson.image_name)) {
-              questionData.image_name = objectiveJson.image_name; // First for display
-              questionData.image_names = objectiveJson.image_name; // Keep array for backward compat
-            }
-          }
           if (Array.isArray(objectiveJson.images) && objectiveJson.images.length > 0) {
-            // Keep as array - use first one for display compatibility
-            questionData.image_url = objectiveJson.images; // First for display
-            questionData.image_urls = objectiveJson.image_url; // Keep array for backward compat
-            if (Array.isArray(objectiveJson.image_name)) {
-              questionData.image_name = objectiveJson.image_name; // First for display
-              questionData.image_names = objectiveJson.image_name; // Keep array for backward compat
-            }
-          }
-           else if (typeof objectiveJson.image_url === 'string' && objectiveJson.image_url) {
-            // Single string - convert to array for consistency
-            questionData.image_url = objectiveJson.image_url; // Keep string for display
-            questionData.image_urls = [objectiveJson.image_url]; // Also as array
-            if (typeof objectiveJson.image_name === 'string') {
-              questionData.image_name = objectiveJson.image_name;
-              questionData.image_names = [objectiveJson.image_name];
-            } else if (Array.isArray(objectiveJson.image_name)) {
-              questionData.image_name = objectiveJson.image_name;
-              questionData.image_names = objectiveJson.image_name;
-            }
+            questionData.image_url = objectiveJson.images;
+            questionData.image_name = Array.isArray(objectiveJson.image_name) 
+              ? objectiveJson.image_name 
+              : (objectiveJson.image_name ? [objectiveJson.image_name] : []);
+          } else if (Array.isArray(objectiveJson.image_url) && objectiveJson.image_url.length > 0) {
+            questionData.image_url = objectiveJson.image_url;
+            questionData.image_name = Array.isArray(objectiveJson.image_name) 
+              ? objectiveJson.image_name 
+              : (objectiveJson.image_name ? [objectiveJson.image_name] : []);
+          } else if (typeof objectiveJson.image_url === 'string' && objectiveJson.image_url) {
+            questionData.image_url = [objectiveJson.image_url];
+            questionData.image_name = [objectiveJson.image_name || 'image'];
+          } else {
+            questionData.image_url = [];
+            questionData.image_name = [];
           }
           
           blocks.push({
@@ -144,6 +128,7 @@ export default function LessonBuilder() {
                 },
               ],
               weightage: typeof item.weightage === 'number' ? item.weightage : 10,
+              item_type: item.item_type == "foundation" || item.item_type == "certification" || item.item_type == "no-skill" ? item.item_type : "no-skill",
             },
           });
         } else if (item.block_type === "text") {
@@ -539,14 +524,14 @@ export default function LessonBuilder() {
                   let questionImageUrls = [];
                   let questionImageNames = [];
             
-                  if (Array.isArray(question.image_url)) {
+                  if (Array.isArray(question.image_url) && question.image_url.length > 0) {
                     const imageNames = Array.isArray(question.image_name)
                       ? question.image_name
                       : question.image_name
                       ? [question.image_name]
                       : [];
             
-                    if (imageNames.length > 0 && question.image_url.length > 0) {
+                    if (imageNames.length === question.image_url.length) {
                       const imageObject = images?.find(
                         (img) => img.questionId == question.id
                       );
@@ -559,16 +544,11 @@ export default function LessonBuilder() {
                           let finalImageName = imageNames[index];
             
                           if (typeof url === "string" && url.startsWith("blob:")) {
-                            if (imageObject?.question?.[index]?.file) {
-                              const file = imageObject.question[index].file;
-                              base64Url = await fileToBase64(file);
-                              finalImageName = file.name || finalImageName;
-                            } else {
-                              const files = getQuestionImagesByQuestionId(question.id);
-                              const file = files?.[index];
-                              if (file instanceof File || file instanceof Blob) {
-                                base64Url = await fileToBase64(file);
-                                finalImageName = file.name || finalImageName;
+                            if (imageObject?.question && Array.isArray(imageObject.question)) {
+                              const matchingImage = imageObject.question.find((img) => img.url === url);
+                              if (matchingImage?.file) {
+                                base64Url = await fileToBase64(matchingImage.file);
+                                finalImageName = matchingImage.file.name || finalImageName;
                               }
                             }
                           } else {
@@ -582,11 +562,8 @@ export default function LessonBuilder() {
                       );
             
                       const validImages = imageData.filter(Boolean);
-            
-                      questionImageUrls =
-                        imageNames.length > 0 ? validImages.map((i) => i.url) : [];
-                      questionImageNames =
-                        imageNames.length > 0 ? validImages.map((i) => i.name) : [];
+                      questionImageUrls = validImages.map((i) => i.url);
+                      questionImageNames = validImages.map((i) => i.name);
                     }
                   } else if (
                     typeof question.image_url === "string" &&
@@ -598,10 +575,6 @@ export default function LessonBuilder() {
                     questionImageNames = [question.image_name];
                   }
             
-                  if (questionImageNames.length === 0) {
-                    questionImageUrls = [];
-                  }
-            
                   const {
                     image_url,
                     image_urls,
@@ -611,8 +584,10 @@ export default function LessonBuilder() {
             
                   const objectiveJson = {
                     ...questionWithoutImageFields,
-                    images: questionImageUrls,
-                    image_name: questionImageNames,
+                    ...(questionImageUrls.length > 0 && {
+                      images: questionImageUrls,
+                      image_name: questionImageNames,
+                    }),
                   };
             
                   return {
@@ -620,7 +595,7 @@ export default function LessonBuilder() {
                     instruction_category: "OB",
                     block_name: block.name,
                     block_type: block.type,
-                    item_type: "g",
+                    item_type: block.content.item_type,
                     objective_json: objectiveJson,
                     weightage:
                       typeof block.content.weightage === "number"
@@ -747,9 +722,7 @@ export default function LessonBuilder() {
       const files = getFilesByItemId(item.temporary_item_id);
       if (!files || files.length === 0) return [];
       
-      // Skip question images - they are sent as base64 in objective_json
-      // Only upload option/answer images to S3
-      const mainFileUploads = []; // Question images are now excluded - sent as base64 instead
+      const mainFileUploads = [];
       const optionFileUploads = files.flatMap((file) => {
         if (
           !file?.option ||
@@ -811,7 +784,6 @@ export default function LessonBuilder() {
     return files;
   };
 
-  // Helper to get question images (excluding option images) for base64 conversion
   const getQuestionImagesByQuestionId = (questionId) => {
     const imageObject = images?.find((img) => img.questionId == questionId);
     if (imageObject && Array.isArray(imageObject.question)) {

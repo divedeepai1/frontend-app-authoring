@@ -373,6 +373,7 @@ export function HybridContentEditor({
       content: {
         questions: [newQuestion],
         weightage: 10,
+        item_type: "no-skill",
       },
       isCollapsed: false,
     };
@@ -1584,6 +1585,24 @@ export function HybridContentEditor({
                     <div className="flex items-center justify-between p-2 bg-indigo-50 border-b border-indigo-200">
                       <div className="px-2 py-0.5 text-indigo-700">
                         {getObjectiveNumber(block.id)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          defaultValue="no-skill"
+                          value={block.content.item_type || "no-skill"}
+                          className="px-2 py-1 text-xs rounded text-gray-950 border-green-200 border bg-transparent"
+                          onChange={(e) => {
+                            const newType = e.target.value;
+                            updateBlock(block.id, {
+                              ...block.content,
+                              item_type: newType,
+                            });
+                          }}
+                        >
+                          <option value="certification">Certification Skill</option>
+                          <option value="foundation">Foundation Skill</option>
+                          <option value="no-skill">No Skill</option>
+                        </select>
                       </div>
                     </div>
                     <div className="p-2">
