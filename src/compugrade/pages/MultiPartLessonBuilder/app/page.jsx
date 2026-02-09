@@ -39,6 +39,7 @@ export default function LessonBuilder() {
   const [toasts, setToasts] = useState([]);
   const [aiVideoLoading, setAiVideoLoading] = useState(false);
   const [aiInstructionsLoading, setAiInstructionsLoading] = useState(false);
+  const [aiLessonBuilderLoading, setAiLessonBuilderLoading] = useState(false);
   const [saveDraftLoading, setSaveDraftLoading] = useState(false);
   const [partConfigOpen, setPartConfigOpen] = useState(false);
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
@@ -1178,6 +1179,162 @@ export default function LessonBuilder() {
     }
   };
 
+  const handleAiLessonBuilderClick = () => {
+    if (aiLessonBuilderLoading) return;
+    const el = document.getElementById("ai-lesson-builder-excel");
+    if (el) el.click();
+  };
+
+  const handleAiLessonBuilderSelected = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      addToast({
+        title: "No file selected",
+        message: "Please choose an Excel file.",
+        variant: "info",
+      });
+      return;
+    }
+    setAiLessonBuilderLoading(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const response = await fetch(
+        base_url + "/api/openedx/parse_lesson_from_excel",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            excel_base64: base64,
+          }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Failed : ${response.status} ${response.statusText}`);
+      }
+      const result = await response.json();
+      const items = result || [];
+      const blocks = [];
+
+      items.forEach((item) => {
+        if (item.block_type === "objective") {
+          const objectiveJson = item.objective_json || {};
+          let questionData = { ...objectiveJson };
+          
+          if (Array.isArray(objectiveJson.images) && objectiveJson.images.length > 0) {
+            questionData.image_url = objectiveJson.images;
+            questionData.image_name = Array.isArray(objectiveJson.image_name) 
+              ? objectiveJson.image_name 
+              : (objectiveJson.image_name ? [objectiveJson.image_name] : []);
+          } else if (Array.isArray(objectiveJson.image_url) && objectiveJson.image_url.length > 0) {
+            questionData.image_url = objectiveJson.image_url;
+            questionData.image_name = Array.isArray(objectiveJson.image_name) 
+              ? objectiveJson.image_name 
+              : (objectiveJson.image_name ? [objectiveJson.image_name] : []);
+          } else if (typeof objectiveJson.image_url === 'string' && objectiveJson.image_url) {
+            questionData.image_url = [objectiveJson.image_url];
+            questionData.image_name = [objectiveJson.image_name || 'image'];
+          } else {
+            questionData.image_url = [];
+            questionData.image_name = [];
+          }
+          
+          blocks.push({
+            id: "objective-block-" + item.item_num,
+            name: item.block_name,
+            type: "objective",
+            content: {
+              questions: [
+                {
+                  id: "objective-question-" + item.item_num +"123",
+                  ...questionData,
+                },
+              ],
+              weightage: typeof item.weightage === 'number' ? item.weightage : 10,
+              item_type: item.item_type == "foundation" || item.item_type == "certification" || item.item_type == "no-skill" ? item.item_type : "no-skill",
+            },
+          });
+        } else if (item.block_type === "text") {
+          blocks.push({
+            id: "text-block-" + item.id,
+            name: item.block_name,
+            type: "text",
+            content: {
+              html: item.natural_text || "",
+            },
+          });
+        } else if (item.block_type === "instruction") {
+          blocks.push({
+            id: "instruction-block-" + item.id,
+            name: item.block_name,
+            type: "instruction",
+            content: {
+              html: item.natural_text || "",
+              errorCodes: item.error_codes || [],
+              weightage: typeof item.weightage === 'number' ? item.weightage : 10,
+              attachments: {
+                images: Array.isArray(item.image_name) ? item.image_name : [],
+                videos: [
+                  ...(Array.isArray(item.video_name) ? item.video_name : []),
+                  ...(item.video_timestamp ? [item.video_timestamp] : []),
+                ],
+              },
+              item_type: item.item_type == "foundation" || item.item_type == "certification" || item.item_type == "no-skill" ? item.item_type : "no-skill",
+            },
+          });
+        } else if (item.block_type === "doc-comparison") {
+          blocks.push({
+            id: "doc-comparison-block-" + item.id,
+            name: item.block_name,
+            type: "doc-comparison",
+            content: {
+              mode: item.comparison_mode || "",
+              document: item.answer_key || null,
+            },
+          });
+        }
+      });
+
+      if (blocks.length > 0) {
+        setLessonParts((parts) =>
+          (parts || []).map((part) => {
+            if (String(part.id) !== String(selectedPartId)) return part;
+
+            const existingBlocks = part.content?.blocks || [];
+
+            return {
+              ...part,
+              content: {
+                ...(part.content || {}),
+                blocks: [...existingBlocks, ...blocks],
+              },
+            };
+          })
+        );
+
+        addToast({
+          title: "AI Lesson Builder Success",
+          message: `Added ${blocks.length} block${blocks.length > 1 ? "s" : ""} from Excel.`,
+          variant: "success",
+        });
+      } else {
+        addToast({
+          title: "No Blocks Found",
+          message: "The Excel file did not return any blocks.",
+          variant: "info",
+        });
+      }
+    } catch (error) {
+      addToast({
+        title: "AI Lesson Builder Error",
+        message: error.message || "Request failed.",
+        variant: "error",
+      });
+    } finally {
+      setAiLessonBuilderLoading(false);
+      if (event?.target) event.target.value = "";
+    }
+  };
+
   return (
     <ImagesProvider
       images={images}
@@ -1337,6 +1494,54 @@ export default function LessonBuilder() {
                           accept=".doc,.docx"
                           className="hidden"
                           onChange={handleAiInstructionsSelected}
+                        />
+                      </div>
+                      <div className="relative">
+                        <div
+                          className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
+                            aiLessonBuilderLoading
+                              ? "bg-blue-400 text-white cursor-not-allowed"
+                              : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                          }`}
+                          onClick={
+                            !aiLessonBuilderLoading
+                              ? handleAiLessonBuilderClick
+                              : undefined
+                          }
+                          aria-disabled={aiLessonBuilderLoading}
+                        >
+                          {aiLessonBuilderLoading ? (
+                            <svg
+                              className="w-4 h-4 animate-spin text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                              ></path>
+                            </svg>
+                          ) : null}
+                          {aiLessonBuilderLoading
+                            ? "Processing..."
+                            : "AI Lesson builder"}
+                        </div>
+                        <input
+                          id="ai-lesson-builder-excel"
+                          type="file"
+                          accept=".xlsx,.xls"
+                          className="hidden"
+                          onChange={handleAiLessonBuilderSelected}
                         />
                       </div>
                     </div>
