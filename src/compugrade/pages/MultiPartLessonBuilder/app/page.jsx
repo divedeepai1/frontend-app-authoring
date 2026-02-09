@@ -59,8 +59,7 @@ export default function LessonBuilder() {
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
 
-  //  console.log(lessonParts);
-  // console.log(lessonConfig)
+
   
 
   const handleSaveAll = async (instructions) => {
@@ -249,6 +248,8 @@ export default function LessonBuilder() {
   };
 
   const handleSubmitDraft = async () => {
+
+    
     setSaveDraftLoading(true);
     const backendPayload = await frontendToBackend(lessonConfig, blockId);
     try {
@@ -302,7 +303,7 @@ export default function LessonBuilder() {
       const result = await response.json();
       return result;
     } catch (err) {
-      console.log(err);
+
       throw err;
     }
   };
@@ -363,7 +364,8 @@ export default function LessonBuilder() {
               if (
                 q.correct_answer === null ||
                 q.correct_answer === undefined ||
-                q.correct_answer === ""
+                q.correct_answer === "" ||
+                (Array.isArray(q.correct_answer) && q.correct_answer.length === 0)
               )
                 errors.push(`${label}: Select a correct option.`);
             } else if (type === "multiple-select") {
@@ -430,9 +432,7 @@ export default function LessonBuilder() {
           }
           
           if (mode === "comparison-only" || mode === "graded-comparison") {
-            // if (!part.sourceDocument) {
-            //   errors.push(`${label}: Source document is required in part configuration for ${mode} mode.`);
-            // }
+
             if (!part.answerKey) {
               errors.push(`${label}: Answer key is required in part configuration for ${mode} mode.`);
             }
@@ -531,17 +531,19 @@ export default function LessonBuilder() {
                       ? [question.image_name]
                       : [];
             
-                    if (imageNames.length === question.image_url.length) {
+                    if (imageNames.length === question.image_url.length && imageNames.length > 0) {
                       const imageObject = images?.find(
                         (img) => img.questionId == question.id
                       );
             
                       const imageData = await Promise.all(
                         question.image_url.map(async (url, index) => {
-                          if (!url || !imageNames[index]) return null;
+                          if (!url || (typeof url === 'string' && url.trim() === '')) return null;
+                          const imageName = imageNames[index];
+                          if (!imageName || (typeof imageName === 'string' && imageName.trim() === '')) return null;
             
                           let base64Url = null;
-                          let finalImageName = imageNames[index];
+                          let finalImageName = imageName;
             
                           if (typeof url === "string" && url.startsWith("blob:")) {
                             if (imageObject?.question && Array.isArray(imageObject.question)) {
@@ -549,45 +551,95 @@ export default function LessonBuilder() {
                               if (matchingImage?.file) {
                                 base64Url = await fileToBase64(matchingImage.file);
                                 finalImageName = matchingImage.file.name || finalImageName;
+                              } else {
+                                return null;
                               }
+                            } else {
+                              return null;
                             }
                           } else {
                             base64Url = url;
                           }
             
-                          return base64Url && finalImageName
-                            ? { url: base64Url, name: finalImageName }
-                            : null;
+                          if (!base64Url || !finalImageName) return null;
+                          
+                          return { url: base64Url, name: finalImageName };
                         })
                       );
             
-                      const validImages = imageData.filter(Boolean);
-                      questionImageUrls = validImages.map((i) => i.url);
-                      questionImageNames = validImages.map((i) => i.name);
+                      const validImages = imageData.filter(img => img !== null && img.url && img.name);
+                      
+                      if (validImages.length > 0 && validImages.length === imageNames.length) {
+                        questionImageUrls = validImages.map((i) => i.url).filter(Boolean);
+                        questionImageNames = validImages.map((i) => i.name).filter(Boolean);
+                        
+                        if (questionImageUrls.length !== questionImageNames.length) {
+                          questionImageUrls = [];
+                          questionImageNames = [];
+                        }
+                      } else {
+                        questionImageUrls = [];
+                        questionImageNames = [];
+                      }
+                    } else {
+                      questionImageUrls = [];
+                      questionImageNames = [];
                     }
                   } else if (
                     typeof question.image_url === "string" &&
                     question.image_url &&
                     question.image_name &&
+                    typeof question.image_name === "string" &&
                     question.image_name.trim() !== ""
                   ) {
                     questionImageUrls = [question.image_url];
                     questionImageNames = [question.image_name];
+                  } else {
+                    questionImageUrls = [];
+                    questionImageNames = [];
+                  }
+            
+                  if (questionImageNames.length === 0) {
+                    questionImageUrls = [];
+                  }
+                  
+                  if (questionImageUrls.length === 0) {
+                    questionImageNames = [];
+                  }
+                  
+                  if (questionImageUrls.length !== questionImageNames.length) {
+                    questionImageUrls = [];
+                    questionImageNames = [];
+                  }
+                  
+                  if (questionImageNames.length === 0) {
+                    questionImageUrls = [];
                   }
             
                   const {
                     image_url,
                     image_urls,
-                    image_names,
+                    image_name,
                     ...questionWithoutImageFields
                   } = question;
+                  
+                  if (questionImageNames.length === 0) {
+                    questionImageUrls = [];
+                  }
+                  
+                  if (questionImageUrls.length !== questionImageNames.length) {
+                    questionImageUrls = [];
+                    questionImageNames = [];
+                  }
+                  
+                  if (questionImageNames.length === 0) {
+                    questionImageUrls = [];
+                  }
             
                   const objectiveJson = {
                     ...questionWithoutImageFields,
-                    ...(questionImageUrls.length > 0 && {
-                      images: questionImageUrls,
-                      image_name: questionImageNames,
-                    }),
+                    images: questionImageUrls,
+                    image_name: questionImageNames,
                   };
             
                   return {
@@ -800,6 +852,8 @@ export default function LessonBuilder() {
   };
 
   const handleSubmit = async () => {
+  
+    
     setLoading(true);
     const backendPayload = await frontendToBackend(lessonConfig, blockId);
     try {
