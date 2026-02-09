@@ -101,19 +101,28 @@ export function useQuestionImages(question) {
 
   const handleQuestionImageRemoveAt = (index, onQuestionChange) => {
     setQuestionImages((currentImages) => {
+      if (index < 0 || index >= currentImages.length) {
+        return currentImages
+      }
+
       const imageToRemove = currentImages[index]
 
-      if (imageToRemove?.url?.startsWith('blob:')) {
+      if (imageToRemove?.url && typeof imageToRemove.url === 'string' && imageToRemove.url.startsWith('blob:')) {
         URL.revokeObjectURL(imageToRemove.url)
       }
 
       const updatedImages = currentImages.filter((_, i) => i !== index)
 
-      onQuestionChange({
+      const imageUrls = updatedImages.length > 0 ? updatedImages.map(img => img.url) : []
+      const imageNames = updatedImages.length > 0 ? updatedImages.map(img => img.name) : []
+
+      const updatedQuestion = {
         ...question,
-        image_url: updatedImages.map(img => img.url),
-        image_name: updatedImages.map(img => img.name)
-      })
+        image_url: imageUrls,
+        image_name: imageNames
+      }
+
+      onQuestionChange(updatedQuestion)
 
       return updatedImages
     })
