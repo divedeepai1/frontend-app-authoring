@@ -10,6 +10,7 @@ export default function RichTextEditorModal({
   onClose,
   saveLabel = "Save",
   editorId = "rich-text-editor-modal",
+  isSaving = false,
 }) {
   const [content, setContent] = useState({ html: initialValue || "" });
 
@@ -28,12 +29,12 @@ export default function RichTextEditorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b px-5 py-3">
           <div className="space-y-0">
             <p className="text-sm font-semibold text-gray-900 p-0 m-0">{title}</p>
-            <p className="text-xs text-gray-500 p-0 m-0 mt-1">Use rich text to describe context around the video.</p>
+            <p className="text-xs text-gray-500 p-0 m-0 mt-1">{title != "Home Intro Text" && "Use rich text to describe context around the video."}</p>
           </div>
           <div
             type="button"
@@ -64,9 +65,10 @@ export default function RichTextEditorModal({
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-0 focus-visible:outline-none border-transparent"
+            disabled={isSaving}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-0 focus-visible:outline-none border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saveLabel}
+            {isSaving ? "Saving..." : saveLabel}
           </button>
         </div>
       </div>

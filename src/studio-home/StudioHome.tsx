@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   Button,
   Container,
@@ -7,7 +7,7 @@ import {
   MailtoLink,
   Row,
 } from '@openedx/paragon';
-import { Add as AddIcon, Error } from '@openedx/paragon/icons';
+import { Add as AddIcon, Error ,Edit} from '@openedx/paragon/icons';
 import { useIntl } from '@edx/frontend-platform/i18n';
 import { StudioFooter } from '@edx/frontend-component-footer';
 import { getConfig } from '@edx/frontend-platform';
@@ -25,11 +25,16 @@ import CreateNewCourseForm from './create-new-course-form';
 import messages from './messages';
 import { useStudioHome } from './hooks';
 import AlertMessage from '../generic/alert-message';
+import RichTextEditorModal from '../compugrade/pages/MultiPartLessonBuilder/components/RichTextEditorModal';
+import { base_url } from '../compugrade-constants';
 
 const StudioHome = () => {
   const intl = useIntl();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [welcomeText, setWelcomeText] = useState('');
+  const [isSavingWelcome, setIsSavingWelcome] = useState(false);
 
   const isPaginationCoursesEnabled = getConfig().ENABLE_HOME_PAGE_COURSE_API_V2;
   const {
@@ -60,6 +65,28 @@ const StudioHome = () => {
     showNewLibraryV2Button,
   } = studioHomeData;
 
+  useEffect(() => {
+    const fetchWelcomeText = async () => {
+      try {
+        const response = await fetch(`${base_url}/api/course/home_intro_text`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        body: JSON.stringify({ }),
+
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setWelcomeText(data?.home_intro_text || '');
+        }
+      } catch (error) {
+      }
+    };
+    fetchWelcomeText();
+  }, []);
+
   const getHeaderButtons = useCallback(() => {
     const headerButtons: JSX.Element[] = [];
 
@@ -72,6 +99,17 @@ const StudioHome = () => {
         <MailtoLink to={studioRequestEmail}>{intl.formatMessage(messages.emailStaffBtnText)}</MailtoLink>,
       );
     }
+
+    headerButtons.push(
+      <Button
+        variant="outline-primary"
+        iconBefore={Edit}
+        size="sm"
+        onClick={() => setIsWelcomeModalOpen(true)}
+      >
+        Welcome Text
+      </Button>,
+    );
 
     if (hasAbilityToCreateNewCourse) {
       headerButtons.push(
@@ -92,7 +130,6 @@ const StudioHome = () => {
         if (showV2LibraryURL) {
           navigate('/library/create');
         } else {
-          // Studio home library for legacy libraries
           window.open(`${getConfig().STUDIO_BASE_URL}/home_library`);
         }
       };
@@ -111,9 +148,28 @@ const StudioHome = () => {
     }
 
     return headerButtons;
-  }, [location, userIsActive, isFailedLoadingPage]);
+  }, [location, userIsActive, isFailedLoadingPage, isShowEmailStaff, studioRequestEmail, intl, hasAbilityToCreateNewCourse, showNewCourseContainer, setShowNewCourseContainer, showNewLibraryButton, showV2LibraryURL, showNewLibraryV2Button, navigate]);
 
   const headerButtons = userIsActive ? getHeaderButtons() : [];
+
+  const handleWelcomeSave = async (content) => {
+    setIsSavingWelcome(true);
+    try {
+      await fetch(`${base_url}/api/course/home_intro_text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ home_intro_text: content }),
+      });
+      setWelcomeText(content);
+      setIsWelcomeModalOpen(false);
+    } catch (error) {
+    } finally {
+      setIsSavingWelcome(false);
+    }
+  };
+
   if (isLoadingPage && !isFiltered) {
     return (<Loading />);
   }
@@ -190,6 +246,16 @@ const StudioHome = () => {
         />
       </div>
       <StudioFooter />
+      <RichTextEditorModal
+        open={isWelcomeModalOpen}
+        title="Home Intro Text"
+        initialValue={welcomeText}
+        onSave={handleWelcomeSave}
+        onClose={() => setIsWelcomeModalOpen(false)}
+        saveLabel="Save"
+        editorId="welcome-text-editor"
+        isSaving={isSavingWelcome}
+      />
     </>
   );
 };
