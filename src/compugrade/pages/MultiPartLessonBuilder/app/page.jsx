@@ -1239,13 +1239,13 @@ export default function LessonBuilder() {
           }
           
           blocks.push({
-            id: "objective-block-" + item.item_num,
+            id: "objective-block-" + item.item_num + "-" + Date.now(),
             name: item.block_name,
             type: "objective",
             content: {
               questions: [
                 {
-                  id: "objective-question-" + item.item_num +"123",
+                  id: "objective-question-" + item.item_num + "-" + Date.now(),
                   ...questionData,
                 },
               ],
