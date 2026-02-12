@@ -343,15 +343,21 @@ export default function LessonBuilder() {
             );
           }
           questions.forEach((q, qIndex) => {
-            const label = `Part ${pIndex + 1} / Block ${bIndex + 1} / Q${
-              qIndex + 1
-            }`;
-            const type = q.type;
+            const label = `Part ${pIndex + 1} / Block ${bIndex + 1}`;
+            const type = q.objective_type || q.type;
             const text = q.natural_text || q.text || "";
             if (!text.trim()) {
               errors.push(`${label}: Question text is required.`);
             }
-            if (type === "multiple-choice") {
+            if (type === "true-false") {
+              if (q.correct_answer === null || q.correct_answer === undefined) {
+                errors.push(`${label}: Select True or False.`);
+              }
+            } else if (type === "short-answer") {
+              if (!q.correct_answer || !q.correct_answer.toString().trim()) {
+                errors.push(`${label}: Provide a correct answer.`);
+              }
+            } else if (type === "multiple-choice") {
               const opts = q.options || [];
               if (opts.length < 2)
                 errors.push(`${label}: Add at least two options.`);
