@@ -615,6 +615,11 @@ export function HybridContentEditor({
     );
   };
 
+  const isWlPatternCode = (code) => {
+    if (!code || typeof code !== "string") return false;
+    return code.includes("[wl]");
+  };
+
   const addSelectedCode = (code, options = {}) => {
     if (!code) return;
     const { allowCustom = false } = options;
@@ -1804,12 +1809,15 @@ export function HybridContentEditor({
                     onClick={() => setErrorDropdownOpen(true)}
                   >
                     {(selectedErrorCodes || []).map((code, idx) => {
+                      const isWl = isWlPatternCode(code);
                       const isCustom = isCustomPatternCode(code);
                       return (
                         <span
                           key={`selected-${idx}-${code}`}
                           className={`flex items-center gap-1 rounded-md border text-xs px-2 py-1 ${
-                            isCustom
+                            isWl
+                              ? "bg-red-100 text-red-700 border-red-300"
+                              : isCustom
                               ? "bg-gray-400/30 text-gray-700 border-gray-300"
                               : "bg-blue-50 text-blue-800 border-blue-200"
                           }`}
