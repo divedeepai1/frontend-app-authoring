@@ -107,7 +107,7 @@ export default function ProgrammaticErrorCodeModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-2xl mx-auto bg-white rounded-lg shadow-2xl p-5 space-y-2">
+      <div className="relative w-full max-w-2xl mx-auto bg-white rounded-lg shadow-2xl p-5 space-y-2 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Add Custom Error Code</h3>
@@ -127,7 +127,7 @@ export default function ProgrammaticErrorCodeModal({
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Pattern preview</label>
-          <div className="min-h-[56px] rounded-lg bg-white border border-slate-200  px-3 py-3 flex flex-wrap gap-2 items-center">
+          <div className="min-h-[56px] rounded-lg bg-white border border-slate-200 px-3 py-3 flex flex-wrap gap-2 items-start">
             {segments.length === 0 ? (
               <span className="text-xs text-slate-500">
                 No segments yet. Add strings and variables below.
@@ -138,7 +138,8 @@ export default function ProgrammaticErrorCodeModal({
                   return (
                     <span
                       key={`seg-${index}`}
-                      className="px-3 py-1 text-xs rounded-full bg-slate-200 text-slate-800"
+                      className="inline-block px-3 py-1.5 text-xs rounded-md bg-slate-200 text-slate-800 max-w-full break-words whitespace-normal"
+                      title={seg.value}
                     >
                       {seg.value}
                     </span>
@@ -148,7 +149,7 @@ export default function ProgrammaticErrorCodeModal({
                   return (
                     <span
                       key={`seg-${index}`}
-                      className="px-3 py-1 text-xs rounded-full bg-amber-100 text-amber-800"
+                      className="inline-block px-3 py-1.5 text-xs rounded-md bg-amber-100 text-amber-800 whitespace-nowrap"
                     >
                       [any]
                     </span>
@@ -160,7 +161,7 @@ export default function ProgrammaticErrorCodeModal({
                 return (
                   <span
                     key={`seg-${index}`}
-                    className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-800"
+                    className="inline-block px-3 py-1.5 text-xs rounded-md bg-blue-100 text-blue-800 whitespace-nowrap"
                   >
                     {rangeDisplay}
                   </span>
