@@ -141,7 +141,10 @@ const SingleStudentForm = ({ setSelectedOption ,setAddStudents, isNewStudent, on
         <button
           type="button"
           className="secondary-button px-4 py-2 ml-3"
-          onClick={() => setSelectedOption(null)}
+          onClick={() => {
+            setSelectedOption(null);
+            setAddStudents(false);
+          }}
         >
           Cancel
         </button>
