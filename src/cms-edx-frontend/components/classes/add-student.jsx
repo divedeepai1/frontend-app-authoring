@@ -84,8 +84,8 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
             </div>
           </div>
 
-          <div className="col-md-3" disabled onClick={() => setSelectedOption("bulk")}>
-            <div className="card h-100 text-center clickable">
+          <div className="col-md-3" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+            <div className="card h-100 text-center">
               <div className="card-body d-flex flex-column justify-content-center align-items-center">
                 <div className="mb-1 fs-1">+</div>
                 <p>Add Bulk Students</p>
@@ -93,8 +93,8 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent }) => {
             </div>
           </div>
 
-          <div className="col-md-3" disabled onClick={() => setSelectedOption("link")}>
-            <div className="card h-100 text-center clickable">
+          <div className="col-md-3" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+            <div className="card h-100 text-center">
               <div className="card-body d-flex flex-column justify-content-center align-items-center">
                 <div className="mb-1 fs-1">+</div>
                 <p>Self-Joining Link</p>
