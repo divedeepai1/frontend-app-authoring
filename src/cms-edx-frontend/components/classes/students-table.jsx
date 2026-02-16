@@ -94,7 +94,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
             <th>Fist Name</th>
             <th>Last Name</th>
             <th>Email Address</th>
-            <th>Actions</th>
+            {/* <th>Actions</th> */}
           </tr>
         </thead>
         <tbody>
@@ -139,7 +139,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
               <td>{student.first_name}</td>
               <td>{student.last_name}</td>
               <td>{student.email}</td>
-              <td>
+              {/* <td>
                {fromTeachers && <button
                   className="btn btn-link p-1 me-2"
                   onClick={() =>{ navigate(`/classes/${classId}/${student.id}`)
@@ -183,7 +183,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                    </div>
                  </button>
                )}
-              </td>
+              </td> */}
             </tr>
           ))}
         </tbody>
