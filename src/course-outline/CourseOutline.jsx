@@ -60,6 +60,9 @@ import { getTagsExportFile } from './data/api';
 import { base_url } from '../compugrade-constants';
 import { ChevronsLeftRightEllipsis } from 'lucide-react';
 import TableView from './TableView';
+import { fetchCsrfToken } from "../cms-csrftoken";
+import { getConfig } from "@edx/frontend-platform";
+
 
 
 
@@ -235,6 +238,88 @@ const CourseOutline = ({ courseId }) => {
       return () => clearTimeout(timeoutId);
     }
   }, [structureHashFromList, structureHashFromLocal, courseId, fetchRubricSkills]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 1000; // 2 seconds
+  
+    const normalizeCourseType = (courseType) => {
+      if (courseType === 'ms_powerpoint' || courseType === 'google_slides') {
+        return 'powerpoint';
+      }
+      if (courseType === 'ms_excel' || courseType === 'google_sheets') {
+        return 'excel';
+      }
+      if (courseType === 'ms_word' || courseType === 'google_docs') {
+        return 'ms-word';
+      }
+      return courseType;
+    };
+  
+    const fetchCourseType = async () => {
+      try {
+        const token = await fetchCsrfToken();
+  
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+  
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+  
+        const courses = await response.json();
+        const currentCourse = courses.find(course => course.id == courseId);
+  
+        if (currentCourse?.course_type) {
+          const courseType = normalizeCourseType(currentCourse.course_type);
+  
+          sessionStorage.setItem('courseTitle', currentCourse.display_name);
+          sessionStorage.setItem('courseType', courseType);
+  
+          console.log('Course type set to:', courseType);
+          return; // ✅ stop retrying
+        }
+  
+        // ❌ course_type is null → retry
+        retryCount++;
+  
+        if (retryCount < MAX_RETRIES && isMounted) {
+          console.log(`Course type not found. Retrying... (${retryCount})`);
+          setTimeout(fetchCourseType, RETRY_DELAY);
+        } else {
+          console.warn('Max retries reached. Defaulting to ms-word');
+          sessionStorage.setItem('courseType', 'ms-word');
+        }
+  
+      } catch (error) {
+        console.error('Error fetching course type:', error);
+  
+        retryCount++;
+        if (retryCount < MAX_RETRIES && isMounted) {
+          setTimeout(fetchCourseType, RETRY_DELAY);
+        } else {
+          sessionStorage.setItem('courseType', 'ms-word');
+        }
+      }
+    };
+  
+    fetchCourseType();
+  
+    return () => {
+      isMounted = false; // cleanup to avoid memory leaks
+    };
+  }, [courseId]);
 
   const restoreSectionList = () => {
     setSections(() => [...sectionsList]);
