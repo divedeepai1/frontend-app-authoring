@@ -138,6 +138,13 @@ export default function LessonBuilder() {
             type: "text",
             content: {
               html: item.natural_text || "",
+              attachments: {
+                images: Array.isArray(item.image_name) ? item.image_name : [],
+                // videos: [
+                //   ...(Array.isArray(item.video_name) ? item.video_name : []),
+                //   ...(item.video_timestamp ? [item.video_timestamp] : []),
+                // ],
+              },
             },
           });
         } 
@@ -664,7 +671,17 @@ export default function LessonBuilder() {
                 })
               );
             }
- else if (block.type === "text") {
+            else if (block.type === "text") {
+              let imagesBase64 = [];
+            
+              if (Array.isArray(block.content.attachments?.images)) {
+                imagesBase64 = await Promise.all(
+                  block.content.attachments.images.map(async (img) =>
+                    isFile(img) ? await fileToBase64(img) : img
+                  )
+                );
+              }
+            
               return [
                 {
                   id: block.id,
@@ -673,9 +690,10 @@ export default function LessonBuilder() {
                   block_type: block.type,
                   item_type: "u",
                   natural_text: block.content.html || "",
+                  images: imagesBase64,
                 },
               ];
-            } 
+            }
             else if (block.type === "instruction") {
               let imagesBase64 = [];
               let videosBase64 = [];
@@ -1266,6 +1284,9 @@ export default function LessonBuilder() {
             type: "text",
             content: {
               html: item.natural_text || "",
+              attachments: {
+                images: Array.isArray(item.image_name) ? item.image_name : [],
+              },
             },
           });
         } else if (item.block_type === "instruction") {
