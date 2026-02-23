@@ -270,6 +270,7 @@ export function HybridContentEditor({
       name: "Add Text Block",
       content: {
         html: "",
+        attachments: { images: [] },
       },
       isCollapsed: false,
     };
@@ -965,6 +966,33 @@ export function HybridContentEditor({
     updateBlock(block.id, { ...block.content, attachments: next });
   };
 
+  const handleTextBlockImageSelect = (block, files, inputEl) => {
+    const fileList = Array.from(files || []);
+    if (fileList.length === 0) {
+      if (inputEl) inputEl.value = "";
+      return;
+    }
+    const nextImages = [
+      ...(block.content.attachments?.images || []),
+      ...fileList,
+    ];
+    const contentWithAttachments = {
+      ...block.content,
+      attachments: {
+        ...block.content.attachments,
+        images: nextImages,
+      },
+    };
+    updateBlock(block.id, contentWithAttachments);
+    if (inputEl) inputEl.value = "";
+  };
+
+  const removeTextBlockAttachment = (block, index) => {
+    const next = { ...block.content.attachments };
+    next.images = (next.images || []).filter((_, i) => i !== index);
+    updateBlock(block.id, { ...block.content, attachments: next });
+  };
+
   return (
     <div className="space-y-4">
       <div
@@ -1236,14 +1264,81 @@ export function HybridContentEditor({
             {!block.isCollapsed && (
               <div className="p-3">
                 {block.type === "text" && (
-                  <EnhancedRichTextEditor
-                    content={block.content}
-                    onContentChange={(newContent) =>
-                      updateBlock(block.id, newContent)
-                    }
-                    isCollapsed={false}
-                    onToggleCollapse={() => toggleBlockCollapse(block.id)}
-                  />
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between p-2 bg-indigo-50 border-b border-indigo-200">
+                      <div className="px-2 py-0.5 text-indigo-700">
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => triggerHiddenInput(`text-img-${block.id}`)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-600 border-green-200 border bg-transparent rounded"
+                        >
+                          <ImageIcon className="w-4 h-4" /> Image
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-2">
+                      <EnhancedRichTextEditor
+                        content={block.content}
+                        onContentChange={(newContent) =>
+                          updateBlock(block.id, newContent)
+                        }
+                        isCollapsed={false}
+                        onToggleCollapse={() => toggleBlockCollapse(block.id)}
+                      />
+
+                      <input
+                        id={`text-img-${block.id}`}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) =>
+                          handleTextBlockImageSelect(
+                            block,
+                            e.target.files,
+                            e.target
+                          )
+                        }
+                      />
+
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        {(block.content.attachments?.images || []).map(
+                          (img, idx) => (
+                            <div
+                              key={`text-img-${idx}`}
+                              className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-green-200 text-green-700 text-sm cursor-pointer shadow-sm hover:shadow"
+                              onClick={() =>
+                                setPreviewState({
+                                  open: true,
+                                  url: getUrl(img),
+                                  type: "image",
+                                  name: "Image Attached " + (idx + 1),
+                                })
+                              }
+                            >
+                              <div className="flex items-center gap-2">
+                                <Eye className="w-4 h-4" />
+                                <span className="truncate">
+                                  {"Image Attached " + (idx + 1)}
+                                </span>
+                              </div>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeTextBlockAttachment(block, idx);
+                                }}
+                                className="absolute top-1 right-1 p-0.5 rounded-fullborder  text-red-500  cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
                 {block.type === "instruction" && (
                   <div className="border rounded-lg overflow-hidden">
