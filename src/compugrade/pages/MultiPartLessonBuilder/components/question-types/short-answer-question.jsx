@@ -1,7 +1,7 @@
 
 
 import { useState } from "react"
-import { Trash2, Eye } from "lucide-react"
+import { Trash2, Eye, X } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
 import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
 import { useQuestionImages } from "./useQuestionImages"
@@ -71,6 +71,15 @@ export function ShortAnswerQuestion({ question, onQuestionChange, onDelete, onTi
                 <div className="flex items-center gap-2 pr-6">
                   <Eye className="w-4 h-4" />
                   <span className="truncate">Timestamp Video</span>
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuestionChange({ ...question, video_timestamp: null });
+                  }}
+                  className="absolute top-1 right-1 p-0.5 rounded-full text-red-500 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
                 </div>
               </div>
             </div>
