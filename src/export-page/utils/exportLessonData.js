@@ -90,6 +90,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                           id: lesson.id,
                           title: lesson.title,
                           weightage: lesson.weightage || 0,
+                          video_timestamp: lesson.video_timestamp || null,
                           source_document: lesson.source_document || null,
                           answer_key: lesson.answer_key || null,
                           items: (lesson.items || []).map((item) => {
