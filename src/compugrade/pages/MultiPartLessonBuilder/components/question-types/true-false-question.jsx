@@ -72,6 +72,15 @@ export function TrueFalseQuestion({ question, onQuestionChange, onDelete, onTime
                   <Eye className="w-4 h-4" />
                   <span className="truncate">Timestamp Video</span>
                 </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuestionChange({ ...question, video_timestamp: null });
+                  }}
+                  className="absolute top-1 right-1 p-0.5 rounded-full text-red-500 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </div>
               </div>
             </div>
           )}
