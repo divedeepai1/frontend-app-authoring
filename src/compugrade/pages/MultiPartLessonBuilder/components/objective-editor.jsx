@@ -27,7 +27,13 @@ const QUESTION_TYPES = [
   // { value: "reordering", label: "Reordering" },
 ]
 
-export function ObjectiveEditor({ content, onContentChange, singleQuestionMode = false, questionNumber = 1 }) {
+export function ObjectiveEditor({
+  content,
+  onContentChange,
+  singleQuestionMode = false,
+  questionNumber = 1,
+  onTimestampClick,
+}) {
   const [questions, setQuestions] = useState(content?.questions || [])
   const [selectedQuestionType, setSelectedQuestionType] = useState("true-false")
   const [draggedQuestionIndex, setDraggedQuestionIndex] = useState(null)
@@ -131,6 +137,7 @@ export function ObjectiveEditor({ content, onContentChange, singleQuestionMode =
       question,
       onQuestionChange: (updatedQuestion) => updateQuestion(index, updatedQuestion),
       onDelete: () => deleteQuestion(index),
+      onTimestampClick,
     }
 
     let questionComponent

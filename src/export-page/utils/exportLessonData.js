@@ -106,11 +106,14 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                                 ...baseItem,
                                 weightage: typeof item.weightage === 'number' ? item.weightage : 10,
                                 objective_json: item.objective_json || {},
+                                video_timestamp: item.video_timestamp || null,
                               };
                             } else if (item.block_type === "text") {
                               return {
                                 ...baseItem,
                                 natural_text: item.natural_text || "",
+                                images: Array.isArray(item.image_name) ? item.image_name : (Array.isArray(item.images) ? item.images : []),
+
                               };
                             } else if (item.block_type === "instruction") {
                               return {

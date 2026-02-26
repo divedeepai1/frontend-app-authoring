@@ -1,12 +1,12 @@
 
 
 import { useState } from "react"
-import { Trash2, Plus, X } from "lucide-react"
+import { Trash2, Plus, X, Eye } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
 import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
 import { useQuestionImages } from "./useQuestionImages"
 
-export function MultipleSelectQuestion({ question, onQuestionChange, onDelete }) {
+export function MultipleSelectQuestion({ question, onQuestionChange, onDelete, onTimestampClick }) {
   const [questionContent, setQuestionContent] = useState({ html: question.natural_text || "" })
   const normalizeOptions = (opts) => {
     const arr = opts || ["", "", "", ""]
@@ -115,6 +115,19 @@ export function MultipleSelectQuestion({ question, onQuestionChange, onDelete })
               multiple={true}
             />
           </div>
+          {question.video_timestamp && onTimestampClick && (
+            <div className="mt-2 flex flex-wrap gap-3">
+              <div
+                className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-purple-200 text-purple-700 text-sm cursor-pointer shadow-sm hover:shadow"
+                onClick={() => onTimestampClick(question.video_timestamp)}
+              >
+                <div className="flex items-center gap-2 pr-6">
+                  <Eye className="w-4 h-4" />
+                  <span className="truncate">Timestamp Video</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
