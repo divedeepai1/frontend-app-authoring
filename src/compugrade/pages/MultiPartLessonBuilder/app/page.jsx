@@ -191,6 +191,7 @@ export default function LessonBuilder() {
         id: lesson.id,
         title: lesson.title,
         weightage: lesson.weightage,
+        time_allowed: lesson.time_allowed ?? null,
         sourceDocument: lesson.source_document || null,
         answerKey: lesson.answer_key || null,
         content: {
@@ -779,6 +780,12 @@ export default function LessonBuilder() {
           id: lesson.id,
           title: lesson.title,
           weightage: lesson.weightage,
+          time_allowed:
+            typeof lesson.time_allowed === "number"
+              ? lesson.time_allowed
+              : lesson.time_allowed
+              ? Number(lesson.time_allowed) || null
+              : null,
           source_document: partSourceDoc,
           answer_key: partAnswerKey,
           items: items.flat(),
@@ -930,6 +937,7 @@ export default function LessonBuilder() {
       },
       sourceDocument: null,
       answerKey: null,
+      time_allowed: null,
     };
     setLessonParts([...lessonParts, part]);
     setSelectedPartId(part.id);

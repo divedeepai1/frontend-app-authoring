@@ -55,6 +55,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
         title: lesson.title,
         weightage: lesson.weightage || 0,
         source_document: lesson.source_document || null,
+        video_timestamp: lesson.video_timestamp || null,
         answer_key: lesson.answer_key || null,
         items: (lesson.items || []).map((item) => {
           const baseItem = {
