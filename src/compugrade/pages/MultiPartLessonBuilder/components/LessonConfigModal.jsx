@@ -327,6 +327,7 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
           id: item.id,
           name: item.customer_facing_name,
           status: item.skill_type, // keep original casing from API
+          cert_type: item.cert_type,
         }));
         setAllSkills(mapped);
       } catch (err) {
@@ -357,17 +358,15 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
 
   const statusColorClasses = (status) => {
     const s = (status || "").trim();
-    if (s === "AB" || s === "Working" || s === "Working A2") return "bg-blue-100 text-blue-700 ring-1 ring-blue-200";
-    // if (s === "Working A2") return "bg-amber-100 text-amber-700 ring-1 ring-amber-200";
+    if (s === "AB" || s === "Working" || s === "Working A2")
+      return "bg-blue-100 text-blue-700 ring-1 ring-blue-200";
     return "bg-gray-100 text-gray-700 ring-1 ring-gray-200";
   };
 
   const chipColorClasses = (status) => {
-    const courseType = sessionStorage.getItem("courseType");
-    // if (courseType !== "ms-word") return "bg-gray-50 text-gray-800 border-gray-200";
     const s = (status || "").trim();
-    if (s === "AB" || s === "Working" || s === "Working A2") return "bg-blue-50 text-blue-800 border-blue-200";
-    // if (s === "Working A2") return "bg-amber-50 text-amber-800 border-amber-200";
+    if (s === "AB" || s === "Working" || s === "Working A2")
+      return "bg-blue-50 text-blue-800 border-blue-200";
     return "bg-gray-50 text-gray-800 border-gray-200";
   };
 
@@ -438,8 +437,8 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
             ) : (
               <ul className="py-1">
                 {filtered.map((s) => {
-                  const courseType = sessionStorage.getItem("courseType");
-                  const showStatus = courseType === "ms-word";
+                  const hasStatus = !!(s.status || "").trim();
+                  const hasCert = !!(s.cert_type || "").trim();
                   return (
                     <li
                       key={s.id}
@@ -448,9 +447,28 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
                       onClick={() => addSkill(s)}
                     >
                       <span className="font-medium text-gray-800">{s.name}</span>
-                      
-                        <span className={`ml-2 rounded px-2 py-0.5 text-xs ${statusColorClasses(s.status)}`}>{s.status}</span>
-                      
+                      {(hasStatus || hasCert) && (
+                        <span className="ml-2 flex items-center gap-2">
+                          {hasStatus && (
+                            <span
+                              className={`rounded px-2 py-0.5 text-xs ${statusColorClasses(
+                                s.status
+                              )}`}
+                            >
+                              {s.status}
+                            </span>
+                          )}
+                          {hasCert && (
+                            <span
+                              className={`rounded px-2 py-0.5 text-xs ${statusColorClasses(
+                                s.status
+                              )}`}
+                            >
+                              {s.cert_type}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </li>
                   );
                 })}
