@@ -72,6 +72,47 @@ export default function PartConfigModal({
           </div>
         </div>
         <div className="p-4 space-y-4">
+          {/* Minutes to Complete Card */}
+          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  Minutes to Complete
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Estimated time allowed for this part. Leave blank if not applicable.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={selectedPartConfig.time_allowed ?? ""}
+                  onKeyDown={(e) => {
+                    // Block minus, plus, exponent, and other non-numeric control keys
+                    if (["-", "+", "e", "E"].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    // Allow only digits using regex; ignore any invalid updates
+                    if (!/^\d*$/.test(raw)) return;
+                    const num = raw === "" ? null : Number(raw);
+                    setSelectedPartConfig({
+                      time_allowed:
+                        num !== null && !Number.isNaN(num) ? num : null,
+                    });
+                  }}
+                  placeholder="e.g. 30"
+                />
+                <span className="text-xs text-gray-500">minutes</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Part Documents Card */}
           <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 rounded-lg bg-blue-50">

@@ -8,6 +8,8 @@ const SaveTimestampsDialog = ({
   title = "Save Timestamp Instructions",
   onSave,
   onSaveAll,
+  onRegenerate,
+  regenerating = false,
 }) => {
   // console.log(data);
   const videoRef = useRef(null);
@@ -23,7 +25,10 @@ const SaveTimestampsDialog = ({
   // Initialize editable times from props
   useEffect(() => {
     const initial = {};
-    for (const t of data.timestamps) {
+    const safeTimestamps = Array.isArray(data?.timestamps)
+      ? data.timestamps
+      : [];
+    for (const t of safeTimestamps) {
       const [s, e] = t.timestamp.split("-");
       initial[t.item_id] = {
         instruction: t.instruction,
@@ -401,6 +406,46 @@ const SaveTimestampsDialog = ({
                               )}
                               {isSavingAll ? "Saving..." : "Save All"}
                             </div>
+
+                            {onRegenerate && (
+                              <div
+                                onClick={!regenerating ? onRegenerate : undefined}
+                                className={`px-3 flex gap-2 items-center mt-4 mb-4 py-2 text-sm font-medium text-white 
+                    border border-transparent rounded-md transition-colors
+                    ${
+                      regenerating
+                        ? "bg-blue-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    }`}
+                              >
+                                {regenerating ? (
+                                  <svg
+                                    className="w-4 h-4 animate-spin text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                                    ></path>
+                                  </svg>
+                                ) : (
+                                  <Loader className="w-4 h-4" />
+                                )}
+                                {regenerating ? "Regenerating..." : "Regenerate"}
+                              </div>
+                            )}
+
                             <div
                   onClick={onClose}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"

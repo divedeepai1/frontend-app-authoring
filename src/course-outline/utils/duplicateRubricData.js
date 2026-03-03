@@ -55,6 +55,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
         title: lesson.title,
         weightage: lesson.weightage || 0,
         source_document: lesson.source_document || null,
+        video_timestamp: lesson.video_timestamp || null,
         answer_key: lesson.answer_key || null,
         items: (lesson.items || []).map((item) => {
           const baseItem = {
@@ -70,6 +71,8 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
               ...baseItem,
               weightage: typeof item.weightage === 'number' ? item.weightage : 10,
               objective_json: item.objective_json || {},
+              video_timestamp: item.video_timestamp || null,
+
             };
           } else if (item.block_type === "text") {
             return {

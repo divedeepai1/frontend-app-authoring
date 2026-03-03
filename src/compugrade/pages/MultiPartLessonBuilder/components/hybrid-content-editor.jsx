@@ -1711,10 +1711,15 @@ export function HybridContentEditor({
                         onContentChange={(newContent) =>
                           updateBlock(block.id, newContent)
                         }
-                        isCollapsed={false}
-                        onToggleCollapse={() => toggleBlockCollapse(block.id)}
                         singleQuestionMode={true}
                         questionNumber={getObjectiveNumber(block.id)}
+                        onTimestampClick={(timestamp) =>
+                          timestamp &&
+                          setTimestampPreview({
+                            open: true,
+                            timestamp,
+                          })
+                        }
                       />
                     </div>
                   </div>

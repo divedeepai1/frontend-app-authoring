@@ -4,6 +4,14 @@ import { useRef, useEffect } from "react";
 function TimestampModal({ open, timestamp, onClose, videoUrl }) {
   const videoRef = useRef(null);
 
+  const formatTime = (seconds) => {
+    if (seconds == null) return "End";
+    const sec = Math.max(0, Math.floor(seconds || 0));
+    const minutes = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${minutes.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
   useEffect(() => {
     if (!open || !timestamp) return;
 
@@ -39,13 +47,24 @@ function TimestampModal({ open, timestamp, onClose, videoUrl }) {
 
   if (!open) return null;
 
+  // Parse timestamp for display
+  let displayStart = "";
+  let displayEnd = "";
+  if (timestamp) {
+    const [startStr, endStr] = timestamp.split("-");
+    const startSec = parseFloat(startStr);
+    const endSec = endStr === "None" ? null : parseFloat(endStr);
+    displayStart = formatTime(startSec);
+    displayEnd = formatTime(endSec);
+  }
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white w-[600px] rounded-lg shadow-lg overflow-hidden">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">
-            Video Segment ({timestamp})
+            Video Segment ({displayStart} - {displayEnd})
           </h2>
           <div onClick={onClose} className="text-gray-600 hover:text-black">
             <X size={20} />
