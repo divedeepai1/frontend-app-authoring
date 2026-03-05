@@ -15,6 +15,7 @@ import { Helmet } from 'react-helmet';
 import {
   Add as IconAdd,
   CheckCircle as CheckCircleIcon,
+  Edit,
 } from '@openedx/paragon/icons';
 
 import { useSelector } from 'react-redux';
@@ -62,6 +63,7 @@ import { ChevronsLeftRightEllipsis } from 'lucide-react';
 import TableView from './TableView';
 import { fetchCsrfToken } from "../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
+import RichTextEditorModal from '../compugrade/pages/MultiPartLessonBuilder/components/RichTextEditorModal';
 
 
 
@@ -135,6 +137,9 @@ const CourseOutline = ({ courseId }) => {
   const [toastMessage, setToastMessage] = useState(/** @type{null|string} */ (null));
   const [skills,setSkills]=useState([])
   const [viewMode, setViewMode] = useState("list")
+  const [isCourseDashboardModalOpen, setIsCourseDashboardModalOpen] = useState(false);
+  const [courseDashboardText, setCourseDashboardText] = useState('');
+  const [isSavingCourseDashboard, setIsSavingCourseDashboard] = useState(false);
 
   // Extract fetch function so it can be called independently
   const fetchRubricSkills = React.useCallback(async () => {
@@ -189,6 +194,29 @@ const CourseOutline = ({ courseId }) => {
       window.location.href = '#';
     }
   }, [location, courseId, courseName, fetchRubricSkills]);
+
+  useEffect(() => {
+    const fetchCourseDashboardText = async () => {
+      if (!courseId) return;
+      try {
+        const response = await fetch(`${base_url}/api/course/course_intro_text`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCourseDashboardText(data?.course_intro_text || '');
+        }
+      } catch (error) {
+        // Silently handle error
+      }
+    };
+    fetchCourseDashboardText();
+  }, [courseId]);
 
   const [sections, setSections] = useState(sectionsList);
 
@@ -638,6 +666,25 @@ const CourseOutline = ({ courseId }) => {
     setSections(sectionsList);
   }, [sectionsList]);
 
+  const handleCourseDashboardSave = async (content) => {
+    setIsSavingCourseDashboard(true);
+    try {
+      await fetch(`${base_url}/api/course/course_intro_text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ course_intro_text: content }),
+      });
+      setCourseDashboardText(content);
+      setIsCourseDashboardModalOpen(false);
+    } catch (error) {
+      // Silently handle error
+    } finally {
+      setIsSavingCourseDashboard(false);
+    }
+  };
+
   if (isLoading) {
     // eslint-disable-next-line react/jsx-no-useless-fragment
     return (
@@ -683,19 +730,33 @@ const CourseOutline = ({ courseId }) => {
               />
             ) : null}
           </TransitionReplace>
+          
+          <div style={{marginBottom:"30px",display:"flex",justifyContent:"flex-end"}}>
+          <Button
+                  variant="outline-primary"
+                  iconBefore={Edit}
+                  size="sm"
+                  onClick={() => setIsCourseDashboardModalOpen(true)}
+                >
+                  Course Dashboard Text
+                </Button>
+                </div>
           <SubHeader
             title={intl.formatMessage(messages.headingTitle)}
             // subtitle={intl.formatMessage(messages.headingSubtitle)}
             headerActions={(
-              <HeaderNavigations
-                isReIndexShow={isReIndexShow}
-                isSectionsExpanded={isSectionsExpanded}
-                headerNavigationsActions={headerNavigationsActions}
-                isDisabledReindexButton={isDisabledReindexButton}
-                hasSections={Boolean(sectionsList.length)}
-                courseActions={courseActions}
-                errors={errors}
-              />
+              <div className="d-flex align-items-center" style={{ gap: '0.75rem' }}>
+                <HeaderNavigations
+                  isReIndexShow={isReIndexShow}
+                  isSectionsExpanded={isSectionsExpanded}
+                  headerNavigationsActions={headerNavigationsActions}
+                  isDisabledReindexButton={isDisabledReindexButton}
+                  hasSections={Boolean(sectionsList.length)}
+                  courseActions={courseActions}
+                  errors={errors}
+                />
+                
+              </div>
             )}
           />
           <Layout
@@ -931,6 +992,17 @@ const CourseOutline = ({ courseId }) => {
           {toastMessage}
         </Toast>
       )}
+      <RichTextEditorModal
+        open={isCourseDashboardModalOpen}
+        title="Course Dashboard Text"
+        initialValue={courseDashboardText}
+        onSave={handleCourseDashboardSave}
+        onClose={() => setIsCourseDashboardModalOpen(false)}
+        saveLabel="Save"
+        fromCourseOutline={true}
+        editorId="course-dashboard-text-editor"
+        isSaving={isSavingCourseDashboard}
+      />
     </>
   );
 };
