@@ -69,7 +69,8 @@ export function ImageAttach({ image, images, onSelect, onRemove, onRemoveAt, lab
             <div className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-200">
               <button type="button" className="flex  bg-transparent border-none items-center gap-1" onClick={() => openPreview(image)} title="Preview image">
                 <Eye size={14} />
-                <span className="truncate max-w-[160px]">{fileName || 'image'}</span>
+                
+                <span className="truncate max-w-[160px]">{(fileName?.split('/').pop()) || 'image'}</span>
               </button>
               <button type="button" onClick={onRemove} className="ml-1 bg-transparent border-none text-red-600 hover:text-red-700" title="Remove image">
                 <X size={14} />

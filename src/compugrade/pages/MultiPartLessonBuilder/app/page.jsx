@@ -43,6 +43,7 @@ export default function LessonBuilder() {
   const [aiInstructionsLoading, setAiInstructionsLoading] = useState(false);
   const [aiLessonBuilderLoading, setAiLessonBuilderLoading] = useState(false);
   const [saveDraftLoading, setSaveDraftLoading] = useState(false);
+  const [transferLoading, setTransferLoading] = useState(false);
   const [partConfigOpen, setPartConfigOpen] = useState(false);
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -808,6 +809,46 @@ export default function LessonBuilder() {
     };
   }
 
+  const normalizeImportedLessonPayload = (payload) => ({
+    rubric_id: blockId,
+    source_document: payload?.source_document || null,
+    answer_key: payload?.answer_key || null,
+    video: payload?.video || null,
+    skills: payload?.skills || [],
+    text_before_video: payload?.text_before_video || "",
+    text_after_video: payload?.text_after_video || "",
+    lesson_overview: payload?.lesson_overview || "",
+    num_of_attempts:
+      payload?.num_of_attempts === null
+        ? null
+        : payload?.num_of_attempts || 3,
+    lessons: (payload?.lessons || []).map((lesson) => ({
+      id: lesson.id,
+      title: lesson.title,
+      weightage: lesson.weightage,
+      time_allowed: lesson.time_allowed ?? null,
+      source_document: lesson.source_document || null,
+      answer_key: lesson.answer_key || null,
+      items: (lesson.items || []).map((item) => ({
+        ...item,
+        image_name: Array.isArray(item.image_name)
+          ? item.image_name
+          : Array.isArray(item.images)
+          ? item.images
+          : item.image_name
+          ? [item.image_name]
+          : [],
+        video_name: Array.isArray(item.video_name)
+          ? item.video_name
+          : Array.isArray(item.videos)
+          ? item.videos
+          : item.video_name
+          ? [item.video_name]
+          : [],
+      })),
+    })),
+  });
+
   const handleUploadToS3 = async (items) => {
     const uploadPromises = items?.flatMap((item) => {
       if (!item?.image_url) return [];
@@ -1459,6 +1500,71 @@ export default function LessonBuilder() {
     }
   };
 
+  const handleExportLesson = async () => {
+    setTransferLoading(true);
+    try {
+      const exportedLesson = await frontendToBackend(
+        { ...lessonConfig, lessonParts },
+        blockId
+      );
+      const blob = new Blob([JSON.stringify(exportedLesson, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "exported-lesson.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addToast({
+        title: "Lesson Exported",
+        message: "Lesson data downloaded successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      addToast({
+        title: "Export Error",
+        message: error.message || "Could not export lesson data.",
+        variant: "error",
+      });
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
+  const handleImportLesson = async (file) => {
+    setTransferLoading(true);
+    try {
+      const raw = await file.text();
+      const payload = JSON.parse(raw);
+      const frontendData = fromBackendToFrontend(
+        normalizeImportedLessonPayload(payload)
+      );
+      const importedLessonParts = frontendData?.lessonParts || [];
+
+      setLessonParts(importedLessonParts);
+      setLessonConfig(frontendData);
+      setSelectedPartId(importedLessonParts[0]?.id || "");
+      setImages([]);
+      setNextImageId(1);
+      addToast({
+        title: "Lesson Imported",
+        message: "Lesson data loaded successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      addToast({
+        title: "Import Error",
+        message: error.message || "Could not import lesson data.",
+        variant: "error",
+      });
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
   return (
     <ImagesProvider
       images={images}
@@ -1479,8 +1585,11 @@ export default function LessonBuilder() {
               onOpenPreview={() => setOpen(true)}
               onSaveDraft={handleSaveDraftClick}
               onPublish={handlePublishClick}
+              onImportLesson={handleImportLesson}
+              onExportLesson={handleExportLesson}
               saveDraftLoading={saveDraftLoading}
               publishLoading={loading}
+              transferLoading={transferLoading}
             />
 
             <div className="flex h-[calc(100vh-88px)]">
