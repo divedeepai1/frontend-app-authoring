@@ -5,6 +5,7 @@ import { EnhancedRichTextEditor } from "./enhanced-rich-text-editor";
 export default function RichTextEditorModal({
   open,
   title,
+  fromCourseOutline,
   initialValue = "",
   onSave,
   onClose,
@@ -34,7 +35,7 @@ export default function RichTextEditorModal({
         <div className="flex items-start justify-between border-b px-5 py-3">
           <div className="space-y-0">
             <p className="text-sm font-semibold text-gray-900 p-0 m-0">{title}</p>
-            <p className="text-xs text-gray-500 p-0 m-0 mt-1">{title != "Home Intro Text" && "Use rich text to describe context around the video."}</p>
+            <p className="text-xs text-gray-500 p-0 m-0 mt-1">{title != "Home Intro Text" && title != "Course Dashboard Text" && "Use rich text to describe context around the video."}</p>
           </div>
           <div
             type="button"
@@ -66,6 +67,7 @@ export default function RichTextEditorModal({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
+            // style={{backgroundColor: fromCourseOutline ? "#000000" : "blue"}}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-0 focus-visible:outline-none border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Saving..." : saveLabel}
