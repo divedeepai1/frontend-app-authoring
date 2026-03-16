@@ -1,4 +1,4 @@
-import { BookOpen, Save, Upload, ChevronRight } from "lucide-react";
+import { BookOpen, Save, Upload, ChevronRight, FileCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import LessonImportExportButtons from "./LessonImportExportButtons";
 import HeaderActionButton from "./ui/HeaderActionButton";
@@ -9,6 +9,7 @@ export default function PageHeader({
   onPublish,
   onImportLesson,
   onExportLesson,
+  onOpenQA,
   saveDraftLoading,
   publishLoading,
   transferLoading,
@@ -43,11 +44,16 @@ export default function PageHeader({
               {unitTitle}
             </div>
           </div>
-          <LessonImportExportButtons
-            onImport={onImportLesson}
-            onExport={onExportLesson}
-            loading={transferLoading}
-          />
+          <div className="flex items-center gap-3">
+            {/* <HeaderActionButton icon={FileCheck} onClick={onOpenQA} variant="primary">
+              Lesson QA
+            </HeaderActionButton> */}
+            <LessonImportExportButtons
+              onImport={onImportLesson}
+              onExport={onExportLesson}
+              loading={transferLoading}
+            />
+          </div>
         </nav>
         <div className="flex items-center justify-between">
           <div className="flex items-center  gap-4">

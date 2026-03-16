@@ -18,6 +18,7 @@ import PageHeader from "../components/PageHeader";
 import RightSidebar from "../components/RightSidebar";
 import LessonConfigModal from "../components/LessonConfigModal";
 import PartConfigModal from "../components/PartConfigModal";
+import LessonQAModal from "../components/qa/LessonQAModal";
 
 export default function LessonBuilder() {
   const { blockId, sequenceId, courseId } = useParams();
@@ -62,6 +63,7 @@ export default function LessonBuilder() {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
+  const [qaModalOpen, setQaModalOpen] = useState(false);
 
 
   
@@ -1587,6 +1589,7 @@ export default function LessonBuilder() {
               onPublish={handlePublishClick}
               onImportLesson={handleImportLesson}
               onExportLesson={handleExportLesson}
+              onOpenQA={() => setQaModalOpen(true)}
               saveDraftLoading={saveDraftLoading}
               publishLoading={loading}
               transferLoading={transferLoading}
@@ -1926,6 +1929,11 @@ export default function LessonBuilder() {
           nameHint="document.docx"
         />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <LessonQAModal
+          open={qaModalOpen}
+          onClose={() => setQaModalOpen(false)}
+          lessonParts={lessonParts}
+        />
         </>
       )}
     </ImagesProvider>
