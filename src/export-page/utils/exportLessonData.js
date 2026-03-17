@@ -90,6 +90,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                           id: lesson.id,
                           title: lesson.title,
                           weightage: lesson.weightage || 0,
+                          video_timestamp: lesson.video_timestamp || null,
                           source_document: lesson.source_document || null,
                           answer_key: lesson.answer_key || null,
                           items: (lesson.items || []).map((item) => {
@@ -106,6 +107,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                                 ...baseItem,
                                 weightage: typeof item.weightage === 'number' ? item.weightage : 10,
                                 objective_json: item.objective_json || {},
+                                video_timestamp: item.video_timestamp || null,
                               };
                             } else if (item.block_type === "text") {
                               return {

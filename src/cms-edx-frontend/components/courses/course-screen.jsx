@@ -5,6 +5,8 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import docIcon from "../../assests/document.svg"
 import viewIcon from "../../assests/view-button.svg"
 import CourseResourcesDialog from "./CourseResourcesDialog"
+import { base_url } from "../../../compugrade-constants"
+import LessonScheduleModal from "./LessonScheduleModal"
 
 function CourseScreen() {
   const [classes, setClasses] = useState([])
@@ -16,7 +18,10 @@ function CourseScreen() {
   const [lessons, setLessons] = useState([])
   const [verticals, setVerticals] = useState([])
   const [expandedChapters, setExpandedChapters] = useState({})
+  const [expandedLessons, setExpandedLessons] = useState({})
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false)
+  const [scheduleContext, setScheduleContext] = useState(null)
+  const [classStudents, setClassStudents] = useState([])
 
   const fetchClasses = async () => {
     const token = await fetchCsrfToken();
@@ -76,6 +81,13 @@ function CourseScreen() {
         newExpanded[chapter.id] = true;
       });
       setExpandedChapters(newExpanded);
+      
+      // Initialize expanded state for lessons (default false)
+      const newLessonExpanded = {};
+      (data?.lessons || []).forEach((lesson) => {
+        newLessonExpanded[lesson.id] = lesson.is_expanded || false;
+      });
+      setExpandedLessons(newLessonExpanded);
     } catch (e) {
       console.error("course-integration error", e);
     }
@@ -104,6 +116,39 @@ function CourseScreen() {
     }
   }, [selectedClassId, classes])
 
+  useEffect(() => {
+    const fetchStudentsForClass = async () => {
+      if (!selectedClassId) {
+        setClassStudents([])
+        return
+      }
+      const token = await fetchCsrfToken();
+      try {
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${selectedClassId}/students-list/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to get: ${response.status} ${errorText}`);
+        }
+        const result = await response.json();
+        setClassStudents(result?.students || []);
+      } catch (error) {
+        console.error("Error:", error.message);
+        setClassStudents([]);
+      }
+    }
+    fetchStudentsForClass()
+  }, [selectedClassId])
+
   const lessonsByChapter = useMemo(() => {
     const byChapter = {};
     lessons.forEach(ls => {
@@ -129,6 +174,83 @@ function CourseScreen() {
       ...prev,
       [chapterId]: !prev[chapterId]
     }));
+  }
+
+  const toggleLessonUiExpanded = (lessonId) => {
+    const currentState = expandedLessons[lessonId] || false;
+    const newState = !currentState;
+    setExpandedLessons(prev => ({
+      ...prev,
+      [lessonId]: newState
+    }));
+  }
+
+  const updateLessonExpanded = async (lessonId, isExpanded) => {
+    if (!selectedCourse) return;
+    
+    try {
+      const token = await fetchCsrfToken();
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/course-integration/`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+          body: JSON.stringify({
+            lesson_id: lessonId,
+            course_key: selectedCourse,
+            is_expanded: isExpanded,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to update lesson expanded state: ${response.status} ${errorText}`);
+      }
+      
+      // Update local state on success
+      setExpandedLessons(prev => ({
+        ...prev,
+        [lessonId]: isExpanded
+      }));
+    } catch (error) {
+      console.error("Error updating lesson expanded state:", error.message);
+      // Revert the UI change on error
+      setExpandedLessons(prev => ({
+        ...prev,
+        [lessonId]: !isExpanded
+      }));
+    }
+  }
+
+  const toggleLessonExpanded = (lessonId) => {
+    const currentState = expandedLessons[lessonId] || false;
+    const newState = !currentState;
+    setExpandedLessons(prev => ({
+      ...prev,
+      [lessonId]: newState
+    }));
+    updateLessonExpanded(lessonId, newState);
+  }
+
+  const handleOpenSchedule = (lesson, vertical) => {
+    if (!lesson || !vertical) return;
+    const rubricId =
+      vertical?.id ||
+      "";
+    setScheduleContext({
+      lessonTitle: lesson.title,
+      verticalTitle: vertical.title,
+      rubricId,
+    });
+  }
+
+  const handleCloseSchedule = () => {
+    setScheduleContext(null);
   }
 
   return (
@@ -255,26 +377,89 @@ function CourseScreen() {
                       <div key={lesson.id || lidx} className="lesson-row lesson border-top py-2">
                         <div className="d-flex justify-content-between align-items-start">
                           <div className="d-flex align-items-start" style={{ width: "100%" }}>
-                            <span className="primary-text mr-2" style={{fontWeight:"600" , fontSize:"20px" }}>•</span>
+                            <div 
+                              className="mr-2 d-flex primary-text align-items-center mt-2" 
+                              style={{ cursor: "pointer", minWidth: "24px" }}
+                              
+                              onClick={() => toggleLessonUiExpanded(lesson.id)}
+                            >
+                              {expandedLessons[lesson.id] ? (
+                                <ChevronDown size={20} />
+                              ) : (
+                                <ChevronRight size={20} />
+                              )}
+                            </div>
                             <div className="flex-grow-1">
-                              <div className="mb-2" >{lesson.title}</div>
-                              {/* Verticals under each lesson */}
-                              {(verticalsByLesson[lesson.id] || []).length > 0 && (
+                              <div 
+                                className="mb-2 d-flex align-items-center" 
+                                style={{ cursor: "pointer" }}
+                                onClick={() => toggleLessonUiExpanded(lesson.id)}
+                              >
+                                <span className="primary-text mr-2" style={{fontWeight:"600" , fontSize:"20px" }}>•</span>
+                                <span>{lesson.title}</span>
+                              </div>
+                              {expandedLessons[lesson.id] && (verticalsByLesson[lesson.id] || []).length > 0 && (
                                 <div className="ml-3">
                                   {(verticalsByLesson[lesson.id] || []).map((v, vidx) => (
-                                    <div key={v.id || vidx} className="d-flex align-items-center mb-1" style={{ gap: "8px" }}>
-                                      
+                                    <div 
+                                      key={v.id || vidx} 
+                                      className="d-flex align-items-center py-1" 
+                                      style={{ 
+                                        gap: "8px",
+                                        borderBottom: vidx < (verticalsByLesson[lesson.id] || []).length - 1 ? "1px solid #E5E7EB" : "none"
+                                      }}
+                                    >
                                       <span>{v.title}</span>
+                                      <button
+                                        className="primary-button px-2 py-2 ml-auto"
+                                        style={{ fontSize: 12, whiteSpace: "nowrap", marginLeft: "auto" }}
+                                        onClick={() => handleOpenSchedule(lesson, v)}
+                                      >
+                                        Schedule Access
+                                      </button>
                                     </div>
                                   ))}
                                 </div>
                               )}
                             </div>
                           </div>
-                          {/* <div className="d-flex">
-                            <img src={docIcon} alt="doc" />
-                            <img src={viewIcon} className="ml-3" alt="view"/>
-                          </div> */}
+                          <div className="d-flex align-items-center">
+                            <label 
+                              className="d-flex align-items-center" 
+                              style={{ cursor: "pointer", gap: "8px", fontSize: "14px", whiteSpace: "nowrap" }}
+                            >
+                              <span className="primary-text" style={{ fontWeight: "500" }}>
+                                Expand subsection
+                              </span>
+                              <div
+                                onClick={() => toggleLessonExpanded(lesson.id)}
+                                style={{
+                                  position: "relative",
+                                  width: "44px",
+                                  height: "24px",
+                                  borderRadius: "12px",
+                                  backgroundColor: expandedLessons[lesson.id] ? "#255A71" : "#ccc",
+                                  transition: "background-color 0.3s ease",
+                                  cursor: "pointer",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: "2px",
+                                    left: expandedLessons[lesson.id] ? "22px" : "2px",
+                                    width: "20px",
+                                    height: "20px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#fff",
+                                    transition: "left 0.3s ease",
+                                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                  }}
+                                />
+                              </div>
+                            </label>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -286,12 +471,20 @@ function CourseScreen() {
         </div>
       </div>
 
-      {/* Course Resources Dialog */}
       <CourseResourcesDialog
         isOpen={isResourcesDialogOpen}
         onClose={() => setIsResourcesDialogOpen(false)}
         classId={selectedClassId}
         courseId={selectedCourse}
+      />
+
+      <LessonScheduleModal
+        isOpen={!!scheduleContext}
+        onClose={handleCloseSchedule}
+        courseId={selectedCourse}
+        title={scheduleContext ? `${scheduleContext.verticalTitle || ""} • ${scheduleContext.lessonTitle || ""}` : ""}
+        students={classStudents}
+        rubricId={scheduleContext ? scheduleContext.rubricId : ""}
       />
     </div>
   )

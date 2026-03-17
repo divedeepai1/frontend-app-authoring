@@ -18,6 +18,10 @@ import PageHeader from "../components/PageHeader";
 import RightSidebar from "../components/RightSidebar";
 import LessonConfigModal from "../components/LessonConfigModal";
 import PartConfigModal from "../components/PartConfigModal";
+import LessonQAModal from "../components/qa/LessonQAModal";
+import { fetchCsrfToken } from "../../../../cms-csrftoken";
+import { getConfig } from "@edx/frontend-platform";
+
 
 export default function LessonBuilder() {
   const { blockId, sequenceId, courseId } = useParams();
@@ -38,9 +42,12 @@ export default function LessonBuilder() {
   const [validationErrors, setValidationErrors] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [aiVideoLoading, setAiVideoLoading] = useState(false);
+  const [aiVideoRegenerating, setAiVideoRegenerating] = useState(false);
+  const [aiVideoFetching, setAiVideoFetching] = useState(false);
   const [aiInstructionsLoading, setAiInstructionsLoading] = useState(false);
   const [aiLessonBuilderLoading, setAiLessonBuilderLoading] = useState(false);
   const [saveDraftLoading, setSaveDraftLoading] = useState(false);
+  const [transferLoading, setTransferLoading] = useState(false);
   const [partConfigOpen, setPartConfigOpen] = useState(false);
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -59,9 +66,92 @@ export default function LessonBuilder() {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
+  const [qaModalOpen, setQaModalOpen] = useState(false);
 
-
+  useEffect(() => {
+    let isFetching = false;
   
+    const fetchCourseType = async () => {
+      if (isFetching) return;
+      isFetching = true;
+  
+      const token = await fetchCsrfToken();
+  
+      try {
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+  
+        if (response.ok) {
+          const courses = await response.json();
+          const currentCourse = courses.find(
+            (course) => course.id == courseId
+          );
+  
+          if (currentCourse && currentCourse.course_type) {
+            sessionStorage.setItem(
+              "courseTitle",
+              currentCourse?.display_name
+            );
+  
+            let sessionCourseType = currentCourse.course_type;
+  
+            if (
+              sessionCourseType === "ms_powerpoint" ||
+              sessionCourseType === "google_slides"
+            ) {
+              sessionCourseType = "powerpoint";
+            } else if (
+              sessionCourseType === "ms_excel" ||
+              sessionCourseType === "google_sheets"
+            ) {
+              sessionCourseType = "excel";
+            } else if (
+              sessionCourseType === "ms_word" ||
+              sessionCourseType === "google_docs"
+            ) {
+              sessionCourseType = "ms-word";
+            }
+  
+            sessionStorage.setItem("courseType", sessionCourseType);
+          } else {
+            sessionStorage.setItem("courseType", "ms-word");
+          }
+        } else {
+          sessionStorage.setItem("courseType", "ms-word");
+        }
+      } catch (err) {
+        sessionStorage.setItem("courseType", "ms-word");
+      } finally {
+        isFetching = false;
+      }
+    };
+  
+    const existingCourseType = sessionStorage.getItem("courseType");
+    if (!existingCourseType) {
+      fetchCourseType();
+    }
+  
+    const interval = setInterval(() => {
+      const courseType = sessionStorage.getItem("courseType");
+  
+      if (!courseType) {
+        fetchCourseType();
+      }
+    }, 2000);
+  
+    return () => clearInterval(interval);
+  }, [courseId]);
+
+
 
   const handleSaveAll = async (instructions) => {
     try {
@@ -114,6 +204,11 @@ export default function LessonBuilder() {
           } else {
             questionData.image_url = [];
             questionData.image_name = [];
+          }
+
+          // Attach video timestamp for objective question (same as instructions)
+          if (item.video_timestamp) {
+            questionData.video_timestamp = item.video_timestamp;
           }
           
           blocks.push({
@@ -184,6 +279,7 @@ export default function LessonBuilder() {
         id: lesson.id,
         title: lesson.title,
         weightage: lesson.weightage,
+        time_allowed: lesson.time_allowed ?? null,
         sourceDocument: lesson.source_document || null,
         answerKey: lesson.answer_key || null,
         content: {
@@ -663,6 +759,8 @@ export default function LessonBuilder() {
                     block_type: block.type,
                     item_type: block.content.item_type,
                     objective_json: objectiveJson,
+                    // forward any video timestamp for this objective question
+                    video_timestamp: question.video_timestamp || null,
                     weightage:
                       typeof block.content.weightage === "number"
                         ? block.content.weightage
@@ -770,6 +868,12 @@ export default function LessonBuilder() {
           id: lesson.id,
           title: lesson.title,
           weightage: lesson.weightage,
+          time_allowed:
+            typeof lesson.time_allowed === "number"
+              ? lesson.time_allowed
+              : lesson.time_allowed
+              ? Number(lesson.time_allowed) || null
+              : null,
           source_document: partSourceDoc,
           answer_key: partAnswerKey,
           items: items.flat(),
@@ -791,6 +895,46 @@ export default function LessonBuilder() {
       num_of_attempts: currentLessonConfig.num_of_attempts === null ? null : (currentLessonConfig.num_of_attempts || 3),
     };
   }
+
+  const normalizeImportedLessonPayload = (payload) => ({
+    rubric_id: blockId,
+    source_document: payload?.source_document || null,
+    answer_key: payload?.answer_key || null,
+    video: payload?.video || null,
+    skills: payload?.skills || [],
+    text_before_video: payload?.text_before_video || "",
+    text_after_video: payload?.text_after_video || "",
+    lesson_overview: payload?.lesson_overview || "",
+    num_of_attempts:
+      payload?.num_of_attempts === null
+        ? null
+        : payload?.num_of_attempts || 3,
+    lessons: (payload?.lessons || []).map((lesson) => ({
+      id: lesson.id,
+      title: lesson.title,
+      weightage: lesson.weightage,
+      time_allowed: lesson.time_allowed ?? null,
+      source_document: lesson.source_document || null,
+      answer_key: lesson.answer_key || null,
+      items: (lesson.items || []).map((item) => ({
+        ...item,
+        image_name: Array.isArray(item.image_name)
+          ? item.image_name
+          : Array.isArray(item.images)
+          ? item.images
+          : item.image_name
+          ? [item.image_name]
+          : [],
+        video_name: Array.isArray(item.video_name)
+          ? item.video_name
+          : Array.isArray(item.videos)
+          ? item.videos
+          : item.video_name
+          ? [item.video_name]
+          : [],
+      })),
+    })),
+  });
 
   const handleUploadToS3 = async (items) => {
     const uploadPromises = items?.flatMap((item) => {
@@ -921,6 +1065,7 @@ export default function LessonBuilder() {
       },
       sourceDocument: null,
       answerKey: null,
+      time_allowed: null,
     };
     setLessonParts([...lessonParts, part]);
     setSelectedPartId(part.id);
@@ -1036,9 +1181,22 @@ export default function LessonBuilder() {
   const canRunAiVideo = (partId) => {
     if (!lessonConfig) return false;
     const hasVideo = !!(lessonConfig.videos && lessonConfig.videos.length > 0);
-    const lessons = Array.isArray(lessonConfig.lessonParts) ? lessonConfig.lessonParts : [];
-    const partExists = lessons.some((l) => String(l.id) === String(partId));
-    return hasVideo && partExists;
+    
+    // Find part in frontend state
+    const frontendPart = lessonParts.find((p) => String(p.id) === String(partId));
+    if (!frontendPart) return false;
+    
+    // Check if part exists in backend saved parts (lessonConfig.lessonParts)
+    // and verify both ID and title/name match
+    const backendLessons = Array.isArray(lessonConfig.lessonParts) ? lessonConfig.lessonParts : [];
+    const backendPart = backendLessons.find((l) => String(l.id) === String(partId));
+    
+    if (!backendPart) return false;
+    
+    // Check if title/name matches between frontend and backend
+    const titleMatches = String(frontendPart.title || "").trim() === String(backendPart.title || "").trim();
+    
+    return hasVideo && titleMatches;
   };
 
   const getAiVideoDisableReason = (partId) => {
@@ -1046,15 +1204,32 @@ export default function LessonBuilder() {
       return "The Lesson is not saved yet. Save it to enable AI Video";
     if (!lessonConfig.videos || lessonConfig.videos.length === 0)
       return "Attach video in Configuration and save lesson to enable AI Video";
-    const lessons = Array.isArray(lessonConfig.lessonParts) ? lessonConfig.lessonParts : [];
-    const partExists = lessons.some((l) => String(l.id) === String(partId));
-    if (!partExists)
+    
+    // Find part in frontend state
+    const frontendPart = lessonParts.find((p) => String(p.id) === String(partId));
+    if (!frontendPart)
+      return "Part not found in frontend state";
+    
+    // Check if part exists in backend
+    const backendLessons = Array.isArray(lessonConfig.lessonParts) ? lessonConfig.lessonParts : [];
+    const backendPart = backendLessons.find((l) => String(l.id) === String(partId));
+    
+    if (!backendPart)
       return "This part is not saved/exist in Lesson yet. Save the lesson to enable AI Video";
+    
+    // Check if title/name matches
+    const titleMatches = String(frontendPart.title || "").trim() === String(backendPart.title || "").trim();
+    if (!titleMatches)
+      return "This part has been modified. Save the lesson to enable AI Video";
+    
     return "";
   };
 
-  const videoSplicing = async (sub_rubric_id) => {
-    if (aiVideoLoading) return;
+  const [videoPartId, setVideoPartId] = useState(null);
+
+  const videoSplicing = async (sub_rubric_id, options = {}) => {
+    const { forceRegenerate = false } = options || {};
+    if (aiVideoLoading || aiVideoFetching) return;
     if (!canRunAiVideo(sub_rubric_id)) {
       const reason = getAiVideoDisableReason(sub_rubric_id);
       addToast({
@@ -1064,43 +1239,93 @@ export default function LessonBuilder() {
       });
       return;
     }
-    setAiVideoLoading(true);
-    try {
-      const url = new URL(
-        base_url + "/api/openedx/get_base_timestamps_for_rubric_video"
-      );
-      url.searchParams.append("rubric_id", blockId);
-      url.searchParams.append("sub_rubric_id", sub_rubric_id);
+    
+    let result = null;
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+    // First try to fetch existing timestamps unless explicitly regenerating
+    if (!forceRegenerate) {
+      setAiVideoFetching(true);
+      try {
+        const existingUrl = new URL(
+          base_url + "/api/openedx/get_base_items_timestamp"
+        );
+        existingUrl.searchParams.append("rubric_id", blockId);
+        existingUrl.searchParams.append("sub_rubric_id", sub_rubric_id);
 
-      if (!response.ok) {
-        throw new Error(`Failed : ${response.status} ${response.statusText}`);
+        const existingRes = await fetch(existingUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (existingRes.ok) {
+          const existingData = await existingRes.json();
+          if (
+            existingData &&
+            Array.isArray(existingData.timestamps) &&
+            existingData.timestamps.length > 0
+          ) {
+            result = existingData;
+            addToast({
+              title: "AI Video Ready",
+              message: "Timestamps loaded successfully.",
+              variant: "success",
+            });
+          }
+        }
+      } catch (e) {
+        // Swallow and fall back to regeneration
+        console.error("Error fetching existing timestamps:", e);
+      } finally {
+        setAiVideoFetching(false);
       }
-
-      const result = await response.json();
-      addToast({
-        title: "AI Video Ready",
-        message: "Timestamps added successfully.",
-        variant: "success",
-      });
-      setVideoData(result)
-      setIsVideoOpen(true);
-
-      return result;
-    } catch (error) {
-      console.error("Error :", error);
-      addToast({
-        title: "AI Video Error",
-        message: error.message || "Request failed.",
-        variant: "error",
-      });
-    } finally {
-      setAiVideoLoading(false);
     }
+
+    // If nothing found (or forceRegenerate), call old endpoint to regenerate
+    if (!result) {
+      setAiVideoLoading(true);
+      setAiVideoRegenerating(true);
+      try {
+        const url = new URL(
+          base_url + "/api/openedx/get_base_timestamps_for_rubric_video"
+        );
+        url.searchParams.append("rubric_id", blockId);
+        url.searchParams.append("sub_rubric_id", sub_rubric_id);
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed : ${response.status} ${response.statusText}`);
+        }
+
+        result = await response.json();
+        addToast({
+          title: "AI Video Ready",
+          message: "Timestamps added successfully.",
+          variant: "success",
+        });
+      } catch (error) {
+        console.error("Error :", error);
+        addToast({
+          title: "AI Video Error",
+          message: error.message || "Request failed.",
+          variant: "error",
+        });
+      } finally {
+        setAiVideoRegenerating(false);
+        setAiVideoLoading(false);
+      }
+    }
+
+    if (result) {
+      setVideoData(result);
+      setVideoPartId(sub_rubric_id);
+      setIsVideoOpen(true);
+    }
+
+    return result;
   };
 
 
@@ -1362,6 +1587,71 @@ export default function LessonBuilder() {
     }
   };
 
+  const handleExportLesson = async () => {
+    setTransferLoading(true);
+    try {
+      const exportedLesson = await frontendToBackend(
+        { ...lessonConfig, lessonParts },
+        blockId
+      );
+      const blob = new Blob([JSON.stringify(exportedLesson, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "exported-lesson.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addToast({
+        title: "Lesson Exported",
+        message: "Lesson data downloaded successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      addToast({
+        title: "Export Error",
+        message: error.message || "Could not export lesson data.",
+        variant: "error",
+      });
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
+  const handleImportLesson = async (file) => {
+    setTransferLoading(true);
+    try {
+      const raw = await file.text();
+      const payload = JSON.parse(raw);
+      const frontendData = fromBackendToFrontend(
+        normalizeImportedLessonPayload(payload)
+      );
+      const importedLessonParts = frontendData?.lessonParts || [];
+
+      setLessonParts(importedLessonParts);
+      setLessonConfig(frontendData);
+      setSelectedPartId(importedLessonParts[0]?.id || "");
+      setImages([]);
+      setNextImageId(1);
+      addToast({
+        title: "Lesson Imported",
+        message: "Lesson data loaded successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      addToast({
+        title: "Import Error",
+        message: error.message || "Could not import lesson data.",
+        variant: "error",
+      });
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
   return (
     <ImagesProvider
       images={images}
@@ -1382,8 +1672,12 @@ export default function LessonBuilder() {
               onOpenPreview={() => setOpen(true)}
               onSaveDraft={handleSaveDraftClick}
               onPublish={handlePublishClick}
+              onImportLesson={handleImportLesson}
+              onExportLesson={handleExportLesson}
+              onOpenQA={() => setQaModalOpen(true)}
               saveDraftLoading={saveDraftLoading}
               publishLoading={loading}
+              transferLoading={transferLoading}
             />
 
             <div className="flex h-[calc(100vh-88px)]">
@@ -1430,22 +1724,22 @@ export default function LessonBuilder() {
                       <div className="relative group">
                         <div
                           className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
-                            aiVideoLoading
+                            aiVideoLoading || aiVideoRegenerating
                               ? "bg-blue-400 text-white cursor-not-allowed"
-                              : canRunAiVideo(selectedPart.id)
-                              ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                              : "bg-blue-300 text-white cursor-not-allowed"
+                              : aiVideoFetching || !canRunAiVideo(selectedPart.id)
+                              ? "bg-blue-300 text-white cursor-not-allowed"
+                              : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                           }`}
                           onClick={
-                            canRunAiVideo(selectedPart.id) && !aiVideoLoading
+                            canRunAiVideo(selectedPart.id) && !aiVideoLoading && !aiVideoFetching && !aiVideoRegenerating
                               ? () => videoSplicing(selectedPart.id)
                               : undefined
                           }
                           aria-disabled={
-                            !canRunAiVideo(selectedPart.id) || aiVideoLoading
+                            !canRunAiVideo(selectedPart.id) || aiVideoLoading || aiVideoFetching || aiVideoRegenerating
                           }
                         >
-                          {aiVideoLoading ? (
+                          {aiVideoRegenerating ? (
                             <svg
                               className="w-4 h-4 animate-spin text-white"
                               xmlns="http://www.w3.org/2000/svg"
@@ -1467,11 +1761,11 @@ export default function LessonBuilder() {
                               ></path>
                             </svg>
                           ) : null}
-                          {aiVideoLoading ? "Video splicing..." : "AI Video"}
+                          {aiVideoRegenerating ? "Video splicing..." : "AI Video"}
                         </div>
-                        {!canRunAiVideo(selectedPart.id) && (
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-gray-900 text-white text-xs px-2 py-1 shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                            {getAiVideoDisableReason(selectedPart.id)}
+                        {(!canRunAiVideo(selectedPart.id) || aiVideoFetching) && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-gray-900 text-white text-xs px-2 py-1 shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
+                            {aiVideoFetching ? "Fetching timestamps..." : getAiVideoDisableReason(selectedPart.id)}
                           </div>
                         )}
                       </div>
@@ -1632,6 +1926,12 @@ export default function LessonBuilder() {
           onClose={()=> setIsVideoOpen(false)}
           data={videoData}
           onSaveAll={handleSaveAll}
+          onRegenerate={
+            videoPartId
+              ? () => videoSplicing(videoPartId, { forceRegenerate: true })
+              : undefined
+          }
+          regenerating={aiVideoLoading}
         />
 
         <EditPartDialog
@@ -1714,6 +2014,11 @@ export default function LessonBuilder() {
           nameHint="document.docx"
         />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <LessonQAModal
+          open={qaModalOpen}
+          onClose={() => setQaModalOpen(false)}
+          lessonParts={lessonParts}
+        />
         </>
       )}
     </ImagesProvider>

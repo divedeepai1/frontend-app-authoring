@@ -1,12 +1,12 @@
 
 
 import { useState } from "react"
-import { Trash2 } from "lucide-react"
+import { Trash2, Eye, X } from "lucide-react"
 import { ImageAttach } from "../ui/image-attach"
 import { EnhancedRichTextEditor } from "../enhanced-rich-text-editor"
 import { useQuestionImages } from "./useQuestionImages"
 
-export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
+export function ShortAnswerQuestion({ question, onQuestionChange, onDelete, onTimestampClick }) {
   const [questionContent, setQuestionContent] = useState({ html: question.natural_text || "" })
   const [sampleAnswer, setSampleAnswer] = useState(question.correct_answer || "")
   const { questionImages, handleQuestionImageSelect, handleQuestionImageRemoveAt } = useQuestionImages(question)
@@ -62,6 +62,28 @@ export function ShortAnswerQuestion({ question, onQuestionChange, onDelete }) {
               multiple={true}
             />
           </div>
+          {question.video_timestamp && onTimestampClick && (
+            <div className="mt-2 flex flex-wrap gap-3">
+              <div
+                className="relative flex items-center justify-between w-44 px-3 py-2 rounded-lg bg-white border border-purple-200 text-purple-700 text-sm cursor-pointer shadow-sm hover:shadow"
+                onClick={() => onTimestampClick(question.video_timestamp)}
+              >
+                <div className="flex items-center gap-2 pr-6">
+                  <Eye className="w-4 h-4" />
+                  <span className="truncate">Timestamp Video</span>
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuestionChange({ ...question, video_timestamp: null });
+                  }}
+                  className="absolute top-1 right-1 p-0.5 rounded-full text-red-500 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         </div>
 
