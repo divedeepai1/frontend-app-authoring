@@ -18,6 +18,10 @@ import PageHeader from "../components/PageHeader";
 import RightSidebar from "../components/RightSidebar";
 import LessonConfigModal from "../components/LessonConfigModal";
 import PartConfigModal from "../components/PartConfigModal";
+import LessonQAModal from "../components/qa/LessonQAModal";
+import { fetchCsrfToken } from "../../../../cms-csrftoken";
+import { getConfig } from "@edx/frontend-platform";
+
 
 export default function LessonBuilder() {
   const { blockId, sequenceId, courseId } = useParams();
@@ -62,9 +66,92 @@ export default function LessonBuilder() {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
+  const [qaModalOpen, setQaModalOpen] = useState(false);
 
-
+  useEffect(() => {
+    let isFetching = false;
   
+    const fetchCourseType = async () => {
+      if (isFetching) return;
+      isFetching = true;
+  
+      const token = await fetchCsrfToken();
+  
+      try {
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+  
+        if (response.ok) {
+          const courses = await response.json();
+          const currentCourse = courses.find(
+            (course) => course.id == courseId
+          );
+  
+          if (currentCourse && currentCourse.course_type) {
+            sessionStorage.setItem(
+              "courseTitle",
+              currentCourse?.display_name
+            );
+  
+            let sessionCourseType = currentCourse.course_type;
+  
+            if (
+              sessionCourseType === "ms_powerpoint" ||
+              sessionCourseType === "google_slides"
+            ) {
+              sessionCourseType = "powerpoint";
+            } else if (
+              sessionCourseType === "ms_excel" ||
+              sessionCourseType === "google_sheets"
+            ) {
+              sessionCourseType = "excel";
+            } else if (
+              sessionCourseType === "ms_word" ||
+              sessionCourseType === "google_docs"
+            ) {
+              sessionCourseType = "ms-word";
+            }
+  
+            sessionStorage.setItem("courseType", sessionCourseType);
+          } else {
+            sessionStorage.setItem("courseType", "ms-word");
+          }
+        } else {
+          sessionStorage.setItem("courseType", "ms-word");
+        }
+      } catch (err) {
+        sessionStorage.setItem("courseType", "ms-word");
+      } finally {
+        isFetching = false;
+      }
+    };
+  
+    const existingCourseType = sessionStorage.getItem("courseType");
+    if (!existingCourseType) {
+      fetchCourseType();
+    }
+  
+    const interval = setInterval(() => {
+      const courseType = sessionStorage.getItem("courseType");
+  
+      if (!courseType) {
+        fetchCourseType();
+      }
+    }, 2000);
+  
+    return () => clearInterval(interval);
+  }, [courseId]);
+
+
 
   const handleSaveAll = async (instructions) => {
     try {
@@ -1587,6 +1674,7 @@ export default function LessonBuilder() {
               onPublish={handlePublishClick}
               onImportLesson={handleImportLesson}
               onExportLesson={handleExportLesson}
+              onOpenQA={() => setQaModalOpen(true)}
               saveDraftLoading={saveDraftLoading}
               publishLoading={loading}
               transferLoading={transferLoading}
@@ -1926,6 +2014,11 @@ export default function LessonBuilder() {
           nameHint="document.docx"
         />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <LessonQAModal
+          open={qaModalOpen}
+          onClose={() => setQaModalOpen(false)}
+          lessonParts={lessonParts}
+        />
         </>
       )}
     </ImagesProvider>
