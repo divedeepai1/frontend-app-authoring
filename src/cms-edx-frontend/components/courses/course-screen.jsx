@@ -5,6 +5,8 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import docIcon from "../../assests/document.svg"
 import viewIcon from "../../assests/view-button.svg"
 import CourseResourcesDialog from "./CourseResourcesDialog"
+import { base_url } from "../../../compugrade-constants"
+import LessonScheduleModal from "./LessonScheduleModal"
 
 function CourseScreen() {
   const [classes, setClasses] = useState([])
@@ -18,6 +20,8 @@ function CourseScreen() {
   const [expandedChapters, setExpandedChapters] = useState({})
   const [expandedLessons, setExpandedLessons] = useState({})
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false)
+  const [scheduleContext, setScheduleContext] = useState(null)
+  const [classStudents, setClassStudents] = useState([])
 
   const fetchClasses = async () => {
     const token = await fetchCsrfToken();
@@ -112,6 +116,39 @@ function CourseScreen() {
     }
   }, [selectedClassId, classes])
 
+  useEffect(() => {
+    const fetchStudentsForClass = async () => {
+      if (!selectedClassId) {
+        setClassStudents([])
+        return
+      }
+      const token = await fetchCsrfToken();
+      try {
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${selectedClassId}/students-list/`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": token,
+            },
+          }
+        );
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to get: ${response.status} ${errorText}`);
+        }
+        const result = await response.json();
+        setClassStudents(result?.students || []);
+      } catch (error) {
+        console.error("Error:", error.message);
+        setClassStudents([]);
+      }
+    }
+    fetchStudentsForClass()
+  }, [selectedClassId])
+
   const lessonsByChapter = useMemo(() => {
     const byChapter = {};
     lessons.forEach(ls => {
@@ -136,6 +173,15 @@ function CourseScreen() {
     setExpandedChapters(prev => ({
       ...prev,
       [chapterId]: !prev[chapterId]
+    }));
+  }
+
+  const toggleLessonUiExpanded = (lessonId) => {
+    const currentState = expandedLessons[lessonId] || false;
+    const newState = !currentState;
+    setExpandedLessons(prev => ({
+      ...prev,
+      [lessonId]: newState
     }));
   }
 
@@ -184,18 +230,27 @@ function CourseScreen() {
   const toggleLessonExpanded = (lessonId) => {
     const currentState = expandedLessons[lessonId] || false;
     const newState = !currentState;
-    // Optimistically update UI
     setExpandedLessons(prev => ({
       ...prev,
       [lessonId]: newState
     }));
-    // Then update backend
     updateLessonExpanded(lessonId, newState);
   }
 
-  const toggleLessonView = (lessonId) => {
-    // Toggle both visual expand/collapse and update backend
-    toggleLessonExpanded(lessonId);
+  const handleOpenSchedule = (lesson, vertical) => {
+    if (!lesson || !vertical) return;
+    const rubricId =
+      vertical?.id ||
+      "";
+    setScheduleContext({
+      lessonTitle: lesson.title,
+      verticalTitle: vertical.title,
+      rubricId,
+    });
+  }
+
+  const handleCloseSchedule = () => {
+    setScheduleContext(null);
   }
 
   return (
@@ -326,7 +381,7 @@ function CourseScreen() {
                               className="mr-2 d-flex primary-text align-items-center mt-2" 
                               style={{ cursor: "pointer", minWidth: "24px" }}
                               
-                              onClick={() => toggleLessonView(lesson.id)}
+                              onClick={() => toggleLessonUiExpanded(lesson.id)}
                             >
                               {expandedLessons[lesson.id] ? (
                                 <ChevronDown size={20} />
@@ -338,12 +393,11 @@ function CourseScreen() {
                               <div 
                                 className="mb-2 d-flex align-items-center" 
                                 style={{ cursor: "pointer" }}
-                                onClick={() => toggleLessonView(lesson.id)}
+                                onClick={() => toggleLessonUiExpanded(lesson.id)}
                               >
                                 <span className="primary-text mr-2" style={{fontWeight:"600" , fontSize:"20px" }}>•</span>
                                 <span>{lesson.title}</span>
                               </div>
-                              {/* Verticals under each lesson - only show if expanded */}
                               {expandedLessons[lesson.id] && (verticalsByLesson[lesson.id] || []).length > 0 && (
                                 <div className="ml-3">
                                   {(verticalsByLesson[lesson.id] || []).map((v, vidx) => (
@@ -356,6 +410,13 @@ function CourseScreen() {
                                       }}
                                     >
                                       <span>{v.title}</span>
+                                      <button
+                                        className="primary-button px-2 py-2 ml-auto"
+                                        style={{ fontSize: 12, whiteSpace: "nowrap", marginLeft: "auto" }}
+                                        onClick={() => handleOpenSchedule(lesson, v)}
+                                      >
+                                        Schedule Access
+                                      </button>
                                     </div>
                                   ))}
                                 </div>
@@ -410,12 +471,20 @@ function CourseScreen() {
         </div>
       </div>
 
-      {/* Course Resources Dialog */}
       <CourseResourcesDialog
         isOpen={isResourcesDialogOpen}
         onClose={() => setIsResourcesDialogOpen(false)}
         classId={selectedClassId}
         courseId={selectedCourse}
+      />
+
+      <LessonScheduleModal
+        isOpen={!!scheduleContext}
+        onClose={handleCloseSchedule}
+        courseId={selectedCourse}
+        title={scheduleContext ? `${scheduleContext.verticalTitle || ""} • ${scheduleContext.lessonTitle || ""}` : ""}
+        students={classStudents}
+        rubricId={scheduleContext ? scheduleContext.rubricId : ""}
       />
     </div>
   )
