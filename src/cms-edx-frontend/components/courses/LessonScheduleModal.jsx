@@ -2,21 +2,19 @@ import { useEffect, useMemo, useState } from "react"
 import { X } from "lucide-react"
 import { base_url } from "../../../compugrade-constants"
 
-const toDateTimeLocal = (isoString) => {
+const toDateOnly = (isoString) => {
   if (!isoString) return ""
   const date = new Date(isoString)
   if (Number.isNaN(date.getTime())) return ""
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
-  const hours = String(date.getHours()).padStart(2, "0")
-  const minutes = String(date.getMinutes()).padStart(2, "0")
-  return `${year}-${month}-${day}T${hours}:${minutes}`
+  return `${year}-${month}-${day}`
 }
 
-const toIsoFromLocal = (value) => {
+const toIsoFromDateOnly = (value) => {
   if (!value) return null
-  const date = new Date(value)
+  const date = new Date(`${value}T13:00:00`)
   if (Number.isNaN(date.getTime())) return null
   return date.toISOString()
 }
@@ -86,8 +84,8 @@ const LessonScheduleModal = ({ isOpen, onClose, courseId, title, students, rubri
             id: s.id,
             name: s.name || s.full_name || s.email || `Student ${s.id}`,
             email: s.email || "",
-            start: toDateTimeLocal(existing.start_date),
-            due: toDateTimeLocal(existing.due_date),
+            start: toDateOnly(existing.start_date),
+            due: toDateOnly(existing.due_date),
           }
         })
         setRows(mappedRows)
@@ -142,8 +140,8 @@ const LessonScheduleModal = ({ isOpen, onClose, courseId, title, students, rubri
     setSavingId(row.id)
     setError("")
     try {
-      const startIso = toIsoFromLocal(row.start)
-      const dueIso = toIsoFromLocal(row.due)
+      const startIso = toIsoFromDateOnly(row.start)
+      const dueIso = toIsoFromDateOnly(row.due)
       if (!startIso || !dueIso) {
         setError("Dates must be valid.")
         setSavingId(null)
@@ -191,8 +189,8 @@ const LessonScheduleModal = ({ isOpen, onClose, courseId, title, students, rubri
     setBulkError("")
     setError("")
     try {
-      const startIso = toIsoFromLocal(bulkStart)
-      const dueIso = toIsoFromLocal(bulkDue)
+      const startIso = toIsoFromDateOnly(bulkStart)
+      const dueIso = toIsoFromDateOnly(bulkDue)
       if (!startIso || !dueIso) {
         setBulkError("Dates must be valid.")
         setSavingAll(false)
@@ -322,20 +320,10 @@ const LessonScheduleModal = ({ isOpen, onClose, courseId, title, students, rubri
                     <tr key={row.id}>
                       {/* <td style={{ minWidth: 140 }}>{row.name}</td> */}
                       <td style={{ minWidth: 140 }}>{row.email}</td>
-                      {/* <td style={{ minWidth: 160 }}>
-                        <input
-                          type="datetime-local"
-                          className="form-control form-control-sm"
-                          value={row.start}
-                          onChange={(e) =>
-                            handleRowChange(row.id, "start", e.target.value)
-                          }
-                        />
-                      </td> */}
                       <td style={{ minWidth: 140 }}>
                         <input
-                          type="datetime-local"
-                          className="form-control form-control-sm  mr-4"
+                          type="date"
+                          className="form-control form-control-sm w-48 mr-12"
                           value={row.due}
                           onChange={(e) =>
                             handleRowChange(row.id, "due", e.target.value)
@@ -388,7 +376,7 @@ const LessonScheduleModal = ({ isOpen, onClose, courseId, title, students, rubri
                 <div className="mb-3">
                   <label className="form-label mb-1">Start date</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     className="form-control"
                     value={bulkStart}
                     onChange={(e) => setBulkStart(e.target.value)}
@@ -397,7 +385,7 @@ const LessonScheduleModal = ({ isOpen, onClose, courseId, title, students, rubri
                 <div className="mb-3">
                   <label className="form-label mb-1">Due date</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     className="form-control"
                     value={bulkDue}
                     onChange={(e) => setBulkDue(e.target.value)}
@@ -415,7 +403,7 @@ const LessonScheduleModal = ({ isOpen, onClose, courseId, title, students, rubri
                     className="primary-button px-3 py-2"
                     style={{ fontSize: 12 }}
                     onClick={handleBulkSave}
-                    disabled={savingAll}
+                    disabled={savingAll || !bulkStart || !bulkDue}
                   >
                     {savingAll ? "Saving..." : "Save for all"}
                   </button>

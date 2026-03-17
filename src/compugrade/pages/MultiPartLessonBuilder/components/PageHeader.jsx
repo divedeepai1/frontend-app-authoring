@@ -35,7 +35,7 @@ export default function PageHeader({
             >
               {sessionStorage?.getItem("courseTitle")}
             </div>
-            <ChevronRight className="mx-2 mt-1 h-4 w-4" />
+            {unitTitle && <ChevronRight className="mx-2 mt-1 h-4 w-4" />}
             <div
               onClick={() => navigate(-1)}
               className="cursor-pointer transition-colors hover:text-blue-600"
