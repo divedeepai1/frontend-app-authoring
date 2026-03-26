@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Layers, BookOpen,  Settings} from "lucide-react";
+import { Layers, BookOpen, Settings } from "lucide-react";
 import { AddPartDialog } from "../components/add-part-dialog";
 import { EditPartDialog } from "../components/edit-part-dialog";
 import { DeleteConfirmationDialog } from "../components/delete-confirmation-dialog";
@@ -67,6 +67,7 @@ export default function LessonBuilder() {
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
   const [qaModalOpen, setQaModalOpen] = useState(false);
+  const [qaModalPartId, setQaModalPartId] = useState(null);
 
   useEffect(() => {
     let isFetching = false;
@@ -1674,7 +1675,10 @@ export default function LessonBuilder() {
               onPublish={handlePublishClick}
               onImportLesson={handleImportLesson}
               onExportLesson={handleExportLesson}
-              onOpenQA={() => setQaModalOpen(true)}
+              onOpenQA={() => {
+                setQaModalPartId(selectedPart?.id ?? lessonParts?.[0]?.id ?? null);
+                setQaModalOpen(true);
+              }}
               saveDraftLoading={saveDraftLoading}
               publishLoading={loading}
               transferLoading={transferLoading}
@@ -1719,6 +1723,29 @@ export default function LessonBuilder() {
                         className="p-1 px-2 rounded-lg bg-blue-100 cursor-pointer "
                       >
                         <Settings className="w-5 h-5 mb-1 text-blue-600" />
+                      </div>
+
+                      <div
+                        onClick={() => {
+                          const courseType = (sessionStorage.getItem("courseType") || "").toLowerCase();
+                          const isQaDisabled =
+                            courseType === "excel" || courseType === "powerpoint";
+                          if (isQaDisabled) return;
+                          setQaModalPartId(selectedPart?.id ?? null);
+                          setQaModalOpen(true);
+                        }}
+                        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
+                          (() => {
+                            const courseType = (sessionStorage.getItem("courseType") || "").toLowerCase();
+                            const isQaDisabled =
+                              courseType === "excel" || courseType === "powerpoint";
+                            return isQaDisabled 
+                              ? "bg-blue-300 text-white cursor-not-allowed"
+                              : "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2";
+                          })()
+                        }`}
+                      >
+                        Lesson QA
                       </div>
 
                       <div className="relative group">
@@ -2016,8 +2043,12 @@ export default function LessonBuilder() {
       <ToastContainer toasts={toasts} removeToast={removeToast} />
         <LessonQAModal
           open={qaModalOpen}
-          onClose={() => setQaModalOpen(false)}
+          onClose={() => {
+            setQaModalOpen(false);
+            setQaModalPartId(null);
+          }}
           lessonParts={lessonParts}
+          partId={qaModalPartId}
         />
         </>
       )}

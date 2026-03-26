@@ -1,34 +1,36 @@
 import { useState, useRef } from "react";
-import { Upload, X, CheckCircle2, XCircle, FileText } from "lucide-react";
+import {
+  Upload,
+  X,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  ArrowDownToLine,
+} from "lucide-react";
+import InstructionContentPreview from "./InstructionContentPreview";
 
-function FileItem({ file, index, stateType, onRemove, onReplace }) {
-  const replaceInputRef = useRef(null);
-
-  const fileName = file.name || file;
+function FileItem({ file, onRemove, onDownload, deleting }) {
+  const fileName = file.fileName || file.name || "State file";
 
   return (
-    <div className="flex items-center justify-between p-2.5 bg-white rounded border border-gray-200 group hover:border-gray-300 transition-colors">
+    <div className="flex items-center justify-between p-1 px-2 bg-white rounded border border-gray-200 group hover:border-gray-300 transition-colors">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
         <span className="text-sm text-gray-700 truncate">{fileName}</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <input
-          ref={replaceInputRef}
-          type="file"
-          accept=".docx,.doc"
-          className="hidden"
-          onChange={(e) => onReplace(e)}
-        />
         <div
-          onClick={() => replaceInputRef.current?.click()}
-          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors opacity-0 group-hover:opacity-100"
-          title="Replace"
+          type="button"
+          onClick={onDownload}
+          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          title="Download"
         >
-          <Upload className="w-4 h-4" />
+          <ArrowDownToLine className="w-4 h-4" />
         </div>
         <div
-          onClick={() => onRemove()}
+          type="button"
+          onClick={onRemove}
+          disabled={deleting}
           className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
           title="Remove"
         >
@@ -43,33 +45,44 @@ export default function InstructionStateUpload({
   instruction,
   correctState,
   wrongStates,
-  onStateChange,
+  onUploadStateFiles,
+  onDeleteStateFile,
+  onDownloadStateFile,
+  loading,
+  courseType,
+  canUpload,
 }) {
   const correctInputRef = useRef(null);
   const wrongInputRef = useRef(null);
   const [correctDragActive, setCorrectDragActive] = useState(false);
   const [wrongDragActive, setWrongDragActive] = useState(false);
 
-  const handleFileSelect = (stateType, event) => {
+  const isWordCourse =
+    courseType === "ms-word" ||
+    courseType === "ms_word" ||
+    courseType === "google_docs";
+  const acceptedExtensions = isWordCourse ? [".doc", ".docx"] : [".xls", ".xlsx"];
+  const acceptAttr = acceptedExtensions.join(",");
+
+  const isAllowedByExtension = (fileName) =>
+    acceptedExtensions.some((ext) => fileName.toLowerCase().endsWith(ext));
+
+  const getFileTypeText = () => (isWordCourse ? ".doc/.docx" : ".xls/.xlsx");
+
+  const handleFileSelect = async (stateType, event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    const validFiles = files.filter(
-      (file) => file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-                file.type === "application/msword" ||
-                file.name.endsWith(".docx") ||
-                file.name.endsWith(".doc")
-    );
+    const validFiles = files.filter((file) => isAllowedByExtension(file.name || ""));
 
-    if (validFiles.length === 0) return;
-
-    if (stateType === "correctState") {
-      onStateChange(stateType, validFiles);
-    } else {
-      onStateChange(stateType, [...wrongStates, ...validFiles]);
+    if (validFiles.length === 0) {
+      event.target.value = "";
+      return;
     }
 
-    if (event.target) {
+    try {
+      await onUploadStateFiles(stateType, validFiles);
+    } finally {
       event.target.value = "";
     }
   };
@@ -94,9 +107,10 @@ export default function InstructionStateUpload({
     }
   };
 
-  const handleDrop = (e, stateType) => {
+  const handleDrop = async (e, stateType) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!canUpload) return;
     if (stateType === "correctState") {
       setCorrectDragActive(false);
     } else {
@@ -106,52 +120,17 @@ export default function InstructionStateUpload({
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
 
-    const validFiles = files.filter(
-      (file) => file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-                file.type === "application/msword" ||
-                file.name.endsWith(".docx") ||
-                file.name.endsWith(".doc")
-    );
+    const validFiles = files.filter((file) => isAllowedByExtension(file.name || ""));
 
     if (validFiles.length === 0) return;
 
-    if (stateType === "correctState") {
-      onStateChange(stateType, validFiles);
-    } else {
-      onStateChange(stateType, [...wrongStates, ...validFiles]);
-    }
-  };
-
-  const handleRemoveFile = (stateType, index) => {
-    if (stateType === "correctState") {
-      onStateChange(stateType, []);
-    } else {
-      const updated = wrongStates.filter((_, i) => i !== index);
-      onStateChange(stateType, updated);
-    }
-  };
-
-  const handleReplaceFile = (stateType, index, event) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-
-    if (stateType === "correctState") {
-      onStateChange(stateType, files);
-    } else {
-      const updated = [...wrongStates];
-      updated[index] = files[0];
-      onStateChange(stateType, updated);
-    }
-
-    if (event.target) {
-      event.target.value = "";
-    }
+    await onUploadStateFiles(stateType, validFiles);
   };
 
 
   return (
     <div className="bg-white rounded border border-gray-200 p-3">
-      <div className="mb-3 flex items-center gap-3">
+      <div className="mb-2 flex items-center gap-3">
         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-semibold text-sm">
           {instruction.instructionNumber}
         </div>
@@ -159,6 +138,7 @@ export default function InstructionStateUpload({
           {instruction.name}
         </h4>
       </div>
+      <InstructionContentPreview html={instruction.contentHtml} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-2.5">
@@ -170,36 +150,43 @@ export default function InstructionStateUpload({
             <div className="space-y-2">
               {correctState.map((file, index) => (
                 <FileItem
-                  key={index}
+                  key={file.id || index}
                   file={file}
-                  index={index}
-                  stateType="correctState"
-                  onRemove={() => handleRemoveFile("correctState", index)}
-                  onReplace={(e) => handleReplaceFile("correctState", index, e)}
+                  deleting={loading?.deletingId === file.id}
+                  onRemove={() => onDeleteStateFile("correctState", file)}
+                  onDownload={() => onDownloadStateFile(file)}
                 />
               ))}
             </div>
           ) : (
             <div
-              onClick={() => correctInputRef.current?.click()}
+              onClick={() =>
+                canUpload && !loading?.correctUpload && correctInputRef.current?.click()
+              }
               onDragEnter={(e) => handleDrag(e, "correctState")}
               onDragLeave={(e) => handleDragLeave(e, "correctState")}
               onDragOver={(e) => handleDrag(e, "correctState")}
               onDrop={(e) => handleDrop(e, "correctState")}
-              className={`border-2 border-dashed rounded  text-center cursor-pointer transition-colors ${
+              className={`border-2 border-dashed rounded text-center  transition-colors ${
                 correctDragActive
                   ? "border-green-500 bg-green-50"
                   : "border-gray-300 hover:border-green-400 hover:bg-green-50/50"
-              }`}
+              } ${canUpload ? "cursor-pointer" : "cursor-not-allowed opacity-70"}`}
             >
-              <Upload className="w-5 h-5 text-gray-400 mx-auto mb-1.5" />
-              <p className="text-xs text-gray-600">Drop .docx or click</p>
+              <Upload className="w-4 h-4 text-gray-400 mx-auto mb-1.5" />
+              <p className="text-xs text-gray-600">
+                {loading?.correctUpload
+                  ? "Uploading..."
+                  : !canUpload
+                  ? "Save lesson first to upload"
+                  : `Drop ${getFileTypeText()} or click`}
+              </p>
             </div>
           )}
           <input
             ref={correctInputRef}
             type="file"
-            accept=".docx,.doc"
+            accept={acceptAttr}
             className="hidden"
             onChange={(e) => handleFileSelect("correctState", e)}
           />
@@ -214,35 +201,42 @@ export default function InstructionStateUpload({
             <div className="space-y-2 mb-2">
               {wrongStates.map((file, index) => (
                 <FileItem
-                  key={index}
+                  key={file.id || index}
                   file={file}
-                  index={index}
-                  stateType="wrongStates"
-                  onRemove={() => handleRemoveFile("wrongStates", index)}
-                  onReplace={(e) => handleReplaceFile("wrongStates", index, e)}
+                  deleting={loading?.deletingId === file.id}
+                  onRemove={() => onDeleteStateFile("wrongStates", file)}
+                  onDownload={() => onDownloadStateFile(file)}
                 />
               ))}
             </div>
           )}
           <div
-            onClick={() => wrongInputRef.current?.click()}
+            onClick={() =>
+              canUpload && !loading?.wrongUpload && wrongInputRef.current?.click()
+            }
             onDragEnter={(e) => handleDrag(e, "wrongStates")}
             onDragLeave={(e) => handleDragLeave(e, "wrongStates")}
             onDragOver={(e) => handleDrag(e, "wrongStates")}
             onDrop={(e) => handleDrop(e, "wrongStates")}
-            className={`border-2 border-dashed rounded  text-center cursor-pointer transition-colors ${
+            className={`border-2 border-dashed rounded text-center transition-colors ${
               wrongDragActive
                 ? "border-red-500 bg-red-50"
                 : "border-gray-300 hover:border-red-400 hover:bg-red-50/50"
-            }`}
+            } ${canUpload ? "cursor-pointer" : "cursor-not-allowed opacity-70"}`}
           >
-            <Upload className="w-5 h-5 text-gray-400 mx-auto mb-1.5" />
-            <p className="text-xs text-gray-600">Drop .docx or click</p>
+            <Upload className="w-4 h-4 text-gray-400 mx-auto mb-1.5" />
+            <p className="text-xs text-gray-600">
+              {loading?.wrongUpload
+                ? "Uploading..."
+                : !canUpload
+                ? "Save lesson first to upload"
+                : `Drop ${getFileTypeText()} or click`}
+            </p>
           </div>
           <input
             ref={wrongInputRef}
             type="file"
-            accept=".docx,.doc"
+            accept={acceptAttr}
             className="hidden"
             multiple
             onChange={(e) => handleFileSelect("wrongStates", e)}
