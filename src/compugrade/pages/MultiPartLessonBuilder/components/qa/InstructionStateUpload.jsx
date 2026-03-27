@@ -58,34 +58,55 @@ export default function InstructionStateUpload({
   const [wrongDragActive, setWrongDragActive] = useState(false);
 
   const isWordCourse =
-    courseType === "ms-word" ||
-    courseType === "ms_word" ||
-    courseType === "google_docs";
-  const acceptedExtensions = isWordCourse ? [".doc", ".docx"] : [".xls", ".xlsx"];
-  const acceptAttr = acceptedExtensions.join(",");
+  courseType === "ms-word" || courseType === "ms_word";
 
-  const isAllowedByExtension = (fileName) =>
-    acceptedExtensions.some((ext) => fileName.toLowerCase().endsWith(ext));
+const isPptCourse =
+  courseType === "powerpoint";
 
-  const getFileTypeText = () => (isWordCourse ? ".doc/.docx" : ".xls/.xlsx");
+const isExcelCourse =
+  courseType === "excel";
 
-  const handleFileSelect = async (stateType, event) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
+const acceptedExtensions = isWordCourse
+  ? [".doc", ".docx"]
+  : isPptCourse
+  ? [".ppt", ".pptx"]
+  : isExcelCourse
+  ? [".xls", ".xlsx"]
+  : [];
 
-    const validFiles = files.filter((file) => isAllowedByExtension(file.name || ""));
+const acceptAttr = acceptedExtensions.join(",");
 
-    if (validFiles.length === 0) {
-      event.target.value = "";
-      return;
-    }
+const isAllowedByExtension = (fileName) =>
+  acceptedExtensions.some((ext) =>
+    fileName.toLowerCase().endsWith(ext)
+  );
 
-    try {
-      await onUploadStateFiles(stateType, validFiles);
-    } finally {
-      event.target.value = "";
-    }
-  };
+const getFileTypeText = () => {
+  if (isWordCourse) return ".doc/.docx";
+  if (isPptCourse) return ".ppt/.pptx";
+  if (isExcelCourse) return ".xls/.xlsx";
+  return "";
+};
+
+const handleFileSelect = async (stateType, event) => {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+
+  const validFiles = files.filter((file) =>
+    isAllowedByExtension(file.name || "")
+  );
+
+  if (validFiles.length === 0) {
+    event.target.value = "";
+    return;
+  }
+
+  try {
+    await onUploadStateFiles(stateType, validFiles);
+  } finally {
+    event.target.value = "";
+  }
+};
 
   const handleDrag = (e, stateType) => {
     e.preventDefault();

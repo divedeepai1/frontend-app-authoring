@@ -21,6 +21,7 @@ import PartConfigModal from "../components/PartConfigModal";
 import LessonQAModal from "../components/qa/LessonQAModal";
 import { fetchCsrfToken } from "../../../../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
+import { useUniqueId } from "@dnd-kit/utilities";
 
 
 export default function LessonBuilder() {
@@ -247,6 +248,7 @@ export default function LessonBuilder() {
         else if (item.block_type === "instruction") {
           blocks.push({
             id: "instruction-block-" + item.id,
+            item_num:item.item_num,
             name: item.block_name,
             type: "instruction",
             content: {
@@ -824,6 +826,7 @@ export default function LessonBuilder() {
               return [
                 {
                   id: block.id,
+                  item_num: block.item_num || (Date.now().toString() + "-" + block.id),
                   block_name: block.name,
                   instruction_category: "text",
                   block_type: block.type,
