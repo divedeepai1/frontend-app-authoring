@@ -1,22 +1,21 @@
-name: Deploy on Push
-
-on:
-  push:
-    branches:
-      - cms-staging-free-trial
-jobs:
-  deploy:
+name: Deploy on Push 
+on: 
+  push: 
+    branches: 
+      - cms-staging-free-trial 
+jobs: 
+  deploy: 
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.STAGING_FREETRIAL_IP }}
-          username: ubuntu
+    timeout-minutes: 60  # Set to 60 minutes
+    steps: 
+      - name: Checkout code 
+        uses: actions/checkout@v3 
+      - name: Deploy to EC2 via SSH 
+        uses: appleboy/ssh-action@v1.0.0 
+        with: 
+          host: ${{ secrets.STAGING_FREETRIAL_IP }} 
+          username: ubuntu 
           key: ${{ secrets.STAGING_FREETRIAL_KEY }}
-          script: |
+          command_timeout: 60m  # SSH command timeout
+          script: | 
             bash ~/deploy_frontend.sh
