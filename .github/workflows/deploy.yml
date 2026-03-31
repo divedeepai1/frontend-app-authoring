@@ -1,0 +1,21 @@
+name: Deploy on Push 
+on: 
+  push: 
+    branches: 
+      - production-freetrial
+jobs: 
+  deploy: 
+    runs-on: ubuntu-latest
+    timeout-minutes: 60  # Set to 60 minutes
+    steps: 
+      - name: Checkout code 
+        uses: actions/checkout@v3 
+      - name: Deploy to EC2 via SSH 
+        uses: appleboy/ssh-action@v1.0.0 
+        with: 
+          host: ${{ secrets.PROD_FREETRIAL_IP }} 
+          username: ubuntu 
+          key: ${{ secrets.PROD_FREETRIAL_KEY }}
+          command_timeout: 60m  # SSH command timeout
+          script: | 
+            bash ~/deploy_frontend.sh
