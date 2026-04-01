@@ -57,6 +57,7 @@ export default function LessonBuilder() {
     answerKey: null,
     videoEnabled: false,
     videos: [],
+    lesson_files: [],
     lessonParts: [],
     text_before_video: "",
     text_after_video: "",
@@ -182,6 +183,23 @@ export default function LessonBuilder() {
   
 
   function fromBackendToFrontend(backendData) {
+    const getFileNameFromUrl = (url = "") => {
+      if (!url || typeof url !== "string") return "";
+      const urlWithoutQuery = url.split("?")[0] || "";
+      const fileName = urlWithoutQuery.split("/").pop() || "";
+      try {
+        return decodeURIComponent(fileName);
+      } catch (_) {
+        return fileName;
+      }
+    };
+
+    const getFileTypeFromName = (fileName = "") => {
+      if (!fileName || typeof fileName !== "string") return "";
+      const ext = fileName.includes(".") ? fileName.split(".").pop() : "";
+      return ext ? `.${ext.toLowerCase()}` : "";
+    };
+
     const lessons = backendData?.lessons?.map((lesson) => {
       const blocks = [];
 
@@ -296,6 +314,16 @@ export default function LessonBuilder() {
       sourceDocument: backendData.source_document || null,
       answerKey: backendData.answer_key || null,
       videos: backendData.video ? [backendData.video] : [],
+      lesson_files: Array.isArray(backendData.lesson_files)
+        ? backendData.lesson_files.map((url) => {
+            const fileName = getFileNameFromUrl(url);
+            return {
+              presigned_url: url || "",
+              file_name: fileName,
+              file_type: getFileTypeFromName(fileName),
+            };
+          })
+        : [],
       skills: backendData.skills || [],
       videoEnabled: !!backendData.video,
       text_before_video: backendData.text_before_video || "",
@@ -609,6 +637,27 @@ export default function LessonBuilder() {
       }
     }
 
+    const lesson_files = await Promise.all(
+      (Array.isArray(currentLessonConfig.lesson_files)
+        ? currentLessonConfig.lesson_files
+        : []
+      ).map(async (lessonFile) => {
+        const localFile = lessonFile?.file;
+
+        if (isFile(localFile)) {
+          return {
+            base64_data: await fileToBase64(localFile),
+            file_type: lessonFile?.file_type || "",
+            file_name: lessonFile?.file_name || "",
+          };
+        }
+
+        return {
+          presigned_url: lessonFile?.presigned_url || "",
+        };
+      })
+    );
+
     const lesson_parts = await Promise.all(
       (currentLessonConfig.lessonParts || []).map(async (lesson) => {
         let partSourceDoc = "";
@@ -892,6 +941,7 @@ export default function LessonBuilder() {
       source_document: sourceDocBase64,
       answer_key: answerKeyBase64,
       video: videoBase64,
+      lesson_files,
       text_before_video: currentLessonConfig.text_before_video || "",
       text_after_video: currentLessonConfig.text_after_video || "",
       lesson_overview: currentLessonConfig.lesson_overview || "",
@@ -905,6 +955,9 @@ export default function LessonBuilder() {
     source_document: payload?.source_document || null,
     answer_key: payload?.answer_key || null,
     video: payload?.video || null,
+    lesson_files: Array.isArray(payload?.lesson_files)
+      ? payload.lesson_files
+      : [],
     skills: payload?.skills || [],
     text_before_video: payload?.text_before_video || "",
     text_after_video: payload?.text_after_video || "",
@@ -1594,10 +1647,21 @@ export default function LessonBuilder() {
   const handleExportLesson = async () => {
     setTransferLoading(true);
     try {
-      const exportedLesson = await frontendToBackend(
+      const exportedLessonRaw = await frontendToBackend(
         { ...lessonConfig, lessonParts },
         blockId
       );
+      const exportedLesson = {
+        ...exportedLessonRaw,
+        lesson_files: (Array.isArray(exportedLessonRaw?.lesson_files)
+          ? exportedLessonRaw.lesson_files
+          : []
+        )
+          .map((item) =>
+            typeof item === "string" ? item : item?.presigned_url || ""
+          )
+          .filter(Boolean),
+      };
       const blob = new Blob([JSON.stringify(exportedLesson, null, 2)], {
         type: "application/json",
       });
