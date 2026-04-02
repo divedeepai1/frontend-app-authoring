@@ -7,6 +7,7 @@ import viewIcon from "../../assests/view-button.svg"
 import CourseResourcesDialog from "./CourseResourcesDialog"
 import { base_url } from "../../../compugrade-constants"
 import LessonScheduleModal from "./LessonScheduleModal"
+import LessonTimerModal from "./LessonTimerModal"
 
 function CourseScreen() {
   const [classes, setClasses] = useState([])
@@ -21,6 +22,7 @@ function CourseScreen() {
   const [expandedLessons, setExpandedLessons] = useState({})
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false)
   const [scheduleContext, setScheduleContext] = useState(null)
+  const [timerContext, setTimerContext] = useState(null)
   const [classStudents, setClassStudents] = useState([])
 
   const fetchClasses = async () => {
@@ -253,6 +255,20 @@ function CourseScreen() {
     setScheduleContext(null);
   }
 
+  const handleOpenTimerSetup = (lesson, vertical) => {
+    if (!lesson || !vertical) return;
+    const rubricId = vertical?.id || "";
+    setTimerContext({
+      lessonTitle: lesson.title,
+      verticalTitle: vertical.title,
+      rubricId,
+    });
+  }
+
+  const handleCloseTimerSetup = () => {
+    setTimerContext(null);
+  }
+
   return (
     <div>
       <style>{`
@@ -417,6 +433,13 @@ function CourseScreen() {
                                       >
                                         Schedule Access
                                       </button>
+                                      <button
+                                        className="secondary-button px-2 py-2"
+                                        style={{ fontSize: 12, whiteSpace: "nowrap" }}
+                                        onClick={() => handleOpenTimerSetup(lesson, v)}
+                                      >
+                                        Setup Timer
+                                      </button>
                                     </div>
                                   ))}
                                 </div>
@@ -485,6 +508,14 @@ function CourseScreen() {
         title={scheduleContext ? `${scheduleContext.verticalTitle || ""} • ${scheduleContext.lessonTitle || ""}` : ""}
         students={classStudents}
         rubricId={scheduleContext ? scheduleContext.rubricId : ""}
+      />
+
+      <LessonTimerModal
+        isOpen={!!timerContext}
+        onClose={handleCloseTimerSetup}
+        title={timerContext ? `${timerContext.verticalTitle || ""} • ${timerContext.lessonTitle || ""}` : ""}
+        students={classStudents}
+        rubricId={timerContext ? timerContext.rubricId : ""}
       />
     </div>
   )
