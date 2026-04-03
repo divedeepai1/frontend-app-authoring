@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 
+const isValidPositiveFloatInput = (value) =>
+  value === "" || /^(\d+\.?\d*|\.\d+)$/.test(value)
+
 const GradeOverrideModal = ({
   isOpen,
   onClose,
@@ -37,17 +40,26 @@ const GradeOverrideModal = ({
         setError("Please enter a grade value to override.")
         return
       }
-      if (!/^(?:\d+|\d*\.\d+)$/.test(trimmedScore) || Number(trimmedScore) <= 0) {
+      if (!isValidPositiveFloatInput(trimmedScore)) {
+        setError("Grade must be a positive number greater than 0.")
+        return
+      }
+      const parsed = parseFloat(trimmedScore)
+      if (Number.isNaN(parsed) || parsed <= 0) {
         setError("Grade must be a positive number greater than 0.")
         return
       }
     }
     setError("")
+    const trimmedScore = score.trim()
+    const parsedScore =
+      actionType === "override" && trimmedScore !== "" ? parseFloat(trimmedScore) : null
     await onSubmit({
       courseId,
       rubricId: lesson?.id,
       userId: student?.id,
-      overrideScore: actionType === "reset" ? null : score.trim(),
+      overrideScore:
+        actionType === "reset" ? null : Number.isFinite(parsedScore) ? parsedScore : null,
       reason: reason.trim(),
     })
   }
@@ -106,12 +118,12 @@ const GradeOverrideModal = ({
                 value={score}
                 onChange={(event) => {
                   const nextValue = event.target.value
-                  if (nextValue === "" || /^(?:\d+|\d*\.\d+)$/.test(nextValue)) {
+                  if (isValidPositiveFloatInput(nextValue)) {
                     setScore(nextValue)
                     if (error) setError("")
                   }
                 }}
-                placeholder="Enter new grade value"
+                placeholder="e.g. 85 or 8.5"
                 disabled={saving}
               />
             </div>
