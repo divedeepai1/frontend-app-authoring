@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../../cms-csrftoken"
 import { ChevronDown, ChevronRight } from "lucide-react"
+import { useNavigate } from "react-router"
 import docIcon from "../../assests/document.svg"
 import viewIcon from "../../assests/view-button.svg"
 import CourseResourcesDialog from "./CourseResourcesDialog"
@@ -10,6 +11,7 @@ import LessonScheduleModal from "./LessonScheduleModal"
 import LessonTimerModal from "./LessonTimerModal"
 
 function CourseScreen() {
+  const navigate = useNavigate()
   const [classes, setClasses] = useState([])
   const [selectedClassId, setSelectedClassId] = useState("")
   const [courses, setCourses] = useState([])
@@ -367,6 +369,12 @@ function CourseScreen() {
                   onClick={() => setIsResourcesDialogOpen(true)}
                 >
                   Add Resources
+                </button>
+                <button
+                  className="primary-button px-4 py-2 ml-3"
+                  onClick={() => navigate("/curriculum/gradebook")}
+                >
+                  View Gradebook
                 </button>
                 {/* <button className="secondary-button px-4 py-2 ml-3">Customize this Course</button> */}
               </div>
