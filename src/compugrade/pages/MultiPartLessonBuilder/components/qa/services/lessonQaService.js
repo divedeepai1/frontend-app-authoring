@@ -42,11 +42,7 @@ export async function getLessonQaStates(subRubricId) {
   }
 
   const data = await response.json();
-  const list = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.states)
-      ? data.states
-      : [];
+  const list = data?.states || [];
 
   return list.map(normalizeQaState).filter((s) => s.id && s.rubricItemId);
 }
