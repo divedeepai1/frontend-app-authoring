@@ -125,11 +125,21 @@ const Gradebook = () => {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [overrideContext, setOverrideContext] = useState(null)
+  const [studentSearch, setStudentSearch] = useState("")
   const lastGradebookRequestKeyRef = useRef("")
   const gradebookAbortRef = useRef(null)
   const latestGradebookRequestIdRef = useRef(0)
 
   const studentIds = useMemo(() => classStudents.map((student) => student.id), [classStudents])
+  const filteredStudents = useMemo(() => {
+    const query = studentSearch.trim().toLowerCase()
+    if (!query) return classStudents
+    return classStudents.filter((student) => {
+      const name = String(student.name || "").toLowerCase()
+      const email = String(student.email || "").toLowerCase()
+      return name.includes(query) || email.includes(query)
+    })
+  }, [classStudents, studentSearch])
 
   const fetchClasses = async () => {
     const token = await fetchCsrfToken()
@@ -492,13 +502,23 @@ const Gradebook = () => {
                 <div className="card-body p-4">
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <h2 className="primary-text m-0">Class Gradebook</h2>
-                    <button
-                      className="primary-button px-4 py-2"
-                      onClick={handleExport}
-                      disabled={exporting || loading || !selectedCourse || !studentIds.length}
-                    >
-                      {exporting ? "Exporting..." : "Export CSV"}
-                    </button>
+                    <div className="d-flex align-items-center" style={{ gap: 10 }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        style={{ width: 260, minWidth: 220 }}
+                        placeholder="Search student here"
+                        value={studentSearch}
+                        onChange={(event) => setStudentSearch(event.target.value)}
+                      />
+                      <button
+                        className="primary-button px-4 py-2"
+                        onClick={handleExport}
+                        disabled={exporting || loading || !selectedCourse || !studentIds.length}
+                      >
+                        {exporting ? "Exporting..." : "Export CSV"}
+                      </button>
+                    </div>
                   </div>
                   {error && (
                     <div className="alert alert-danger py-2 px-3" style={{ fontSize: 12 }}>
@@ -517,7 +537,7 @@ const Gradebook = () => {
                   ) : (
                     <GradebookTable
                       lessons={courseRubrics}
-                      students={classStudents}
+                      students={filteredStudents}
                       gradesByStudent={gradebookRows}
                       editedLessonIds={editedLessonIds}
                       onEditCell={(student, lesson, value) => {
