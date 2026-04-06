@@ -126,6 +126,8 @@ const Gradebook = () => {
   const [success, setSuccess] = useState("")
   const [overrideContext, setOverrideContext] = useState(null)
   const lastGradebookRequestKeyRef = useRef("")
+  const gradebookAbortRef = useRef(null)
+  const latestGradebookRequestIdRef = useRef(0)
 
   const studentIds = useMemo(() => classStudents.map((student) => student.id), [classStudents])
 
@@ -232,12 +234,21 @@ const Gradebook = () => {
     }
     lastGradebookRequestKeyRef.current = requestKey
 
+    if (gradebookAbortRef.current) {
+      gradebookAbortRef.current.abort()
+    }
+    const controller = new AbortController()
+    gradebookAbortRef.current = controller
+    const requestId = latestGradebookRequestIdRef.current + 1
+    latestGradebookRequestIdRef.current = requestId
+
     setLoading(true)
     setError("")
     setSuccess("")
     try {
       const response = await fetch(`${base_url}/api/grading/view_gradebook`, {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
         },
@@ -258,15 +269,23 @@ const Gradebook = () => {
         throw new Error(text || "Failed to load gradebook.")
       }
       const data = await response.json()
+      if (requestId !== latestGradebookRequestIdRef.current) {
+        return
+      }
       const normalized = normalizeGradebookResponse(data, safeStudents, safeRubrics)
       setCourseRubrics(normalized.lessons.length ? normalized.lessons : safeRubrics)
       setClassStudents(normalized.students.length ? normalized.students : safeStudents)
       setGradebookRows(normalized.gradesByStudent)
       setEditedLessonIds(normalized.editedLessonIds)
     } catch (e) {
+      if (e?.name === "AbortError") {
+        return
+      }
       setError("Unable to load gradebook right now.")
     } finally {
-      setLoading(false)
+      if (requestId === latestGradebookRequestIdRef.current) {
+        setLoading(false)
+      }
     }
   }
 
@@ -293,13 +312,12 @@ const Gradebook = () => {
     if (!selectedClassId || !selectedCourse) {
       setClassStudents([])
       setCourseRubrics([])
-      setGradebookRows({})
-      setEditedLessonIds(new Set())
+      if (gradebookAbortRef.current) {
+        gradebookAbortRef.current.abort()
+      }
       lastGradebookRequestKeyRef.current = ""
       return
     }
-    setGradebookRows({})
-    setEditedLessonIds(new Set())
     lastGradebookRequestKeyRef.current = ""
     const loadForSelection = async () => {
       try {
@@ -314,6 +332,14 @@ const Gradebook = () => {
     }
     loadForSelection()
   }, [selectedClassId, selectedCourse])
+
+  useEffect(() => {
+    return () => {
+      if (gradebookAbortRef.current) {
+        gradebookAbortRef.current.abort()
+      }
+    }
+  }, [])
 
   const handleExport = async () => {
     if (!selectedCourse || !studentIds.length) return
