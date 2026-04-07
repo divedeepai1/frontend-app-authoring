@@ -149,12 +149,19 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
             subRubricId: activePart.id,
             rubricItemId: instruction.backendItemId,
             stateType: stateType === "correctState" ? "correct" : "wrong",
+            appName: mapCourseTypeToAppName(courseType),
             file,
           })
         )
       );
 
-      const uploadedEntries = uploadedStates.map(normalizeForUi);
+      const uploadedEntries = uploadedStates.map((state, index) => {
+        const entry = normalizeForUi(state);
+        if (!entry.fileName || entry.fileName === "state file") {
+          entry.fileName = files[index]?.name || "state file";
+        }
+        return entry;
+      });
 
       setInstructionStates((prev) => {
         const current = prev[instruction.id] || { correctState: [], wrongStates: [] };
@@ -277,6 +284,8 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
         item?.display_name ??
         `Instruction ${index + 1}`,
       stateDocument:
+        item?.state_file ??
+        item?.stateFile ??
         item?.state_document ??
         item?.stateDocument ??
         item?.file_name ??
@@ -286,7 +295,12 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
         "State file",
       type: item?.type ?? item?.failure_type ?? item?.warning_type ?? "Issue",
       description: item?.description ?? item?.message ?? "QA issue found.",
-      errorCodes: item?.generated_error_codes ?? item?.errorCodes ?? [],
+      errorCodes:
+        item?.generated_error_codes ??
+        item?.generatedErrorCodes ??
+        item?.error_codes ??
+        item?.errorCodes ??
+        [],
     }));
 
   const normalizeRunQaReport = (payload) => {

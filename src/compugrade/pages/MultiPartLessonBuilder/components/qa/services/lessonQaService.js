@@ -1,5 +1,20 @@
 import { base_url } from "../../../../../../compugrade-constants";
 
+function getFileNameFromUrl(url) {
+  if (!url || typeof url !== "string") return "state file";
+  const withoutQuery = url.split("?")[0];
+  const parts = withoutQuery.split("/");
+  const rawName = parts[parts.length - 1] || "";
+
+  if (!rawName) return "state file";
+
+  try {
+    return decodeURIComponent(rawName);
+  } catch {
+    return rawName;
+  }
+}
+
 function normalizeQaState(item) {
   const rawFileUrl = item?.document_url ?? "";
 
@@ -8,7 +23,7 @@ function normalizeQaState(item) {
       ? rawFileUrl
       : (rawFileUrl?.document_url ?? "");
 
-  const fileName = "state file";
+  const fileName = getFileNameFromUrl(fileUrl);
 
   return {
     id: item?.id ?? item?.state_id ?? item?.qa_state_id ?? null,
@@ -52,9 +67,11 @@ export async function uploadQaState({
   rubricItemId,
   stateType,
   file,
+  appName,
 }) {
   const formData = new FormData();
   formData.append("state_type", stateType);
+  formData.append("app_name", appName);
   formData.append("file", file);
 
   const response = await fetch(
