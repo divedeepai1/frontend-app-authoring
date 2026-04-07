@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react"
 import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../../cms-csrftoken"
 import { ChevronDown, ChevronRight } from "lucide-react"
+import { useNavigate } from "react-router"
 import docIcon from "../../assests/document.svg"
 import viewIcon from "../../assests/view-button.svg"
 import CourseResourcesDialog from "./CourseResourcesDialog"
 import { base_url } from "../../../compugrade-constants"
 import LessonScheduleModal from "./LessonScheduleModal"
+import LessonTimerModal from "./LessonTimerModal"
 
 function CourseScreen() {
+  const navigate = useNavigate()
   const [classes, setClasses] = useState([])
   const [selectedClassId, setSelectedClassId] = useState("")
   const [courses, setCourses] = useState([])
@@ -21,6 +24,7 @@ function CourseScreen() {
   const [expandedLessons, setExpandedLessons] = useState({})
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false)
   const [scheduleContext, setScheduleContext] = useState(null)
+  const [timerContext, setTimerContext] = useState(null)
   const [classStudents, setClassStudents] = useState([])
 
   const fetchClasses = async () => {
@@ -253,6 +257,20 @@ function CourseScreen() {
     setScheduleContext(null);
   }
 
+  const handleOpenTimerSetup = (lesson, vertical) => {
+    if (!lesson || !vertical) return;
+    const rubricId = vertical?.id || "";
+    setTimerContext({
+      lessonTitle: lesson.title,
+      verticalTitle: vertical.title,
+      rubricId,
+    });
+  }
+
+  const handleCloseTimerSetup = () => {
+    setTimerContext(null);
+  }
+
   return (
     <div>
       <style>{`
@@ -352,6 +370,12 @@ function CourseScreen() {
                 >
                   Add Resources
                 </button>
+                <button
+                  className="primary-button px-4 py-2 ml-3"
+                  onClick={() => navigate("/curriculum/gradebook")}
+                >
+                  View Gradebook
+                </button>
                 {/* <button className="secondary-button px-4 py-2 ml-3">Customize this Course</button> */}
               </div>
             </div>
@@ -416,6 +440,13 @@ function CourseScreen() {
                                         onClick={() => handleOpenSchedule(lesson, v)}
                                       >
                                         Schedule Access
+                                      </button>
+                                      <button
+                                        className="secondary-button px-2 py-2"
+                                        style={{ fontSize: 12, whiteSpace: "nowrap" }}
+                                        onClick={() => handleOpenTimerSetup(lesson, v)}
+                                      >
+                                        Setup Timer
                                       </button>
                                     </div>
                                   ))}
@@ -485,6 +516,14 @@ function CourseScreen() {
         title={scheduleContext ? `${scheduleContext.verticalTitle || ""} • ${scheduleContext.lessonTitle || ""}` : ""}
         students={classStudents}
         rubricId={scheduleContext ? scheduleContext.rubricId : ""}
+      />
+
+      <LessonTimerModal
+        isOpen={!!timerContext}
+        onClose={handleCloseTimerSetup}
+        title={timerContext ? `${timerContext.verticalTitle || ""} • ${timerContext.lessonTitle || ""}` : ""}
+        students={classStudents}
+        rubricId={timerContext ? timerContext.rubricId : ""}
       />
     </div>
   )

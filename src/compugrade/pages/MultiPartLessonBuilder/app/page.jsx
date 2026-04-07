@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Layers, BookOpen,  Settings} from "lucide-react";
+import { Layers, BookOpen, Settings } from "lucide-react";
 import { AddPartDialog } from "../components/add-part-dialog";
 import { EditPartDialog } from "../components/edit-part-dialog";
 import { DeleteConfirmationDialog } from "../components/delete-confirmation-dialog";
@@ -21,6 +21,7 @@ import PartConfigModal from "../components/PartConfigModal";
 import LessonQAModal from "../components/qa/LessonQAModal";
 import { fetchCsrfToken } from "../../../../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
+import { useUniqueId } from "@dnd-kit/utilities";
 
 
 export default function LessonBuilder() {
@@ -56,6 +57,7 @@ export default function LessonBuilder() {
     answerKey: null,
     videoEnabled: false,
     videos: [],
+    lesson_files: [],
     lessonParts: [],
     text_before_video: "",
     text_after_video: "",
@@ -67,6 +69,7 @@ export default function LessonBuilder() {
   const videoObjectUrlRef = useRef("");
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
   const [qaModalOpen, setQaModalOpen] = useState(false);
+  const [qaModalPartId, setQaModalPartId] = useState(null);
 
   useEffect(() => {
     let isFetching = false;
@@ -180,6 +183,23 @@ export default function LessonBuilder() {
   
 
   function fromBackendToFrontend(backendData) {
+    const getFileNameFromUrl = (url = "") => {
+      if (!url || typeof url !== "string") return "";
+      const urlWithoutQuery = url.split("?")[0] || "";
+      const fileName = urlWithoutQuery.split("/").pop() || "";
+      try {
+        return decodeURIComponent(fileName);
+      } catch (_) {
+        return fileName;
+      }
+    };
+
+    const getFileTypeFromName = (fileName = "") => {
+      if (!fileName || typeof fileName !== "string") return "";
+      const ext = fileName.includes(".") ? fileName.split(".").pop() : "";
+      return ext ? `.${ext.toLowerCase()}` : "";
+    };
+
     const lessons = backendData?.lessons?.map((lesson) => {
       const blocks = [];
 
@@ -246,6 +266,7 @@ export default function LessonBuilder() {
         else if (item.block_type === "instruction") {
           blocks.push({
             id: "instruction-block-" + item.id,
+            item_num:item.item_num,
             name: item.block_name,
             type: "instruction",
             content: {
@@ -293,6 +314,16 @@ export default function LessonBuilder() {
       sourceDocument: backendData.source_document || null,
       answerKey: backendData.answer_key || null,
       videos: backendData.video ? [backendData.video] : [],
+      lesson_files: Array.isArray(backendData.lesson_files)
+        ? backendData.lesson_files.map((url) => {
+            const fileName = getFileNameFromUrl(url);
+            return {
+              presigned_url: url || "",
+              file_name: fileName,
+              file_type: getFileTypeFromName(fileName),
+            };
+          })
+        : [],
       skills: backendData.skills || [],
       videoEnabled: !!backendData.video,
       text_before_video: backendData.text_before_video || "",
@@ -606,6 +637,27 @@ export default function LessonBuilder() {
       }
     }
 
+    const lesson_files = await Promise.all(
+      (Array.isArray(currentLessonConfig.lesson_files)
+        ? currentLessonConfig.lesson_files
+        : []
+      ).map(async (lessonFile) => {
+        const localFile = lessonFile?.file;
+
+        if (isFile(localFile)) {
+          return {
+            base64_data: await fileToBase64(localFile),
+            file_type: lessonFile?.file_type || "",
+            file_name: lessonFile?.file_name || "",
+          };
+        }
+
+        return {
+          presigned_url: lessonFile?.presigned_url || "",
+        };
+      })
+    );
+
     const lesson_parts = await Promise.all(
       (currentLessonConfig.lessonParts || []).map(async (lesson) => {
         let partSourceDoc = "";
@@ -823,6 +875,7 @@ export default function LessonBuilder() {
               return [
                 {
                   id: block.id,
+                  item_num: block.item_num || (Date.now().toString() + "-" + block.id),
                   block_name: block.name,
                   instruction_category: "text",
                   block_type: block.type,
@@ -888,6 +941,7 @@ export default function LessonBuilder() {
       source_document: sourceDocBase64,
       answer_key: answerKeyBase64,
       video: videoBase64,
+      lesson_files,
       text_before_video: currentLessonConfig.text_before_video || "",
       text_after_video: currentLessonConfig.text_after_video || "",
       lesson_overview: currentLessonConfig.lesson_overview || "",
@@ -901,6 +955,9 @@ export default function LessonBuilder() {
     source_document: payload?.source_document || null,
     answer_key: payload?.answer_key || null,
     video: payload?.video || null,
+    lesson_files: Array.isArray(payload?.lesson_files)
+      ? payload.lesson_files
+      : [],
     skills: payload?.skills || [],
     text_before_video: payload?.text_before_video || "",
     text_after_video: payload?.text_after_video || "",
@@ -1590,10 +1647,21 @@ export default function LessonBuilder() {
   const handleExportLesson = async () => {
     setTransferLoading(true);
     try {
-      const exportedLesson = await frontendToBackend(
+      const exportedLessonRaw = await frontendToBackend(
         { ...lessonConfig, lessonParts },
         blockId
       );
+      const exportedLesson = {
+        ...exportedLessonRaw,
+        lesson_files: (Array.isArray(exportedLessonRaw?.lesson_files)
+          ? exportedLessonRaw.lesson_files
+          : []
+        )
+          .map((item) =>
+            typeof item === "string" ? item : item?.presigned_url || ""
+          )
+          .filter(Boolean),
+      };
       const blob = new Blob([JSON.stringify(exportedLesson, null, 2)], {
         type: "application/json",
       });
@@ -1674,7 +1742,10 @@ export default function LessonBuilder() {
               onPublish={handlePublishClick}
               onImportLesson={handleImportLesson}
               onExportLesson={handleExportLesson}
-              onOpenQA={() => setQaModalOpen(true)}
+              onOpenQA={() => {
+                setQaModalPartId(selectedPart?.id ?? lessonParts?.[0]?.id ?? null);
+                setQaModalOpen(true);
+              }}
               saveDraftLoading={saveDraftLoading}
               publishLoading={loading}
               transferLoading={transferLoading}
@@ -1719,6 +1790,16 @@ export default function LessonBuilder() {
                         className="p-1 px-2 rounded-lg bg-blue-100 cursor-pointer "
                       >
                         <Settings className="w-5 h-5 mb-1 text-blue-600" />
+                      </div>
+
+                      <div
+                        onClick={() => {
+                          setQaModalPartId(selectedPart?.id ?? null);
+                          setQaModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      >
+                        Lesson QA
                       </div>
 
                       <div className="relative group">
@@ -2016,8 +2097,12 @@ export default function LessonBuilder() {
       <ToastContainer toasts={toasts} removeToast={removeToast} />
         <LessonQAModal
           open={qaModalOpen}
-          onClose={() => setQaModalOpen(false)}
+          onClose={() => {
+            setQaModalOpen(false);
+            setQaModalPartId(null);
+          }}
           lessonParts={lessonParts}
+          partId={qaModalPartId}
         />
         </>
       )}
