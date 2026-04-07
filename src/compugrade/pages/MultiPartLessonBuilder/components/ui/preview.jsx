@@ -50,9 +50,10 @@ export default function LessonPreviewDialog({ data, open, setOpen }) {
             {questions.map((q) => (
               <div
                 key={q.id}
+                dangerouslySetInnerHTML={{ __html: q.natural_text || "No question text" }}
                 className="text-gray-700 text-sm border-l-2 border-green-400 pl-2"
               >
-                {q.natural_text || "No question text"}
+                
               </div>
             ))}
           </div>

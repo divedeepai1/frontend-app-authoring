@@ -1,7 +1,9 @@
-import { FileText, Video, Eye, X, Download, Settings, Pencil } from "lucide-react";
+import { FileText, Video, Eye, X, Download, Settings, Pencil, Paperclip, Upload } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { base_url } from "../../../../compugrade-constants";
 import RichTextEditorModal from "./RichTextEditorModal";
+import LessonFilesModal from "./LessonFilesModal";
+import HeaderActionButton from "./ui/HeaderActionButton";
 
 export default function LessonConfigModal({
   open,
@@ -14,9 +16,11 @@ export default function LessonConfigModal({
   setVideoPreviewUrl,
   videoObjectUrlRef,
 }) {
-  if (!open) return null;
-
   const [editorState, setEditorState] = useState({ open: false, target: null });
+  const [filesModalOpen, setFilesModalOpen] = useState(false);
+  const lessonFiles = Array.isArray(lessonConfig?.lesson_files)
+    ? lessonConfig.lesson_files
+    : [];
 
   const cleanHtml = (html = "") =>
     (html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -46,6 +50,85 @@ export default function LessonConfigModal({
       : editorState.target === "overview"
       ? lessonConfig?.lesson_overview || ""
       : lessonConfig?.text_before_video || "";
+
+  const updateLessonFiles = (updater) => {
+    setLessonConfig((currentConfig) => {
+      const currentFiles = Array.isArray(currentConfig?.lesson_files)
+        ? currentConfig.lesson_files
+        : [];
+      const nextFiles =
+        typeof updater === "function" ? updater(currentFiles) : updater;
+      return {
+        ...currentConfig,
+        lesson_files: nextFiles,
+      };
+    });
+  };
+
+  const getFileType = (file) => {
+    if (!file) return "";
+    const name = file.name || "";
+    const extension = name.includes(".") ? name.split(".").pop() : "";
+    return extension ? `.${extension.toLowerCase()}` : file.type || "";
+  };
+
+  const handleAddLessonFile = (file) => {
+    if (!file) return;
+    const nextFile = {
+      base64_data: "",
+      file_type: getFileType(file),
+      file_name: file.name || "uploaded-file",
+      presigned_url: "",
+      file,
+      is_new: true,
+    };
+    updateLessonFiles((currentFiles) => [...currentFiles, nextFile]);
+  };
+
+  const handleReplaceLessonFile = (index, file) => {
+    if (!file) return;
+    updateLessonFiles((currentFiles) =>
+      currentFiles.map((currentFile, currentIndex) => {
+        if (currentIndex !== index) return currentFile;
+        return {
+          ...currentFile,
+          file_name: file.name || currentFile.file_name || "uploaded-file",
+          file_type: getFileType(file),
+          file,
+          is_new: true,
+        };
+      })
+    );
+  };
+
+  const handleDeleteLessonFile = (index) => {
+    updateLessonFiles((currentFiles) =>
+      currentFiles.filter((_, currentIndex) => currentIndex !== index)
+    );
+  };
+
+  const handleDownloadLessonFile = (lessonFile) => {
+    if (lessonFile?.file instanceof File) {
+      const objectUrl = URL.createObjectURL(lessonFile.file);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = lessonFile.file_name || lessonFile.file.name || "lesson-file";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+      return;
+    }
+    if (lessonFile?.presigned_url) {
+      downloadFile(lessonFile.presigned_url, lessonFile.file_name || "lesson-file");
+      return;
+    }
+    if (lessonFile?.base64_data && typeof lessonFile.base64_data === "string") {
+      downloadFile(lessonFile.base64_data, lessonFile.file_name || "lesson-file");
+    }
+  };
+
+  if (!open) return null;
 
   const VideoTextButton = ({ target }) => {
     const isAfter = target === "after";
@@ -79,7 +162,7 @@ export default function LessonConfigModal({
             </div>
             <div>
               <div className="text-base font-semibold">Lesson Configuration</div>
-              <p className="text-xs text-gray-500">Configure lesson-wide skills and video</p>
+              <p className="text-xs text-gray-500">Configure lesson-wide skills, files and video</p>
             </div>
           </div>
           <div className="p-1 rounded hover:bg-gray-100 border-none" onClick={onClose}>
@@ -122,6 +205,27 @@ export default function LessonConfigModal({
               selectedSkills={lessonConfig.skills || []}
               onChange={(skills) => setLessonConfig((c) => ({ ...c, skills }))}
             />
+
+          </div>
+              <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-sky-50">
+                  <Paperclip className="w-5 h-5 text-sky-600" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-900">Downloadable Lesson Files</label>
+                  <p className="text-xs text-gray-500">Manage lesson-level supporting files for learners</p>
+                </div>
+              </div>
+              <HeaderActionButton
+                icon={Upload}
+                variant="primary"
+                onClick={() => setFilesModalOpen(true)}
+              >
+                Manage Files
+              </HeaderActionButton>
+            </div>
           </div>
 
           {/* Number of Attempts Dropdown */}
@@ -264,8 +368,20 @@ export default function LessonConfigModal({
               </div>
             )}
           </div>
+
+      
         </div>
       </div>
+
+      <LessonFilesModal
+        open={filesModalOpen}
+        onClose={() => setFilesModalOpen(false)}
+        lessonFiles={lessonFiles}
+        onAddLessonFile={handleAddLessonFile}
+        onReplaceLessonFile={handleReplaceLessonFile}
+        onDeleteLessonFile={handleDeleteLessonFile}
+        onDownloadLessonFile={handleDownloadLessonFile}
+      />
 
       <RichTextEditorModal
         open={editorState.open}

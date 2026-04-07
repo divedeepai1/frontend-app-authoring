@@ -77,6 +77,9 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
 
                     if (originalRubric) {
                       rubricData = {
+                        lesson_files: originalRubric.lesson_files.map((file) => ({
+                          presigned_url: file,
+                        })),
                         skills: originalRubric.skills || [],
                         num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
                         app_name: originalRubric.app_name || getAppName(),
