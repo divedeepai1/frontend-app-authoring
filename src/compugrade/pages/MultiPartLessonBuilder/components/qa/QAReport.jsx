@@ -1,13 +1,23 @@
-import { CheckCircle, XCircle, AlertTriangle, FileText } from "lucide-react";
+import { useState } from "react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 export default function QAReport({ report }) {
+  const [failuresCollapsed, setFailuresCollapsed] = useState(false);
+  const [warningsCollapsed, setWarningsCollapsed] = useState(false);
   const isPass = report.result === "PASS";
   const hasFailures = report.failures && report.failures.length > 0;
   const hasWarnings = report.warnings && report.warnings.length > 0;
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-200 px-2 py-1 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-xl font-semibold text-gray-900">
@@ -35,37 +45,57 @@ export default function QAReport({ report }) {
       </div>
 
       {hasFailures && (
-        <div className="bg-white rounded-lg border border-red-200 shadow-sm">
-          <div className="bg-red-50 px-5 py-3.5 border-b border-red-200">
+        <div className="bg-white rounded-lg border border-red-200  overflow-hidden">
+          <div
+            className="bg-red-50 px-3 py-2 border-b border-red-200 flex items-center justify-between cursor-pointer"
+            onClick={() => setFailuresCollapsed((v) => !v)}
+          >
             <h4 className="text-base font-semibold text-red-900">
               Failures ({report.failures.length})
             </h4>
+            {failuresCollapsed ? (
+              <ChevronDown className="w-5 h-5 text-red-800" />
+            ) : (
+              <ChevronUp className="w-5 h-5 text-red-800" />
+            )}
           </div>
-          <div className="p-5 space-y-4">
-            {report.failures.map((failure, index) => (
-              <FailureItem key={index} failure={failure} />
-            ))}
-          </div>
+          {!failuresCollapsed && (
+            <div className="p-3 space-y-4">
+              {report.failures.map((failure, index) => (
+                <FailureItem key={index} failure={failure} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {hasWarnings && (
-        <div className="bg-white rounded-lg border border-yellow-200 shadow-sm">
-          <div className="bg-yellow-50 px-5 py-3 border-b border-yellow-200">
+        <div className="bg-white rounded-lg border border-yellow-200  overflow-hidden">
+          <div
+            className="bg-yellow-50 px-3 py-2 border-b border-yellow-200 flex items-center justify-between cursor-pointer"
+            onClick={() => setWarningsCollapsed((v) => !v)}
+          >
             <h4 className="text-base font-semibold text-yellow-900">
               Warnings ({report.warnings.length})
             </h4>
+            {warningsCollapsed ? (
+              <ChevronDown className="w-5 h-5 text-yellow-800" />
+            ) : (
+              <ChevronUp className="w-5 h-5 text-yellow-800" />
+            )}
           </div>
-          <div className="p-5 space-y-4">
-            {report.warnings.map((warning, index) => (
-              <WarningItem key={index} warning={warning} />
-            ))}
-          </div>
+          {!warningsCollapsed && (
+            <div className="p-3 space-y-4">
+              {report.warnings.map((warning, index) => (
+                <WarningItem key={index} warning={warning} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {!hasFailures && !hasWarnings && (
-        <div className="bg-green-50 rounded-lg border border-green-200 p-5">
+        <div className="bg-green-50 rounded-lg border border-green-200 p-3">
           <div className="flex items-center gap-3">
             <CheckCircle className="w-6 h-6 text-green-600" />
             <p className="text-sm font-medium text-green-900">
@@ -80,8 +110,8 @@ export default function QAReport({ report }) {
 
 function FailureItem({ failure }) {
   return (
-    <div className="bg-pink-50 rounded border border-pink-200 p-4">
-      <div className="space-y-2.5">
+    <div className="bg-pink-50 rounded border border-pink-200 px-3 py-3">
+      <div className="space-y-1">
         <div className="flex items-center gap-2.5">
           <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-semibold bg-red-200 text-red-800">
             {failure.type}
@@ -108,9 +138,9 @@ function FailureItem({ failure }) {
 
 function WarningItem({ warning }) {
   return (
-    <div className="bg-yellow-50 rounded-lg border border-yellow-200 p-4">
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+    <div className="bg-yellow-50 rounded-lg border border-yellow-200 px-3 py-3">
+      <div className="flex items-start gap-1">
+       
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-yellow-200 text-yellow-800">
