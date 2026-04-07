@@ -38,6 +38,7 @@ const ScrollableDropdown = ({
   value,
   options,
   suffix,
+  placeholder,
   disabled,
   onChange,
 }) => {
@@ -57,7 +58,7 @@ const ScrollableDropdown = ({
     }
   }, [])
 
-  const selectedLabel = `${value} ${suffix}`
+  const selectedLabel = value ? `${value} ${suffix}` : placeholder
 
   return (
     <div style={{ flex: 1, position: "relative" }} ref={wrapperRef}>
@@ -119,11 +120,12 @@ const ScrollableDropdown = ({
 }
 
 const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
-  const [hours, setHours] = useState("00")
-  const [minutes, setMinutes] = useState("05")
-  const [timerMode, setTimerMode] = useState("display")
+  const [hours, setHours] = useState("")
+  const [minutes, setMinutes] = useState("")
+  const [timerMode, setTimerMode] = useState("")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -142,11 +144,12 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
 
   useEffect(() => {
     if (!isOpen) {
-      setHours("00")
-      setMinutes("05")
-      setTimerMode("display")
+      setHours("")
+      setMinutes("")
+      setTimerMode("")
       setLoading(false)
       setSaving(false)
+      setRemoving(false)
       setError("")
       setSuccess("")
       return
@@ -188,14 +191,14 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
           setHours(formatTwoDigits(Math.min(23, mappedTime.hours)))
           setMinutes(formatTwoDigits(mappedTime.minutes))
         } else {
-          setHours("00")
-          setMinutes("05")
+          setHours("")
+          setMinutes("")
         }
 
         if (loadedMode === "display" || loadedMode === "lock") {
           setTimerMode(loadedMode)
         } else {
-          setTimerMode("display")
+          setTimerMode("")
         }
       } catch (e) {
         setError("Unable to load timer settings right now.")
@@ -264,6 +267,40 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
     }
   }
 
+  const handleRemoveTimer = async () => {
+    setRemoving(true)
+    setError("")
+    setSuccess("")
+    try {
+      const response = await fetch(`${base_url}/api/lms/set_rubric_timer_state`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rubric_openedx_based_id: rubricId,
+          time_allowed: null,
+          timer_mode: null,
+          student_ids: studentIds,
+        }),
+      })
+
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || "Failed to remove timer settings.")
+      }
+
+      setHours("")
+      setMinutes("")
+      setTimerMode("")
+      setSuccess("Timer removed successfully.")
+    } catch (e) {
+      setError("Unable to remove timer settings right now.")
+    } finally {
+      setRemoving(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -284,12 +321,22 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
             </div>
             <div style={{ fontSize: 12, color: "#6B7280" }}>{title || "Lesson"}</div>
           </div>
-          <div
-            className="p-1 rounded hover:bg-gray-100 border-none"
-            style={{ cursor: "pointer" }}
-            onClick={onClose}
-          >
-            <X className="w-5 h-5" />
+          <div className="d-flex align-items-center">
+            <button
+              className="secondary-button px-3 py-1 mr-2"
+              style={{ fontSize: 12 }}
+              onClick={handleRemoveTimer}
+              disabled={saving || loading || removing}
+            >
+              {removing ? "Removing..." : "Remove timer"}
+            </button>
+            <div
+              className="p-1 rounded hover:bg-gray-100 border-none"
+              style={{ cursor: "pointer" }}
+              onClick={onClose}
+            >
+              <X className="w-5 h-5" />
+            </div>
           </div>
         </div>
 
@@ -362,6 +409,7 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
                   onChange={(event) => setTimerMode(event.target.value)}
                   disabled={saving}
                 >
+                  <option value="">Select mode</option>
                   {TIMER_MODE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -380,6 +428,7 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
                     value={hours}
                     options={hourOptions}
                     suffix="hr"
+                    placeholder="Select hours"
                     disabled={saving}
                     onChange={setHours}
                   />
@@ -388,6 +437,7 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
                     value={minutes}
                     options={minuteOptions}
                     suffix="min"
+                    placeholder="Select minutes"
                     disabled={saving}
                     onChange={setMinutes}
                   />
@@ -401,7 +451,7 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
               className="secondary-button px-3 py-1 mr-2"
               style={{ fontSize: 12 }}
               onClick={onClose}
-              disabled={saving}
+              disabled={saving || removing}
             >
               Cancel
             </button>
@@ -409,7 +459,7 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
               className="primary-button px-3 py-2"
               style={{ fontSize: 12 }}
               onClick={handleSave}
-              disabled={saving || loading}
+              disabled={saving || loading || removing}
             >
               {saving ? "Saving..." : "Save timer settings"}
             </button>
