@@ -48,7 +48,7 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
   const findInstructionByRubricItem = (rubricItemId) =>
     instructions.find(
       (instruction) =>
-        String(instruction.backendItemId || "") === String(rubricItemId || "")
+        String(instruction.backendItemId || "") == String(rubricItemId || "")
     );
 
   const normalizeForUi = (state) => ({
@@ -64,7 +64,6 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
     (states || []).forEach((state) => {
       const instruction = findInstructionByRubricItem(state.rubricItemId);
       if (!instruction) return;
-
       if (!grouped[instruction.id]) {
         grouped[instruction.id] = { correctState: [], wrongStates: [] };
       }
