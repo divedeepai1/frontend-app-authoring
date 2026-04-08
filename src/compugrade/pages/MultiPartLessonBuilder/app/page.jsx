@@ -1282,6 +1282,24 @@ export default function LessonBuilder() {
     return "";
   };
 
+  const canRunLessonQa = (partId) => {
+    const part = lessonParts.find((p) => String(p.id) === String(partId));
+    if (!part) return false;
+
+    const instructionBlocks = (part.content?.blocks || []).filter(
+      (block) => block?.type === "instruction"
+    );
+
+    return instructionBlocks.every(
+      (block) => typeof block?.item_num === "string" && block.item_num.trim() !== ""
+    );
+  };
+
+  const getLessonQaDisableReason = (partId) => {
+    if (canRunLessonQa(partId)) return "";
+    return "Save this lesson once to enable Lesson QA.";
+  };
+
   const [videoPartId, setVideoPartId] = useState(null);
 
   const videoSplicing = async (sub_rubric_id, options = {}) => {
@@ -1743,7 +1761,16 @@ export default function LessonBuilder() {
               onImportLesson={handleImportLesson}
               onExportLesson={handleExportLesson}
               onOpenQA={() => {
-                setQaModalPartId(selectedPart?.id ?? lessonParts?.[0]?.id ?? null);
+                const targetPartId = selectedPart?.id ?? lessonParts?.[0]?.id ?? null;
+                if (!targetPartId || !canRunLessonQa(targetPartId)) {
+                  addToast({
+                    title: "Lesson QA Unavailable",
+                    message: getLessonQaDisableReason(targetPartId),
+                    variant: "error",
+                  });
+                  return;
+                }
+                setQaModalPartId(targetPartId);
                 setQaModalOpen(true);
               }}
               saveDraftLoading={saveDraftLoading}
@@ -1792,14 +1819,30 @@ export default function LessonBuilder() {
                         <Settings className="w-5 h-5 mb-1 text-blue-600" />
                       </div>
 
-                      <div
-                        onClick={() => {
-                          setQaModalPartId(selectedPart?.id ?? null);
-                          setQaModalOpen(true);
-                        }}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      >
-                        Lesson QA
+                      <div className="relative group">
+                        <div
+                          onClick={
+                            selectedPart?.id && canRunLessonQa(selectedPart.id)
+                              ? () => {
+                                  setQaModalPartId(selectedPart.id);
+                                  setQaModalOpen(true);
+                                }
+                              : undefined
+                          }
+                          className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border border-transparent transition-colors ${
+                            selectedPart?.id && canRunLessonQa(selectedPart.id)
+                              ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                              : "bg-blue-300 text-white cursor-not-allowed"
+                          }`}
+                          aria-disabled={!selectedPart?.id || !canRunLessonQa(selectedPart.id)}
+                        >
+                          Lesson QA
+                        </div>
+                        {(!selectedPart?.id || !canRunLessonQa(selectedPart.id)) && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-gray-900 text-white text-xs px-2 py-1 shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
+                            {getLessonQaDisableReason(selectedPart?.id)}
+                          </div>
+                        )}
                       </div>
 
                       <div className="relative group">
