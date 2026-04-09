@@ -62,14 +62,19 @@ const normalizeGradebookResponse = (payload, fallbackStudents, fallbackLessons) 
     ? body.students.map((student) => {
         const studentId = student.id ?? student.user_id ?? student.student_id
         const fallback = fallbackById.get(String(studentId))
+      const combinedName = `${student.first_name || ""} ${student.last_name || ""}`.trim()
+        const resolvedName =
+          student.name ||
+          student.full_name ||
+          combinedName ||
+          student.email ||
+          fallback?.name ||
+          `Student ${studentId ?? ""}`
         return {
           id: studentId,
-          name:
-            student.name ??
-            student.full_name ??
-            student.email ??
-            fallback?.name ??
-            `Student ${studentId ?? ""}`,
+        firstName: student.first_name ?? fallback?.firstName ?? "",
+        lastName: student.last_name ?? fallback?.lastName ?? "",
+          name: resolvedName,
           email: student.email ?? fallback?.email ?? "",
         }
       })
@@ -191,7 +196,14 @@ const Gradebook = () => {
     const students = Array.isArray(result?.students) ? result.students : []
     const normalizedStudents = students.map((student) => ({
       id: student.id,
-      name: student.name || student.full_name || student.email || `Student ${student.id}`,
+      firstName: student.first_name || "",
+      lastName: student.last_name || "",
+      name:
+        student.name ||
+        student.full_name ||
+        `${student.first_name || ""} ${student.last_name || ""}`.trim() ||
+        student.email ||
+        `Student ${student.id}`,
       email: student.email || "",
     }))
     setClassStudents(normalizedStudents)
