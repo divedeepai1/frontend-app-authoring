@@ -21,6 +21,11 @@ const normalizeAttemptsPayload = (payload) => {
 }
 
 const parseAttemptEntry = (entry) => {
+  const toNullableNumber = (value) => {
+    if (value === null || value === undefined) return null
+    const parsed = Number(value)
+    return Number.isNaN(parsed) ? null : parsed
+  }
   if (entry && typeof entry === "object") {
     const allottedRaw =
       entry.num_of_attempts ??
@@ -37,11 +42,11 @@ const parseAttemptEntry = (entry) => {
       entry.remaining ??
       allottedRaw
     return {
-      allotted: Number(allottedRaw),
-      numberOfAttempts: Number(numberOfAttemptsRaw),
+      allotted: toNullableNumber(allottedRaw),
+      numberOfAttempts: toNullableNumber(numberOfAttemptsRaw),
     }
   }
-  const value = Number(entry)
+  const value = toNullableNumber(entry)
   return {
     allotted: value,
     numberOfAttempts: value,
@@ -150,10 +155,12 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
       }
       const json = await response.json()
       const data = normalizeAttemptsPayload(json)
-      const loadedClassMax = getRubricAttemptsAllotted(data) ?? 1
+      const loadedClassMax = getRubricAttemptsAllotted(data)
       const parsedClassMax = Number(loadedClassMax)
       const safeClassMax =
-        Number.isInteger(parsedClassMax) && parsedClassMax >= MIN_ATTEMPTS
+        loadedClassMax === null
+          ? "unlimited"
+          : Number.isInteger(parsedClassMax) && parsedClassMax >= MIN_ATTEMPTS
           ? Math.min(parsedClassMax, MAX_ATTEMPTS)
           : 1
       setMaxAttempts(safeClassMax)
@@ -165,13 +172,19 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
         const rawName = student.name || student.full_name || combinedName
         const email = student.email || ""
         const fallbackName = email.includes("@") ? email.split("@")[0] : `Student ${student.id}`
-        const allottedValue = Number(studentAttemptMap[id]?.allotted)
-        const numberOfAttemptsValue = Number(studentAttemptMap[id]?.numberOfAttempts)
+        const allottedValue = studentAttemptMap[id]?.allotted
+        const numberOfAttemptsValue = studentAttemptMap[id]?.numberOfAttempts
         const attemptsAllotted =
+          allottedValue === null
+            ? null
+            :
           Number.isInteger(allottedValue) && allottedValue >= MIN_ATTEMPTS
             ? Math.min(allottedValue, MAX_ATTEMPTS)
             : safeClassMax
         const numberOfAttempts =
+          numberOfAttemptsValue === null
+            ? null
+            :
           Number.isInteger(numberOfAttemptsValue) && numberOfAttemptsValue >= 0
             ? Math.min(numberOfAttemptsValue, MAX_ATTEMPTS)
             : attemptsAllotted
@@ -228,6 +241,7 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
     setSavingClass(true)
     setError("")
     setSuccess("")
+    const classNumOfAttempts = maxAttempts === "unlimited" ? null : maxAttempts
     try {
       const response = await fetch(`${base_url}/api/lms/set_rubric_num_attempts`, {
         method: "POST",
@@ -236,8 +250,8 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
         },
         body: JSON.stringify({
           rubric_openedx_based_id: rubricId,
-          attempts_allotted: maxAttempts,
-          num_of_attempts: maxAttempts,
+          attempts_allotted: classNumOfAttempts,
+          num_of_attempts: classNumOfAttempts,
           student_ids: studentIds,
         }),
       })
@@ -256,8 +270,14 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
 
   const saveStudentAttempts = async (studentId, studentAttemptsAllotted, nextNumOfAttempts) => {
     if (!rubricId) return
-    const boundedAllotted = Math.max(MIN_ATTEMPTS, Math.min(MAX_ATTEMPTS, studentAttemptsAllotted))
-    const boundedNumOfAttempts = Math.max(0, Math.min(MAX_ATTEMPTS, nextNumOfAttempts))
+    const boundedAllotted =
+      studentAttemptsAllotted === null
+        ? null
+        : Math.max(MIN_ATTEMPTS, Math.min(MAX_ATTEMPTS, studentAttemptsAllotted))
+    const boundedNumOfAttempts =
+      nextNumOfAttempts === null
+        ? null
+        : Math.max(0, Math.min(MAX_ATTEMPTS, nextNumOfAttempts))
     setSavingStudentId(studentId)
     setError("")
     setSuccess("")
@@ -292,7 +312,7 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
   return (
     <div className="fixed inset-0 z-50 pt-[4%] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 border-none" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl w-[92vw] max-w-5xl overflow-hidden">
+      <div className="relative bg-white rounded-lg shadow-xl w-[96vw] max-w-6xl overflow-hidden">
         <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
           <div>
             <div className="primary-text" style={{ fontWeight: 600, fontSize: 16 }}>
@@ -329,7 +349,10 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
               <select
                 className="form-control"
                 value={maxAttempts}
-                onChange={(event) => setMaxAttempts(Number(event.target.value))}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setMaxAttempts(value === "unlimited" ? "unlimited" : Number(value))
+                }}
                 disabled={loading || savingClass || !!savingStudentId}
               >
                 {attemptOptions.map((value) => (
@@ -337,6 +360,7 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
                     {value}
                   </option>
                 ))}
+                <option value="unlimited">Unlimited Attempts</option>
               </select>
             </div>
             <button
@@ -364,11 +388,11 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
             <div style={{ maxHeight: 260, overflowY: "auto", overflowX: "hidden" }}>
               <table className="table mb-0" style={{ fontSize: 12, tableLayout: "fixed", width: "100%" }}>
                 <colgroup>
+                  <col style={{ width: "18%" }} />
                   <col style={{ width: "22%" }} />
-                  <col style={{ width: "26%" }} />
                   <col style={{ width: "16%" }} />
                   <col style={{ width: "16%" }} />
-                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "28%" }} />
                 </colgroup>
                 <thead style={{ backgroundColor: "#F3F4F6", position: "sticky", top: 0, zIndex: 2 }}>
                   <tr>
@@ -376,7 +400,7 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
                     <th style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Email</th>
                     <th style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Attempts allotted</th>
                     <th style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Number of attempts</th>
-                    <th className="text-right">Actions</th>
+                    <th style={{ textAlign: "right", paddingRight: 12 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -392,23 +416,27 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
                       <tr key={row.id}>
                         <td style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name || "-"}</td>
                         <td style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.email || "-"}</td>
-                        <td>{row.attemptsAllotted}</td>
-                        <td>{row.numberOfAttempts}</td>
-                        <td className="text-right">
-                          <div className="d-inline-flex align-items-center justify-content-end" style={{ gap: 6, width: "100%" }}>
+                        <td>{row.attemptsAllotted === null ? "Unlimited Attempts" : row.attemptsAllotted}</td>
+                        <td>{row.numberOfAttempts === null ? "Unlimited Attempts" : row.numberOfAttempts}</td>
+                        <td style={{ textAlign: "right", paddingRight: 12 }}>
+                          <div
+                            className="d-inline-flex align-items-center justify-content-end"
+                            style={{ gap: 6, width: "100%", flexWrap: "nowrap" }}
+                          >
                           <button
                             className="secondary-button px-2 py-1"
-                            style={{ fontSize: 12 }}
+                            style={{ fontSize: 12, minWidth: 40, whiteSpace: "nowrap", paddingLeft: 8, paddingRight: 8 }}
                             disabled={
                               savingClass ||
                               savingStudentId === row.id ||
+                              row.numberOfAttempts === null ||
                               row.numberOfAttempts >= MAX_ATTEMPTS
                             }
                             onClick={() =>
                               saveStudentAttempts(
                                 row.id,
-                                row.numberOfAttempts + 1,
-                                row.numberOfAttempts + 1
+                                (row.numberOfAttempts || 0) + 1,
+                                (row.numberOfAttempts || 0) + 1
                               )
                             }
                           >
@@ -416,11 +444,25 @@ const LessonAttemptsModal = ({ isOpen, onClose, title, rubricId, students }) => 
                           </button>
                           <button
                             className="primary-button px-2 py-1"
-                            style={{ fontSize: 12 }}
+                            style={{ fontSize: 12, minWidth: 112, whiteSpace: "nowrap", paddingLeft: 8, paddingRight: 8 }}
                             disabled={savingClass || savingStudentId === row.id}
-                            onClick={() => saveStudentAttempts(row.id, maxAttempts, maxAttempts)}
+                            onClick={() =>
+                              saveStudentAttempts(
+                                row.id,
+                                maxAttempts === "unlimited" ? null : maxAttempts,
+                                maxAttempts === "unlimited" ? null : maxAttempts
+                              )
+                            }
                           >
                             Reset attempts
+                          </button>
+                          <button
+                            className="secondary-button px-2 py-1"
+                            style={{ fontSize: 12, minWidth: 122, whiteSpace: "nowrap", paddingLeft: 8, paddingRight: 8 }}
+                            disabled={savingClass || savingStudentId === row.id || row.numberOfAttempts === null}
+                            onClick={() => saveStudentAttempts(row.id, null, null)}
+                          >
+                            Unlimited Attempts
                           </button>
                           </div>
                         </td>
