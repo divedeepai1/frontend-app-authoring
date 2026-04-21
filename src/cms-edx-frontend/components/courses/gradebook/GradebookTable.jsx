@@ -62,11 +62,15 @@ const GradebookTable = ({
         <tbody>
           {students.map((student) => {
             const rowGrades = gradesByStudent[String(student.id)] || {}
+            const fullName =
+              `${student.firstName || ""} ${student.lastName || ""}`.trim() ||
+              student.name ||
+              "Student"
             return (
               <tr key={student.id}>
                 <td style={{ position: "sticky", left: 0, zIndex: 1, background: "#fff" }}>
-                  <div style={{ fontWeight: 500 }}>{student.name || "Student"}</div>
-                  <div style={{ color: "#6B7280", fontSize: 11 }}>{student.email || student.id}</div>
+                  <div style={{ fontWeight: 500 }}>{student.email || student.id}</div>
+                  <div style={{ color: "#6B7280", fontSize: 11 }}>{fullName}</div>
                 </td>
                 {lessons.map((lesson) => {
                   const cell = rowGrades[String(lesson.id)] || {}

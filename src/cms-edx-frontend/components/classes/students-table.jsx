@@ -1,6 +1,6 @@
 
 import { Table, Container } from "react-bootstrap"
-import { Edit, Trash2 } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 import viewIcon from "../../assests/view-icon.svg";
 import deleteIcon from "../../assests/delete-icon.svg";
 import messageIcon from "../../assests/message-icon.svg";
@@ -9,12 +9,16 @@ import { useEffect, useState } from "react";
 import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../../cms-csrftoken";
 import SaveInformationForLater from "./save-information-for-later";
+import ToastContainer from "../../../compugrade/pages/MultiPartLessonBuilder/components/ui/toast";
+import { base_url } from "../../../compugrade-constants";
 
 
 export default function StudentTable({students,setAddStudents, nextStep, prevStep , fromTeachers , selectedIds, handleDeleteStudents, handleSelectAllStudents, handleSelectStudents,classId}) {
   const navigate = useNavigate()
   const [unreadByEmail, setUnreadByEmail] = useState({});
-  
+  const [resettingStudentId, setResettingStudentId] = useState(null);
+  const [toasts, setToasts] = useState([]);
+
   useEffect(() => {
     let cancelled = false;
     const loadStatuses = async () => {
@@ -49,7 +53,6 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
     return () => { cancelled = true; }
   }, [students, fromTeachers])
 
-  
   const handleMessageClick = (student) => {
     navigate("/classes/chat", {
       state: {
@@ -57,6 +60,52 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
         name: student.username || `${student.first_name} ${student.last_name}` || student.email,
       }
     });
+  };
+
+  
+  const addToast = ({ title, message, variant = "info" }) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setToasts((prev) => [...prev, { id, title, message, variant }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3000);
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  const handleResetStudentProgress = async (studentId) => {
+    if (!studentId) return;
+    setResettingStudentId(studentId);
+    try {
+      const response = await fetch(`${base_url}/api/openedx/user/reset_student_progress`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: studentId,
+        }),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "Failed to reset student progress.");
+      }
+      addToast({
+        title: "Student progress reset",
+        message: "Progress has been reset successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      addToast({
+        title: "Reset failed",
+        message: "Unable to reset student progress right now.",
+        variant: "error",
+      });
+    } finally {
+      setResettingStudentId(null);
+    }
   };
 
   return (
@@ -94,7 +143,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
             <th>Fist Name</th>
             <th>Last Name</th>
             <th>Email Address</th>
-            {/* <th>Actions</th> */}
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -139,51 +188,84 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
               <td>{student.first_name}</td>
               <td>{student.last_name}</td>
               <td>{student.email}</td>
-              {/* <td>
-               {fromTeachers && <button
-                  className="btn btn-link p-1 me-2"
-                  onClick={() =>{ navigate(`/classes/${classId}/${student.id}`)
-                  sessionStorage.setItem("student-name", student.username)
-                  sessionStorage.setItem("student-email", student.email)
-               }
-                }
-                  style={{ border: "none", background: "none" }}
-                >
-                  <img src={viewIcon} alt="view" />
-                </button>}
+              <td style={{ whiteSpace: "nowrap" }}>
+                <div className="d-inline-flex align-items-center" style={{ gap: 8 }}>
+                {fromTeachers && (
+                  <button
+                    className="btn btn-link p-1 me-2"
+                    onClick={() => {
+                      navigate(`/classes/${classId}/${student.id}`)
+                      sessionStorage.setItem("student-name", student.username)
+                      sessionStorage.setItem("student-email", student.email)
+                    }}
+                    style={{ border: "none", background: "none" }}
+                    title="View student details"
+                    aria-label="View student details"
+                  >
+                    <img src={viewIcon} alt="view" />
+                  </button>
+                )}
                 <button
                   className="btn btn-link p-1 me-2"
                   onClick={() => fromTeachers && handleDeleteStudents(student.id)}
                   style={{ border: "none", background: "none" }}
+                  title="Delete student"
+                  aria-label="Delete student"
                 >
                   <img src={deleteIcon} alt="delete" />
                 </button>
-               {fromTeachers && (
-                 <button
-                   className="btn btn-link p-1"
-                   onClick={() => {
-                     setUnreadByEmail((prev) => ({ ...prev, [student.email]: false }));
-                     handleMessageClick(student)
-                   }}
-                   style={{ border: "none", background: "none" }}
-                 >
-                   <div style={{ position: 'relative', display: 'inline-block' }}>
-                     <img src={messageIcon} alt="message" />
-                     {unreadByEmail[student.email] && (
-                       <span style={{
-                         position: 'absolute',
-                         top: -2,
-                         right: -2,
-                         width: 8,
-                         height: 8,
-                         backgroundColor: '#16A34A',
-                         borderRadius: '50%'
-                       }} />
-                     )}
-                   </div>
-                 </button>
-               )}
-              </td> */}
+                {fromTeachers && (
+                  <button
+                    className="btn btn-link p-1"
+                    onClick={() => handleResetStudentProgress(student.id)}
+                    style={{
+                      border: "none",
+                      background: "#e3e1e1",
+                      borderRadius: 2,
+                      width: 24,
+                      height: 24,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    title="Reset student progress"
+                    aria-label="Reset student progress"
+                    disabled={resettingStudentId === student.id}
+                  >
+                    <RotateCcw size={14} color={resettingStudentId === student.id ? "#9CA3AF" : "#6B7280"} />
+                  </button>
+                )}
+                {fromTeachers && (
+                  <button
+                    className="btn btn-link p-1"
+                    onClick={() => {
+                      setUnreadByEmail((prev) => ({ ...prev, [student.email]: false }));
+                      handleMessageClick(student);
+                    }}
+                    style={{ border: "none", background: "none" }}
+                    title="Message student"
+                    aria-label="Message student"
+                  >
+                    <div style={{ position: "relative", display: "inline-block" }}>
+                      <img src={messageIcon} alt="message" />
+                      {unreadByEmail[student.email] && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: -2,
+                            right: -2,
+                            width: 8,
+                            height: 8,
+                            backgroundColor: "#16A34A",
+                            borderRadius: "50%",
+                          }}
+                        />
+                      )}
+                    </div>
+                  </button>
+                )}
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -203,6 +285,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
           </div>
           <SaveInformationForLater />
         </div>}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </>
   )
 }

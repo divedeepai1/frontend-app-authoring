@@ -35,7 +35,7 @@ export default function RichTextEditorModal({
         <div className="flex items-start justify-between border-b px-5 py-3">
           <div className="space-y-0">
             <p className="text-sm font-semibold text-gray-900 p-0 m-0">{title}</p>
-            <p className="text-xs text-gray-500 p-0 m-0 mt-1">{title != "Home Intro Text" && title != "Course Dashboard Text" && "Use rich text to describe context around the video."}</p>
+            <p className="text-xs text-gray-500 p-0 m-0 mt-1">{title != "Home Intro Text" && title != "Course Dashboard Text" && title != "Course Description" && "Use rich text to describe context around the video."}</p>
           </div>
           <div
             type="button"
