@@ -140,6 +140,9 @@ const CourseOutline = ({ courseId }) => {
   const [isCourseDashboardModalOpen, setIsCourseDashboardModalOpen] = useState(false);
   const [courseDashboardText, setCourseDashboardText] = useState('');
   const [isSavingCourseDashboard, setIsSavingCourseDashboard] = useState(false);
+  const [isCourseDescriptionModalOpen, setIsCourseDescriptionModalOpen] = useState(false);
+  const [courseDescriptionText, setCourseDescriptionText] = useState('');
+  const [isSavingCourseDescription, setIsSavingCourseDescription] = useState(false);
 
   // Extract fetch function so it can be called independently
   const fetchRubricSkills = React.useCallback(async () => {
@@ -216,6 +219,38 @@ const CourseOutline = ({ courseId }) => {
       }
     };
     fetchCourseDashboardText();
+  }, [courseId]);
+
+  useEffect(() => {
+    const fetchCourseDescription = async () => {
+      if (!courseId) return;
+      try {
+        const token = await fetchCsrfToken();
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/description/`,
+          {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': token,
+            },
+          },
+        );
+
+        if (!response.ok) return;
+        const data = await response.json();
+        setCourseDescriptionText(
+          data?.description
+          || data?.course_description
+          || data?.courseDescription
+          || '',
+        );
+      } catch (error) {
+      }
+    };
+
+    fetchCourseDescription();
   }, [courseId]);
 
   const [sections, setSections] = useState(sectionsList);
@@ -685,6 +720,33 @@ const CourseOutline = ({ courseId }) => {
     }
   };
 
+  const handleCourseDescriptionSave = async (content) => {
+    if (!courseId) return;
+    setIsSavingCourseDescription(true);
+    try {
+      const token = await fetchCsrfToken();
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/update-description/`,
+        {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token,
+          },
+          body: JSON.stringify({ course_description: content }),
+        },
+      );
+
+      if (!response.ok) return;
+      setCourseDescriptionText(content);
+      setIsCourseDescriptionModalOpen(false);
+    } catch (error) {
+    } finally {
+      setIsSavingCourseDescription(false);
+    }
+  };
+
   if (isLoading) {
     // eslint-disable-next-line react/jsx-no-useless-fragment
     return (
@@ -742,7 +804,19 @@ const CourseOutline = ({ courseId }) => {
                 </Button>
                 </div>
           <SubHeader
-            title={intl.formatMessage(messages.headingTitle)}
+            title={(
+              <div className="d-flex align-items-center" style={{ gap: '0.75rem' }}>
+                <span>{intl.formatMessage(messages.headingTitle)}</span>
+                <Button
+                  variant="outline-primary"
+                  iconBefore={Edit}
+                  size="sm"
+                  onClick={() => setIsCourseDescriptionModalOpen(true)}
+                >
+                  Course Description
+                </Button>
+              </div>
+            )}
             // subtitle={intl.formatMessage(messages.headingSubtitle)}
             headerActions={(
               <div className="d-flex align-items-center" style={{ gap: '0.75rem' }}>
@@ -1002,6 +1076,17 @@ const CourseOutline = ({ courseId }) => {
         fromCourseOutline={true}
         editorId="course-dashboard-text-editor"
         isSaving={isSavingCourseDashboard}
+      />
+      <RichTextEditorModal
+        open={isCourseDescriptionModalOpen}
+        title="Course Description"
+        initialValue={courseDescriptionText}
+        onSave={handleCourseDescriptionSave}
+        onClose={() => setIsCourseDescriptionModalOpen(false)}
+        saveLabel="Save"
+        fromCourseOutline={true}
+        editorId="course-description-text-editor"
+        isSaving={isSavingCourseDescription}
       />
     </>
   );
