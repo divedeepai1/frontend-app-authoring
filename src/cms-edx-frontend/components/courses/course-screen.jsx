@@ -9,6 +9,7 @@ import CourseResourcesDialog from "./CourseResourcesDialog"
 import { base_url } from "../../../compugrade-constants"
 import LessonScheduleModal from "./LessonScheduleModal"
 import LessonTimerModal from "./LessonTimerModal"
+import LessonAttemptsModal from "./LessonAttemptsModal"
 
 function CourseScreen() {
   const navigate = useNavigate()
@@ -25,6 +26,7 @@ function CourseScreen() {
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false)
   const [scheduleContext, setScheduleContext] = useState(null)
   const [timerContext, setTimerContext] = useState(null)
+  const [attemptContext, setAttemptContext] = useState(null)
   const [classStudents, setClassStudents] = useState([])
 
   const fetchClasses = async () => {
@@ -156,7 +158,8 @@ function CourseScreen() {
   const lessonsByChapter = useMemo(() => {
     const byChapter = {};
     lessons.forEach(ls => {
-      const key = ls.chapter_id;
+      const key = String(ls.chapter_id ?? ls.chapterId ?? ls.parent_chapter_id ?? "");
+      if (!key) return;
       if (!byChapter[key]) byChapter[key] = [];
       byChapter[key].push(ls);
     });
@@ -166,7 +169,14 @@ function CourseScreen() {
   const verticalsByLesson = useMemo(() => {
     const byLesson = {};
     verticals.forEach(v => {
-      const key = v.lesson_id;
+      const key = String(
+        v.lesson_id ??
+        v.lessonId ??
+        v.parent_lesson_id ??
+        v.subsection_lesson_id ??
+        ""
+      );
+      if (!key) return;
       if (!byLesson[key]) byLesson[key] = [];
       byLesson[key].push(v);
     });
@@ -269,6 +279,20 @@ function CourseScreen() {
 
   const handleCloseTimerSetup = () => {
     setTimerContext(null);
+  }
+
+  const handleOpenAttemptsSetup = (lesson, vertical) => {
+    if (!lesson || !vertical) return;
+    const rubricId = vertical?.id || "";
+    setAttemptContext({
+      lessonTitle: lesson.title,
+      verticalTitle: vertical.title,
+      rubricId,
+    });
+  }
+
+  const handleCloseAttemptsSetup = () => {
+    setAttemptContext(null);
   }
 
   return (
@@ -397,7 +421,7 @@ function CourseScreen() {
 
                 {expandedChapters[chapter.id] && (
                   <div className="lesson-container">
-                    {(lessonsByChapter[chapter.id] || []).map((lesson, lidx) => (
+                    {(lessonsByChapter[String(chapter.id)] || []).map((lesson, lidx) => (
                       <div key={lesson.id || lidx} className="lesson-row lesson border-top py-2">
                         <div className="d-flex justify-content-between align-items-start">
                           <div className="d-flex align-items-start" style={{ width: "100%" }}>
@@ -422,15 +446,15 @@ function CourseScreen() {
                                 <span className="primary-text mr-2" style={{fontWeight:"600" , fontSize:"20px" }}>•</span>
                                 <span>{lesson.title}</span>
                               </div>
-                              {expandedLessons[lesson.id] && (verticalsByLesson[lesson.id] || []).length > 0 && (
+                              {expandedLessons[lesson.id] && (verticalsByLesson[String(lesson.id)] || []).length > 0 && (
                                 <div className="ml-3">
-                                  {(verticalsByLesson[lesson.id] || []).map((v, vidx) => (
+                                  {(verticalsByLesson[String(lesson.id)] || []).map((v, vidx) => (
                                     <div 
                                       key={v.id || vidx} 
                                       className="d-flex align-items-center py-1" 
                                       style={{ 
                                         gap: "8px",
-                                        borderBottom: vidx < (verticalsByLesson[lesson.id] || []).length - 1 ? "1px solid #E5E7EB" : "none"
+                                        borderBottom: vidx < (verticalsByLesson[String(lesson.id)] || []).length - 1 ? "1px solid #E5E7EB" : "none"
                                       }}
                                     >
                                       <span>{v.title}</span>
@@ -447,6 +471,13 @@ function CourseScreen() {
                                         onClick={() => handleOpenTimerSetup(lesson, v)}
                                       >
                                         Setup Timer
+                                      </button>
+                                      <button
+                                        className="secondary-button px-2 py-2"
+                                        style={{ fontSize: 12, whiteSpace: "nowrap" }}
+                                        onClick={() => handleOpenAttemptsSetup(lesson, v)}
+                                      >
+                                        Setup Attempts
                                       </button>
                                     </div>
                                   ))}
@@ -524,6 +555,14 @@ function CourseScreen() {
         title={timerContext ? `${timerContext.verticalTitle || ""} • ${timerContext.lessonTitle || ""}` : ""}
         students={classStudents}
         rubricId={timerContext ? timerContext.rubricId : ""}
+      />
+
+      <LessonAttemptsModal
+        isOpen={!!attemptContext}
+        onClose={handleCloseAttemptsSetup}
+        title={attemptContext ? `${attemptContext.verticalTitle || ""} • ${attemptContext.lessonTitle || ""}` : ""}
+        students={classStudents}
+        rubricId={attemptContext ? attemptContext.rubricId : ""}
       />
     </div>
   )

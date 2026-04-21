@@ -28,6 +28,14 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
   const blocks = activePart?.content?.blocks || [];
   blocks.forEach((block) => {
     if (block.type === "instruction") {
+      const instructionWeightage =
+        typeof block.content?.weightage === "number"
+          ? block.content.weightage
+          : typeof block.content?.errorWeightage === "number"
+            ? block.content.errorWeightage
+            : null;
+      if (instructionWeightage === 0) return;
+
       const rawBlockId = String(block.id || "");
       const backendItemId = rawBlockId.startsWith("instruction-block-")
         ? rawBlockId.replace("instruction-block-", "")

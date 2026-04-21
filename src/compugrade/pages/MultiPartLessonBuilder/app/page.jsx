@@ -1539,7 +1539,9 @@ export default function LessonBuilder() {
       const items = result || [];
       const blocks = [];
 
-      items.forEach((item) => {
+      const importBatchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      items.forEach((item, itemIndex) => {
+        const itemSuffix = `${importBatchId}-${itemIndex}`;
         if (item.block_type === "objective") {
           const objectiveJson = item.objective_json || {};
           let questionData = { ...objectiveJson };
@@ -1563,13 +1565,13 @@ export default function LessonBuilder() {
           }
           
           blocks.push({
-            id: "objective-block-" + item.item_num + "-" + Date.now(),
+            id: "objective-block-" + itemSuffix,
             name: item.block_name,
             type: "objective",
             content: {
               questions: [
                 {
-                  id: "objective-question-" + item.item_num + "-" + Date.now(),
+                  id: "objective-question-" + itemSuffix,
                   ...questionData,
                 },
               ],
@@ -1579,7 +1581,7 @@ export default function LessonBuilder() {
           });
         } else if (item.block_type === "text") {
           blocks.push({
-            id: "text-block-" + item.id,
+            id: "text-block-" + itemSuffix,
             name: item.block_name,
             type: "text",
             content: {
@@ -1591,7 +1593,7 @@ export default function LessonBuilder() {
           });
         } else if (item.block_type === "instruction") {
           blocks.push({
-            id: "instruction-block-" + item.id,
+            id: "instruction-block-" + itemSuffix,
             name: item.block_name,
             type: "instruction",
             content: {
@@ -1610,7 +1612,7 @@ export default function LessonBuilder() {
           });
         } else if (item.block_type === "doc-comparison") {
           blocks.push({
-            id: "doc-comparison-block-" + item.id,
+            id: "doc-comparison-block-" + itemSuffix,
             name: item.block_name,
             type: "doc-comparison",
             content: {
