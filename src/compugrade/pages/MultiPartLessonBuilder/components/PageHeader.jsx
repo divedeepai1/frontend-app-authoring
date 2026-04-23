@@ -9,6 +9,7 @@ export default function PageHeader({
   onPublish,
   onImportLesson,
   onExportLesson,
+  onOpenLessonStates,
   onOpenQA,
   saveDraftLoading,
   publishLoading,
@@ -45,6 +46,9 @@ export default function PageHeader({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <HeaderActionButton onClick={onOpenLessonStates} variant="primary">
+              Save Lesson State
+            </HeaderActionButton>
             {/* <HeaderActionButton icon={FileCheck} onClick={onOpenQA} variant="primary">
               Lesson QA
             </HeaderActionButton> */}
