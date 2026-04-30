@@ -17,6 +17,7 @@ import DocumentPreviewDialog from "../components/ui/DocumentPreviewDialog";
 import PageHeader from "../components/PageHeader";
 import RightSidebar from "../components/RightSidebar";
 import LessonConfigModal from "../components/LessonConfigModal";
+import AssessmentTimerModal from "../components/AssessmentTimerModal";
 import PartConfigModal from "../components/PartConfigModal";
 import LessonQAModal from "../components/qa/LessonQAModal";
 import LessonStateModal from "../components/LessonStateModal";
@@ -52,6 +53,7 @@ export default function LessonBuilder() {
   const [transferLoading, setTransferLoading] = useState(false);
   const [partConfigOpen, setPartConfigOpen] = useState(false);
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
+  const [assessmentTimerOpen, setAssessmentTimerOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [lessonConfig, setLessonConfig] = useState({
     sourceDocument: null,
@@ -64,6 +66,9 @@ export default function LessonBuilder() {
     text_after_video: "",
     lesson_overview: "",
     num_of_attempts: 3,
+    is_assessment: false,
+    time_allowed: null,
+    timer_mode: null,
   });
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
@@ -337,6 +342,12 @@ export default function LessonBuilder() {
       lesson_overview: backendData.lesson_overview || "",
       lessonParts: lessons || [],
       num_of_attempts: backendData.num_of_attempts === null ? null : (backendData.num_of_attempts || 3),
+      is_assessment: !!backendData.is_assessment,
+      time_allowed: backendData.time_allowed ?? null,
+      timer_mode:
+        backendData.timer_mode === "display" || backendData.timer_mode === "lock"
+          ? backendData.timer_mode
+          : null,
     };
   }
 
@@ -454,6 +465,12 @@ export default function LessonBuilder() {
   useEffect(() => {
     setLessonConfig((cfg) => ({ ...cfg, lessonParts }));
   }, [lessonParts]);
+
+  useEffect(() => {
+    if (!lessonConfig?.is_assessment) {
+      setAssessmentTimerOpen(false);
+    }
+  }, [lessonConfig?.is_assessment]);
 
   const [images, setImages] = useState([]);
   const [nextImageId, setNextImageId] = useState(1);
@@ -942,7 +959,11 @@ export default function LessonBuilder() {
 
     return {
       rubric_id: rubricId,
-      skills: currentLessonConfig.skills,
+      skills: (Array.isArray(currentLessonConfig.skills) ? currentLessonConfig.skills : []).map((skill) => ({
+        customer_facing_name: skill?.customer_facing_name || "",
+        status: skill?.status || "",
+        cert_type: skill?.cert_type || "",
+      })),
       app_name: sessionStorage.getItem('courseType') == 'ms-word' ? "word" : sessionStorage.getItem('courseType') == "powerpoint" ? "powerpoint" : "excel",
       source_document: sourceDocBase64,
       answer_key: answerKeyBase64,
@@ -953,6 +974,9 @@ export default function LessonBuilder() {
       lesson_overview: currentLessonConfig.lesson_overview || "",
       lessons: lesson_parts,
       num_of_attempts: currentLessonConfig.num_of_attempts === null ? null : (currentLessonConfig.num_of_attempts || 3),
+      is_assessment: !!currentLessonConfig.is_assessment,
+      time_allowed: currentLessonConfig.time_allowed ?? null,
+      timer_mode: currentLessonConfig.timer_mode ?? null,
     };
   }
 
@@ -972,6 +996,12 @@ export default function LessonBuilder() {
       payload?.num_of_attempts === null
         ? null
         : payload?.num_of_attempts || 3,
+    is_assessment: !!payload?.is_assessment,
+    time_allowed: payload?.time_allowed ?? null,
+    timer_mode:
+      payload?.timer_mode === "display" || payload?.timer_mode === "lock"
+        ? payload.timer_mode
+        : null,
     lessons: (payload?.lessons || []).map((lesson) => ({
       id: lesson.id,
       title: lesson.title,
@@ -2273,11 +2303,25 @@ export default function LessonBuilder() {
           onClose={() => setLessonConfigOpen(false)}
           lessonConfig={lessonConfig}
           setLessonConfig={setLessonConfig}
+          onOpenTimerSetup={() => setAssessmentTimerOpen(true)}
           setDocPreview={setDocPreview}
           downloadFile={downloadFile}
           setVideoPreviewOpen={setVideoPreviewOpen}
           setVideoPreviewUrl={setVideoPreviewUrl}
           videoObjectUrlRef={videoObjectUrlRef}
+        />
+        <AssessmentTimerModal
+          open={lessonConfigOpen && !!lessonConfig?.is_assessment && assessmentTimerOpen}
+          onClose={() => setAssessmentTimerOpen(false)}
+          initialTimerMode={lessonConfig?.timer_mode}
+          initialTimeAllowed={lessonConfig?.time_allowed}
+          onSave={({ timer_mode, time_allowed }) => {
+            setLessonConfig((current) => ({
+              ...current,
+              timer_mode,
+              time_allowed,
+            }));
+          }}
         />
         <PartConfigModal
           open={partConfigOpen}

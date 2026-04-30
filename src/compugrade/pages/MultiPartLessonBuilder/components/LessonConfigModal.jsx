@@ -1,4 +1,4 @@
-import { FileText, Video, Eye, X, Download, Settings, Pencil, Paperclip, Upload } from "lucide-react";
+import { FileText, Video, Eye, X, Download, Settings, Pencil, Paperclip, Upload, Clock3 } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { base_url } from "../../../../compugrade-constants";
 import RichTextEditorModal from "./RichTextEditorModal";
@@ -15,6 +15,7 @@ export default function LessonConfigModal({
   setVideoPreviewOpen,
   setVideoPreviewUrl,
   videoObjectUrlRef,
+  onOpenTimerSetup,
 }) {
   const [editorState, setEditorState] = useState({ open: false, target: null });
   const [filesModalOpen, setFilesModalOpen] = useState(false);
@@ -229,7 +230,7 @@ export default function LessonConfigModal({
           </div>
 
           {/* Number of Attempts Dropdown */}
-          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+          <div className="hidden bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-50">
@@ -258,6 +259,63 @@ export default function LessonConfigModal({
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-50">
+                  <Clock3 className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-900">Assessment Mode</label>
+                  <p className="text-xs text-gray-500">Enable rubric-level assessment timer setup</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600">
+                  {lessonConfig?.is_assessment ? "Enabled" : "Disabled"}
+                </span>
+                <div
+                  onClick={() =>
+                    setLessonConfig((current) => {
+                      const nextEnabled = !current?.is_assessment;
+                      return {
+                        ...current,
+                        is_assessment: nextEnabled,
+                        ...(nextEnabled
+                          ? {}
+                          : {
+                              timer_mode: null,
+                              time_allowed: null,
+                            }),
+                      };
+                    })
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    lessonConfig?.is_assessment ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      lessonConfig?.is_assessment ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => lessonConfig?.is_assessment && onOpenTimerSetup && onOpenTimerSetup()}
+                  disabled={!lessonConfig?.is_assessment}
+                  className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors border ${
+                    lessonConfig?.is_assessment
+                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                  }`}
+                >
+                  Setup Timer
+                </button>
+              </div>
             </div>
           </div>
 
@@ -498,7 +556,14 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
       setOpen(false);
       return;
     }
-    const next = [...(selectedSkills || []), { customer_facing_name: skill.name, status: skill.status }];
+    const next = [
+      ...(selectedSkills || []),
+      {
+        customer_facing_name: skill.name,
+        status: skill.status,
+        cert_type: skill.cert_type || "",
+      },
+    ];
     onChange(next);
     setQuery("");
     setOpen(false);
