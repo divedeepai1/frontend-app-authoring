@@ -42,6 +42,10 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
     const savePayload = {
       rubric_id: newRubricId,
       skills: originalRubric.skills || [],
+      time_allowed: originalRubric.time_allowed || null,
+      timer_mode: originalRubric.timer_mode || null,
+      is_assessment: originalRubric.is_assessment || false,
+      lesson_files: originalRubric.lesson_files || [],
       num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
       app_name: originalRubric.app_name || getAppName(),
       text_before_video: originalRubric.text_before_video || "",
@@ -60,6 +64,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
         items: (lesson.items || []).map((item) => {
           const baseItem = {
             id: item.block_type + item.id,
+            item_num: item.item_num || null,
             block_name: item.block_name || "",
             instruction_category: item.instruction_category || "",
             block_type: item.block_type || "",
