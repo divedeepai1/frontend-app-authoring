@@ -64,7 +64,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
         items: (lesson.items || []).map((item) => {
           const baseItem = {
             id: item.block_type + item.id,
-            item_num: item.item_num || null,
+            item_num: item.item_num,
             block_name: item.block_name || "",
             instruction_category: item.instruction_category || "",
             block_type: item.block_type || "",

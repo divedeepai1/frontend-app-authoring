@@ -5,14 +5,13 @@ const ProgressIndicator = ({ activeStep,activeStepList }) => {
     { id: 1, name: 'Class Details' },
     { id: 2, name: 'Add Students' },
     { id: 3, name: 'Assign Course(s)' },
-    { id: 4, name: 'Class Preferences' },
-    { id: 5, name: 'Send Messages' }
+    { id: 4, name: 'Send Messages' }
   ];
 
   return (
     <div className="d-flex justify-content-between mb-4">
       {steps.map((step) => (
-        <div key={step.id} className="position-relative d-flex align-items-center" style={{ width: '20%' }}>
+        <div key={step.id} className="position-relative d-flex align-items-center" style={{ width: `${100 / steps.length}%` }}>
           <div
             className={`w-100 py-3 text-center text-white ${activeStep === step.id || activeStepList?.includes(step.id) ? 'primary-shape' : 'secondary-shape'}`}
             style={{
