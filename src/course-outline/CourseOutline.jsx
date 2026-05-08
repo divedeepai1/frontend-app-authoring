@@ -48,6 +48,8 @@ import UnitCard from './unit-card/UnitCard';
 import HighlightsModal from './highlights-modal/HighlightsModal';
 import EmptyPlaceholder from './empty-placeholder/EmptyPlaceholder';
 import PublishModal from './publish-modal/PublishModal';
+import CourseWeightSettingsModal from './course-weight-settings-modal/CourseWeightSettingsModal';
+import courseWeightMessages from './course-weight-settings-modal/messages';
 import PageAlerts from './page-alerts/PageAlerts';
 import DraggableList from '../generic/drag-helper/DraggableList';
 import {
@@ -143,6 +145,7 @@ const CourseOutline = ({ courseId }) => {
   const [isCourseDescriptionModalOpen, setIsCourseDescriptionModalOpen] = useState(false);
   const [courseDescriptionText, setCourseDescriptionText] = useState('');
   const [isSavingCourseDescription, setIsSavingCourseDescription] = useState(false);
+  const [isCourseWeightModalOpen, setIsCourseWeightModalOpen] = useState(false);
 
   // Extract fetch function so it can be called independently
   const fetchRubricSkills = React.useCallback(async () => {
@@ -853,22 +856,29 @@ const CourseOutline = ({ courseId }) => {
                     />
                     {!errors?.outlineIndexApi && (
                       <div className="pt-4">
-                         <div className="d-flex justify-content-end mb-3" style={{gap:"4px"}}>
-        <button
-          className={viewMode === "list" ? "primary-button px-3 py-2" : "secondary-button px-3 py-2"}
-          onClick={() => setViewMode("list")}
-        >
-          <IconButtonToggle className="me-2" />
-          List View
-        </button>
-        <button
-          className={viewMode === "table" ? "primary-button px-3 py-2" : "secondary-button px-3 py-2"}
-          onClick={() => setViewMode("table")}
-        >
-          <IconButtonToggle className="me-2" />
-          Table View
-        </button>
-      </div>
+                        <div className="d-flex justify-content-end mb-3" style={{ gap: "4px" }}>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => setIsCourseWeightModalOpen(true)}
+                          >
+                            {intl.formatMessage(courseWeightMessages.openButton)}
+                          </Button>
+                          <button
+                            className={viewMode === "list" ? "primary-button px-3 py-2" : "secondary-button px-3 py-2"}
+                            onClick={() => setViewMode("list")}
+                          >
+                            <IconButtonToggle className="me-2" />
+                            List View
+                          </button>
+                          <button
+                            className={viewMode === "table" ? "primary-button px-3 py-2" : "secondary-button px-3 py-2"}
+                            onClick={() => setViewMode("table")}
+                          >
+                            <IconButtonToggle className="me-2" />
+                            Table View
+                          </button>
+                        </div>
                         {sections.length ? (
                         viewMode === "list" ?  <>
                             <DraggableList
@@ -1087,6 +1097,12 @@ const CourseOutline = ({ courseId }) => {
         fromCourseOutline={true}
         editorId="course-description-text-editor"
         isSaving={isSavingCourseDescription}
+      />
+      <CourseWeightSettingsModal
+        isOpen={isCourseWeightModalOpen}
+        courseId={courseId}
+        onClose={() => setIsCourseWeightModalOpen(false)}
+        onSaveSuccess={() => setToastMessage('Course default weightage saved')}
       />
     </>
   );
