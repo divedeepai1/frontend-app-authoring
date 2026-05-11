@@ -95,6 +95,38 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
     }).filter(Boolean)
   }
 
+  const getInitialGlobalTimer = (timerItems, mappedRows) => {
+    const firstValidTimer = (timerItems || []).find((item) => {
+      const mode = item?.timer_mode
+      const timeAllowed = Number(item?.time_allowed)
+      return (mode === "display" || mode === "lock") && Number.isInteger(timeAllowed) && timeAllowed > 0
+    })
+
+    if (firstValidTimer) {
+      const parsed = secondsToHoursMinutes(Number(firstValidTimer.time_allowed))
+      return {
+        mode: firstValidTimer.timer_mode,
+        hours: formatTwoDigits(parsed.hours),
+        minutes: formatTwoDigits(parsed.minutes),
+      }
+    }
+
+    const firstRow = (mappedRows || [])[0]
+    if (firstRow) {
+      return {
+        mode: firstRow.timerMode === "lock" ? "lock" : "display",
+        hours: firstRow.hours || "00",
+        minutes: firstRow.minutes || "00",
+      }
+    }
+
+    return {
+      mode: "display",
+      hours: "00",
+      minutes: "05",
+    }
+  }
+
   useEffect(() => {
     if (!isOpen) {
       setRows([])
@@ -138,7 +170,12 @@ const LessonTimerModal = ({ isOpen, onClose, title, rubricId, students }) => {
 
         const json = await response.json()
         const timerItems = normalizeTimerPayload(json)
-        setRows(mapStudentRows(timerItems))
+        const mappedRows = mapStudentRows(timerItems)
+        const initialGlobalTimer = getInitialGlobalTimer(timerItems, mappedRows)
+        setRows(mappedRows)
+        setGlobalTimerMode(initialGlobalTimer.mode)
+        setGlobalHours(initialGlobalTimer.hours)
+        setGlobalMinutes(initialGlobalTimer.minutes)
       } catch (e) {
         setError("Unable to load timer settings right now.")
       } finally {
