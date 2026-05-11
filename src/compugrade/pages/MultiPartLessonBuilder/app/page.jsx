@@ -64,6 +64,7 @@ export default function LessonBuilder() {
     lessonParts: [],
     text_before_video: "",
     text_after_video: "",
+    video_transcript: "",
     lesson_overview: "",
     num_of_attempts: 3,
     is_assessment: false,
@@ -339,6 +340,7 @@ export default function LessonBuilder() {
       videoEnabled: !!backendData.video,
       text_before_video: backendData.text_before_video || "",
       text_after_video: backendData.text_after_video || "",
+      video_transcript: backendData.video_transcript || "",
       lesson_overview: backendData.lesson_overview || "",
       lessonParts: lessons || [],
       num_of_attempts: backendData.num_of_attempts === null ? null : (backendData.num_of_attempts || 3),
@@ -971,6 +973,7 @@ export default function LessonBuilder() {
       lesson_files,
       text_before_video: currentLessonConfig.text_before_video || "",
       text_after_video: currentLessonConfig.text_after_video || "",
+      video_transcript: currentLessonConfig.video_transcript || "",
       lesson_overview: currentLessonConfig.lesson_overview || "",
       lessons: lesson_parts,
       num_of_attempts: currentLessonConfig.num_of_attempts === null ? null : (currentLessonConfig.num_of_attempts || 3),
@@ -991,6 +994,7 @@ export default function LessonBuilder() {
     skills: payload?.skills || [],
     text_before_video: payload?.text_before_video || "",
     text_after_video: payload?.text_after_video || "",
+    video_transcript: payload?.video_transcript || "",
     lesson_overview: payload?.lesson_overview || "",
     num_of_attempts:
       payload?.num_of_attempts === null

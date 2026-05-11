@@ -36,6 +36,8 @@ export default function LessonConfigModal({
     let key;
     if (editorState.target === "after") {
       key = "text_after_video";
+    } else if (editorState.target === "transcript") {
+      key = "video_transcript";
     } else if (editorState.target === "overview") {
       key = "lesson_overview";
     } else {
@@ -48,6 +50,8 @@ export default function LessonConfigModal({
   const editorInitialValue =
     editorState.target === "after"
       ? lessonConfig?.text_after_video || ""
+      : editorState.target === "transcript"
+      ? lessonConfig?.video_transcript || ""
       : editorState.target === "overview"
       ? lessonConfig?.lesson_overview || ""
       : lessonConfig?.text_before_video || "";
@@ -133,16 +137,32 @@ export default function LessonConfigModal({
 
   const VideoTextButton = ({ target }) => {
     const isAfter = target === "after";
-    const label = isAfter ? "Edit text after video" : "Edit text before video";
+    const isTranscript = target === "transcript";
+    const label = isAfter
+      ? "Edit text after video"
+      : isTranscript
+      ? "Video Transcript"
+      : "Edit text before video";
     const tooltip = cleanHtml(
-      isAfter ? lessonConfig?.text_after_video : lessonConfig?.text_before_video
+      isAfter
+        ? lessonConfig?.text_after_video
+        : isTranscript
+        ? lessonConfig?.video_transcript
+        : lessonConfig?.text_before_video
     );
     return (
       <div className="flex justify-end">
         <button
           type="button"
           onClick={() => handleEditorOpen(target)}
-          title={tooltip || (isAfter ? "Add after-video text" : "Add before-video text")}
+          title={
+            tooltip ||
+            (isAfter
+              ? "Add after-video text"
+              : isTranscript
+              ? "Add video transcript"
+              : "Add before-video text")
+          }
           className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 focus:outline-none focus-visible:ring-0 border-transparent focus-visible:outline-none"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -423,6 +443,7 @@ export default function LessonConfigModal({
                   </div>
                 )}
                 <VideoTextButton target="after" />
+                <VideoTextButton target="transcript" />
               </div>
             )}
           </div>
@@ -446,6 +467,8 @@ export default function LessonConfigModal({
         title={
           editorState.target === "after"
             ? "Text After Video"
+            : editorState.target === "transcript"
+            ? "Video Transcript"
             : editorState.target === "overview"
             ? "Lesson Overview"
             : "Text Before Video"

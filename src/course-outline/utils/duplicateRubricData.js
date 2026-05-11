@@ -51,6 +51,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
       text_before_video: originalRubric.text_before_video || "",
       lesson_overview: originalRubric.lesson_overview || "",
       text_after_video: originalRubric.text_after_video || "",
+      video_transcript: originalRubric.video_transcript || "",
       source_document: originalRubric.source_document || null,
       answer_key: originalRubric.answer_key || null,
       video: originalRubric.video || null,

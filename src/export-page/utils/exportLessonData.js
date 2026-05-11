@@ -83,6 +83,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                         time_allowed: originalRubric.time_allowed || null,
                         timer_mode: originalRubric.timer_mode || null,
                         is_assessment: originalRubric.is_assessment || false,
+                        video_transcript: originalRubric.video_transcript || "",
                         skills: originalRubric.skills || [],
                         num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
                         app_name: originalRubric.app_name || getAppName(),
