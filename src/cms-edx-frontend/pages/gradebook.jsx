@@ -8,6 +8,8 @@ import { fetchCsrfToken } from "../../cms-csrftoken"
 import { base_url } from "../../compugrade-constants"
 import GradebookTable from "../components/courses/gradebook/GradebookTable"
 import GradeOverrideModal from "../components/courses/gradebook/GradeOverrideModal"
+import CourseWeightSettingsModal from "../../course-outline/course-weight-settings-modal/CourseWeightSettingsModal"
+import courseWeightMessages from "../../course-outline/course-weight-settings-modal/messages"
 
 const SELECT_STYLE = {
   boxShadow: "none",
@@ -116,6 +118,7 @@ const normalizeGradebookResponse = (payload, fallbackStudents, fallbackLessons) 
 }
 
 const Gradebook = () => {
+  const [isCourseWeightModalOpen, setIsCourseWeightModalOpen] = useState(false)
   const [classes, setClasses] = useState([])
   const [selectedClassId, setSelectedClassId] = useState("")
   const [courses, setCourses] = useState([])
@@ -145,6 +148,14 @@ const Gradebook = () => {
       return name.includes(query) || email.includes(query)
     })
   }, [classStudents, studentSearch])
+  const selectedClassName = useMemo(() => {
+    const selectedClass = classes.find((item) => String(item.id) === String(selectedClassId))
+    return selectedClass?.name || "selected class"
+  }, [classes, selectedClassId])
+  const selectedCourseName = useMemo(() => {
+    const selectedCourseItem = courses.find((course) => String(course.id) === String(selectedCourse))
+    return selectedCourseItem?.display_name || "selected course"
+  }, [courses, selectedCourse])
 
   const fetchClasses = async () => {
     const token = await fetchCsrfToken()
@@ -440,6 +451,76 @@ const Gradebook = () => {
     }
   }
 
+  const handleClassOverrideWeightSave = async ({ courseId, assessmentWeight }) => {
+    const normalizedStudentIds = classStudents
+      .map((student) => Number(student?.id))
+      .filter((id) => Number.isInteger(id))
+
+    setError("")
+    setSuccess("")
+
+    const response = await fetch(`${base_url}/api/grading/save_class_override_weight_settings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        course_id: courseId,
+        student_ids: normalizedStudentIds,
+        assessment_weight: assessmentWeight,
+      }),
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(text || "Failed to save class override weightage.")
+    }
+  }
+
+  const handleClassOverrideWeightFetch = async ({ courseId }) => {
+    const normalizedStudentIds = classStudents
+      .map((student) => Number(student?.id))
+      .filter((id) => Number.isInteger(id))
+
+    const response = await fetch(`${base_url}/api/grading/get_class_override_weight_settings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        course_id: courseId,
+        student_ids: normalizedStudentIds,
+      }),
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(text || "Failed to fetch class override weightage.")
+    }
+
+    const data = await response.json()
+    const studentPayload = data?.students
+    let firstStudentWeight = null
+
+    if (Array.isArray(studentPayload)) {
+      firstStudentWeight = studentPayload.find((student) => student && student.assessment_weight !== undefined) || null
+    } else if (studentPayload && typeof studentPayload === "object") {
+      if (studentPayload.assessment_weight !== undefined || studentPayload.lesson_weight !== undefined) {
+        firstStudentWeight = studentPayload
+      } else {
+        const firstValue = Object.values(studentPayload)[0]
+        if (firstValue && typeof firstValue === "object") {
+          firstStudentWeight = firstValue
+        }
+      }
+    }
+
+    return {
+      assessmentWeight: firstStudentWeight?.assessment_weight,
+      lessonWeight: firstStudentWeight?.lesson_weight,
+    }
+  }
+
   return (
     <div>
       <HeaderTop isHiddenMainMenu />
@@ -506,6 +587,13 @@ const Gradebook = () => {
                         <option value="">No courses</option>
                       )}
                     </select>
+                    <button
+                      className="primary-button px-3 py-2 ml-3"
+                      onClick={() => setIsCourseWeightModalOpen(true)}
+                      disabled={!selectedCourse}
+                    >
+                      {courseWeightMessages.openButton.defaultMessage}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -573,6 +661,16 @@ const Gradebook = () => {
         initialValue={overrideContext?.value}
         onSubmit={handleOverrideSubmit}
         saving={savingOverride}
+      />
+      <CourseWeightSettingsModal
+        isOpen={isCourseWeightModalOpen}
+        courseId={selectedCourse}
+        onClose={() => setIsCourseWeightModalOpen(false)}
+        onFetch={handleClassOverrideWeightFetch}
+        onSave={handleClassOverrideWeightSave}
+        onSaveSuccess={() => setSuccess("Class override weightage saved")}
+        modalTitle={`Configure class weight settings`}
+        modalDescription={`Set assessment and lesson weights for ${selectedClassName} in ${selectedCourseName}. Total is always 100.`}
       />
     </div>
   )

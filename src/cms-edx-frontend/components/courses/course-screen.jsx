@@ -10,6 +10,7 @@ import { base_url } from "../../../compugrade-constants"
 import LessonScheduleModal from "./LessonScheduleModal"
 import LessonTimerModal from "./LessonTimerModal"
 import LessonAttemptsModal from "./LessonAttemptsModal"
+import LessonPreviewModal from "./LessonPreviewModal"
 
 function CourseScreen() {
   const navigate = useNavigate()
@@ -27,6 +28,7 @@ function CourseScreen() {
   const [scheduleContext, setScheduleContext] = useState(null)
   const [timerContext, setTimerContext] = useState(null)
   const [attemptContext, setAttemptContext] = useState(null)
+  const [previewContext, setPreviewContext] = useState(null)
   const [classStudents, setClassStudents] = useState([])
 
   const fetchClasses = async () => {
@@ -295,6 +297,20 @@ function CourseScreen() {
     setAttemptContext(null);
   }
 
+  const handleOpenPreview = (lesson, vertical) => {
+    if (!lesson || !vertical) return;
+    const rubricId = vertical?.id || "";
+    setPreviewContext({
+      lessonTitle: lesson.title,
+      verticalTitle: vertical.title,
+      rubricId,
+    });
+  }
+
+  const handleClosePreview = () => {
+    setPreviewContext(null);
+  }
+
   return (
     <div>
       <style>{`
@@ -479,6 +495,14 @@ function CourseScreen() {
                                       >
                                         Setup Attempts
                                       </button>
+                                      <button
+                                        type="button"
+                                        className="secondary-button px-2 py-2"
+                                        style={{ fontSize: 12, whiteSpace: "nowrap" }}
+                                        onClick={() => handleOpenPreview(lesson, v)}
+                                      >
+                                        Preview
+                                      </button>
                                     </div>
                                   ))}
                                 </div>
@@ -563,6 +587,13 @@ function CourseScreen() {
         title={attemptContext ? `${attemptContext.verticalTitle || ""} • ${attemptContext.lessonTitle || ""}` : ""}
         students={classStudents}
         rubricId={attemptContext ? attemptContext.rubricId : ""}
+      />
+
+      <LessonPreviewModal
+        isOpen={!!previewContext}
+        onClose={handleClosePreview}
+        title={previewContext ? `${previewContext.verticalTitle || ""} • ${previewContext.lessonTitle || ""}` : ""}
+        openedxBasedId={previewContext ? previewContext.rubricId : ""}
       />
     </div>
   )

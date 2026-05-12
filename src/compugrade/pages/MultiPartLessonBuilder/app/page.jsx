@@ -17,8 +17,10 @@ import DocumentPreviewDialog from "../components/ui/DocumentPreviewDialog";
 import PageHeader from "../components/PageHeader";
 import RightSidebar from "../components/RightSidebar";
 import LessonConfigModal from "../components/LessonConfigModal";
+import AssessmentTimerModal from "../components/AssessmentTimerModal";
 import PartConfigModal from "../components/PartConfigModal";
 import LessonQAModal from "../components/qa/LessonQAModal";
+import LessonStateModal from "../components/LessonStateModal";
 import { fetchCsrfToken } from "../../../../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
 import { useUniqueId } from "@dnd-kit/utilities";
@@ -51,6 +53,7 @@ export default function LessonBuilder() {
   const [transferLoading, setTransferLoading] = useState(false);
   const [partConfigOpen, setPartConfigOpen] = useState(false);
   const [lessonConfigOpen, setLessonConfigOpen] = useState(false);
+  const [assessmentTimerOpen, setAssessmentTimerOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [lessonConfig, setLessonConfig] = useState({
     sourceDocument: null,
@@ -61,8 +64,12 @@ export default function LessonBuilder() {
     lessonParts: [],
     text_before_video: "",
     text_after_video: "",
+    video_transcript: "",
     lesson_overview: "",
     num_of_attempts: 3,
+    is_assessment: false,
+    time_allowed: null,
+    timer_mode: null,
   });
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState("");
@@ -70,6 +77,11 @@ export default function LessonBuilder() {
   const [docPreview, setDocPreview] = useState({ open: false, title: "", src: null });
   const [qaModalOpen, setQaModalOpen] = useState(false);
   const [qaModalPartId, setQaModalPartId] = useState(null);
+  const [lessonStateModalOpen, setLessonStateModalOpen] = useState(false);
+  const [lessonStates, setLessonStates] = useState([]);
+  const [lessonStatesLoading, setLessonStatesLoading] = useState(false);
+  const [lessonStateSaving, setLessonStateSaving] = useState(false);
+  const [restoringStateId, setRestoringStateId] = useState(null);
 
   useEffect(() => {
     let isFetching = false;
@@ -328,9 +340,16 @@ export default function LessonBuilder() {
       videoEnabled: !!backendData.video,
       text_before_video: backendData.text_before_video || "",
       text_after_video: backendData.text_after_video || "",
+      video_transcript: backendData.video_transcript || "",
       lesson_overview: backendData.lesson_overview || "",
       lessonParts: lessons || [],
       num_of_attempts: backendData.num_of_attempts === null ? null : (backendData.num_of_attempts || 3),
+      is_assessment: !!backendData.is_assessment,
+      time_allowed: backendData.time_allowed ?? null,
+      timer_mode:
+        backendData.timer_mode === "display" || backendData.timer_mode === "lock"
+          ? backendData.timer_mode
+          : null,
     };
   }
 
@@ -448,6 +467,12 @@ export default function LessonBuilder() {
   useEffect(() => {
     setLessonConfig((cfg) => ({ ...cfg, lessonParts }));
   }, [lessonParts]);
+
+  useEffect(() => {
+    if (!lessonConfig?.is_assessment) {
+      setAssessmentTimerOpen(false);
+    }
+  }, [lessonConfig?.is_assessment]);
 
   const [images, setImages] = useState([]);
   const [nextImageId, setNextImageId] = useState(1);
@@ -936,7 +961,11 @@ export default function LessonBuilder() {
 
     return {
       rubric_id: rubricId,
-      skills: currentLessonConfig.skills,
+      skills: (Array.isArray(currentLessonConfig.skills) ? currentLessonConfig.skills : []).map((skill) => ({
+        customer_facing_name: skill?.customer_facing_name || "",
+        status: skill?.status || "",
+        cert_type: skill?.cert_type || "",
+      })),
       app_name: sessionStorage.getItem('courseType') == 'ms-word' ? "word" : sessionStorage.getItem('courseType') == "powerpoint" ? "powerpoint" : "excel",
       source_document: sourceDocBase64,
       answer_key: answerKeyBase64,
@@ -944,9 +973,13 @@ export default function LessonBuilder() {
       lesson_files,
       text_before_video: currentLessonConfig.text_before_video || "",
       text_after_video: currentLessonConfig.text_after_video || "",
+      video_transcript: currentLessonConfig.video_transcript || "",
       lesson_overview: currentLessonConfig.lesson_overview || "",
       lessons: lesson_parts,
       num_of_attempts: currentLessonConfig.num_of_attempts === null ? null : (currentLessonConfig.num_of_attempts || 3),
+      is_assessment: !!currentLessonConfig.is_assessment,
+      time_allowed: currentLessonConfig.time_allowed ?? null,
+      timer_mode: currentLessonConfig.timer_mode ?? null,
     };
   }
 
@@ -961,11 +994,18 @@ export default function LessonBuilder() {
     skills: payload?.skills || [],
     text_before_video: payload?.text_before_video || "",
     text_after_video: payload?.text_after_video || "",
+    video_transcript: payload?.video_transcript || "",
     lesson_overview: payload?.lesson_overview || "",
     num_of_attempts:
       payload?.num_of_attempts === null
         ? null
         : payload?.num_of_attempts || 3,
+    is_assessment: !!payload?.is_assessment,
+    time_allowed: payload?.time_allowed ?? null,
+    timer_mode:
+      payload?.timer_mode === "display" || payload?.timer_mode === "lock"
+        ? payload.timer_mode
+        : null,
     lessons: (payload?.lessons || []).map((lesson) => ({
       id: lesson.id,
       title: lesson.title,
@@ -1667,21 +1707,7 @@ export default function LessonBuilder() {
   const handleExportLesson = async () => {
     setTransferLoading(true);
     try {
-      const exportedLessonRaw = await frontendToBackend(
-        { ...lessonConfig, lessonParts },
-        blockId
-      );
-      const exportedLesson = {
-        ...exportedLessonRaw,
-        lesson_files: (Array.isArray(exportedLessonRaw?.lesson_files)
-          ? exportedLessonRaw.lesson_files
-          : []
-        )
-          .map((item) =>
-            typeof item === "string" ? item : item?.presigned_url || ""
-          )
-          .filter(Boolean),
-      };
+      const exportedLesson = await buildExportLessonPayload();
       const blob = new Blob([JSON.stringify(exportedLesson, null, 2)], {
         type: "application/json",
       });
@@ -1709,21 +1735,217 @@ export default function LessonBuilder() {
     }
   };
 
+  const applyImportedPayload = (payload) => {
+    const frontendData = fromBackendToFrontend(
+      normalizeImportedLessonPayload(payload)
+    );
+    const importedLessonParts = frontendData?.lessonParts || [];
+    setLessonParts(importedLessonParts);
+    setLessonConfig(frontendData);
+    setSelectedPartId(importedLessonParts[0]?.id || "");
+    setImages([]);
+    setNextImageId(1);
+  };
+
+  const buildExportLessonPayload = async () => {
+    const exportedLessonRaw = await frontendToBackend(
+      { ...lessonConfig, lessonParts },
+      blockId
+    );
+    const normalizeInstructionItemIdForExport = (item) => {
+      if (item?.block_type !== "instruction" || typeof item?.id !== "string") {
+        return item;
+      }
+      const normalizedId = item.id.includes("-")
+        ? item.id.substring(item.id.lastIndexOf("-") + 1)
+        : item.id;
+
+      return {
+        ...item,
+        id: normalizedId,
+      };
+    };
+    return {
+      ...exportedLessonRaw,
+      lessons: (Array.isArray(exportedLessonRaw?.lessons)
+        ? exportedLessonRaw.lessons
+        : []
+      ).map((lesson) => ({
+        ...lesson,
+        items: (Array.isArray(lesson?.items) ? lesson.items : []).map(
+          normalizeInstructionItemIdForExport
+        ),
+      })),
+      lesson_files: (Array.isArray(exportedLessonRaw?.lesson_files)
+        ? exportedLessonRaw.lesson_files
+        : []
+      )
+        .map((item) =>
+          typeof item === "string" ? item : item?.presigned_url || ""
+        )
+        .filter(Boolean),
+    };
+  };
+
+  const getCookieValue = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop().split(";").shift();
+    }
+    return "";
+  };
+
+  const getEmailFromCookie = () => {
+    const raw = getCookieValue("edx-user-info");
+    if (!raw) return "";
+    try {
+      const fixed = raw.replace(/\\054/g, ",");
+      const decoded = decodeURIComponent(fixed);
+      const firstParsed = JSON.parse(decoded);
+      const parsed =
+        typeof firstParsed === "string" ? JSON.parse(firstParsed) : firstParsed;
+      return parsed?.email || "";
+    } catch {
+      try {
+        const fixed = raw.replace(/\\054/g, ",");
+        const firstParsed = JSON.parse(fixed);
+        const parsed =
+          typeof firstParsed === "string"
+            ? JSON.parse(firstParsed)
+            : firstParsed;
+        return parsed?.email || "";
+      } catch {
+        return "";
+      }
+    }
+  };
+
+  const fetchLessonStates = async () => {
+    if (!blockId) return;
+    const encodedBlockId = encodeURIComponent(blockId);
+    setLessonStatesLoading(true);
+    try {
+      const response = await fetch(
+        `${base_url}/api/openedx/rubrics/${encodedBlockId}/save-states`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Could not fetch lesson states.");
+      }
+      const data = await response.json();
+      setLessonStates(Array.isArray(data?.save_states) ? data.save_states : []);
+    } catch (error) {
+      addToast({
+        title: "State List Error",
+        message: error.message || "Could not fetch saved states.",
+        variant: "error",
+      });
+    } finally {
+      setLessonStatesLoading(false);
+    }
+  };
+
+  const handleOpenLessonStates = async () => {
+    setLessonStateModalOpen(true);
+    await fetchLessonStates();
+  };
+
+  const handleSaveLessonState = async (note) => {
+    if (!blockId) return false;
+    const encodedBlockId = encodeURIComponent(blockId);
+    setLessonStateSaving(true);
+    try {
+      const snapshotPayload = await buildExportLessonPayload();
+      const email = getEmailFromCookie() || sessionStorage.getItem("email") || "";
+      const token = await fetchCsrfToken();
+      const response = await fetch(
+        `${base_url}/api/openedx/rubrics/${encodedBlockId}/save-states`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": token,
+          },
+          body: JSON.stringify({
+            snapshot: snapshotPayload,
+            email,
+            note: note || "",
+          }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Could not save lesson state.");
+      }
+      addToast({
+        title: "State Saved",
+        message: "Lesson state saved successfully.",
+        variant: "success",
+      });
+      await fetchLessonStates();
+      return true;
+    } catch (error) {
+      addToast({
+        title: "Save State Error",
+        message: error.message || "Could not save lesson state.",
+        variant: "error",
+      });
+      return false;
+    } finally {
+      setLessonStateSaving(false);
+    }
+  };
+
+  const handleRestoreLessonState = async (saveStateId) => {
+    if (!saveStateId) return;
+    setRestoringStateId(saveStateId);
+    try {
+      const response = await fetch(
+        `${base_url}/api/openedx/rubrics/save-states/${saveStateId}/restore`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Could not restore lesson state.");
+      }
+      const data = await response.json();
+      const snapshotPayload = data?.snapshot;
+      if (!snapshotPayload || typeof snapshotPayload !== "object") {
+        throw new Error("Invalid snapshot payload.");
+      }
+      applyImportedPayload(snapshotPayload);
+      setLessonStateModalOpen(false);
+      addToast({
+        title: "State Restored",
+        message: "Lesson state restored successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      addToast({
+        title: "Restore Error",
+        message: error.message || "Could not restore lesson state.",
+        variant: "error",
+      });
+    } finally {
+      setRestoringStateId(null);
+    }
+  };
+
   const handleImportLesson = async (file) => {
     setTransferLoading(true);
     try {
       const raw = await file.text();
       const payload = JSON.parse(raw);
-      const frontendData = fromBackendToFrontend(
-        normalizeImportedLessonPayload(payload)
-      );
-      const importedLessonParts = frontendData?.lessonParts || [];
-
-      setLessonParts(importedLessonParts);
-      setLessonConfig(frontendData);
-      setSelectedPartId(importedLessonParts[0]?.id || "");
-      setImages([]);
-      setNextImageId(1);
+      applyImportedPayload(payload);
       addToast({
         title: "Lesson Imported",
         message: "Lesson data loaded successfully.",
@@ -1762,6 +1984,7 @@ export default function LessonBuilder() {
               onPublish={handlePublishClick}
               onImportLesson={handleImportLesson}
               onExportLesson={handleExportLesson}
+              onOpenLessonStates={handleOpenLessonStates}
               onOpenQA={() => {
                 const targetPartId = selectedPart?.id ?? lessonParts?.[0]?.id ?? null;
                 if (!targetPartId || !canRunLessonQa(targetPartId)) {
@@ -2084,11 +2307,25 @@ export default function LessonBuilder() {
           onClose={() => setLessonConfigOpen(false)}
           lessonConfig={lessonConfig}
           setLessonConfig={setLessonConfig}
+          onOpenTimerSetup={() => setAssessmentTimerOpen(true)}
           setDocPreview={setDocPreview}
           downloadFile={downloadFile}
           setVideoPreviewOpen={setVideoPreviewOpen}
           setVideoPreviewUrl={setVideoPreviewUrl}
           videoObjectUrlRef={videoObjectUrlRef}
+        />
+        <AssessmentTimerModal
+          open={lessonConfigOpen && !!lessonConfig?.is_assessment && assessmentTimerOpen}
+          onClose={() => setAssessmentTimerOpen(false)}
+          initialTimerMode={lessonConfig?.timer_mode}
+          initialTimeAllowed={lessonConfig?.time_allowed}
+          onSave={({ timer_mode, time_allowed }) => {
+            setLessonConfig((current) => ({
+              ...current,
+              timer_mode,
+              time_allowed,
+            }));
+          }}
         />
         <PartConfigModal
           open={partConfigOpen}
@@ -2148,6 +2385,16 @@ export default function LessonBuilder() {
           }}
           lessonParts={lessonParts}
           partId={qaModalPartId}
+        />
+        <LessonStateModal
+          open={lessonStateModalOpen}
+          onClose={() => setLessonStateModalOpen(false)}
+          saveStates={lessonStates}
+          loading={lessonStatesLoading}
+          saving={lessonStateSaving}
+          restoringId={restoringStateId}
+          onSaveNewState={handleSaveLessonState}
+          onRestoreState={handleRestoreLessonState}
         />
         </>
       )}
