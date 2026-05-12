@@ -17,45 +17,45 @@ const ClassPreferences = ({
     onChange={handleCheckboxChange}
   />
 
-  <CustomCheckbox
+  {/* <CustomCheckbox
     id="enableClassScoreboard"
     name="enableClassScoreboard"
     label="Enable Class Scoreboard"
     checked={formData.preferences.enableClassScoreboard}
     onChange={handleCheckboxChange}
-  />
+  /> */}
 
-  <CustomCheckbox
+  {/* <CustomCheckbox
     id="disableAccountChanges"
     name="disableAccountChanges"
     label="Disable account changes"
     checked={formData.preferences.disableAccountChanges}
     onChange={handleCheckboxChange}
-  />
+  /> */}
 
-  <CustomCheckbox
+  {/* <CustomCheckbox
     id="hideThePauseButton"
     name="hideThePauseButton"
     label="Hide the pause button"
     checked={formData.preferences.hideThePauseButton}
     onChange={handleCheckboxChange}
-  />
+  /> */}
 
   <CustomCheckbox
     id="studentsCanChangePassword"
     name="studentsCanChangePassword"
-    label="Students can change password"
+    label="Allow students to change password"
     checked={formData.preferences.studentsCanChangePassword}
     onChange={handleCheckboxChange}
   />
 
-  <CustomCheckbox
+  {/* <CustomCheckbox
     id="showRestartButton"
     name="showRestartButton"
     label="Show restart button"
     checked={formData.preferences.showRestartButton}
     onChange={handleCheckboxChange}
-  />
+  /> */}
 
     <div className="d-flex  justify-content-between">
       <div className="d-flex">

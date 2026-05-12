@@ -1,4 +1,4 @@
-import { FileText, Video, Eye, X, Download, Settings, Pencil, Paperclip, Upload } from "lucide-react";
+import { FileText, Video, Eye, X, Download, Settings, Pencil, Paperclip, Upload, Clock3 } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { base_url } from "../../../../compugrade-constants";
 import RichTextEditorModal from "./RichTextEditorModal";
@@ -15,6 +15,7 @@ export default function LessonConfigModal({
   setVideoPreviewOpen,
   setVideoPreviewUrl,
   videoObjectUrlRef,
+  onOpenTimerSetup,
 }) {
   const [editorState, setEditorState] = useState({ open: false, target: null });
   const [filesModalOpen, setFilesModalOpen] = useState(false);
@@ -35,6 +36,8 @@ export default function LessonConfigModal({
     let key;
     if (editorState.target === "after") {
       key = "text_after_video";
+    } else if (editorState.target === "transcript") {
+      key = "video_transcript";
     } else if (editorState.target === "overview") {
       key = "lesson_overview";
     } else {
@@ -47,6 +50,8 @@ export default function LessonConfigModal({
   const editorInitialValue =
     editorState.target === "after"
       ? lessonConfig?.text_after_video || ""
+      : editorState.target === "transcript"
+      ? lessonConfig?.video_transcript || ""
       : editorState.target === "overview"
       ? lessonConfig?.lesson_overview || ""
       : lessonConfig?.text_before_video || "";
@@ -132,16 +137,32 @@ export default function LessonConfigModal({
 
   const VideoTextButton = ({ target }) => {
     const isAfter = target === "after";
-    const label = isAfter ? "Edit text after video" : "Edit text before video";
+    const isTranscript = target === "transcript";
+    const label = isAfter
+      ? "Edit text after video"
+      : isTranscript
+      ? "Video Transcript"
+      : "Edit text before video";
     const tooltip = cleanHtml(
-      isAfter ? lessonConfig?.text_after_video : lessonConfig?.text_before_video
+      isAfter
+        ? lessonConfig?.text_after_video
+        : isTranscript
+        ? lessonConfig?.video_transcript
+        : lessonConfig?.text_before_video
     );
     return (
       <div className="flex justify-end">
         <button
           type="button"
           onClick={() => handleEditorOpen(target)}
-          title={tooltip || (isAfter ? "Add after-video text" : "Add before-video text")}
+          title={
+            tooltip ||
+            (isAfter
+              ? "Add after-video text"
+              : isTranscript
+              ? "Add video transcript"
+              : "Add before-video text")
+          }
           className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-100 focus:outline-none focus-visible:ring-0 border-transparent focus-visible:outline-none"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -229,7 +250,7 @@ export default function LessonConfigModal({
           </div>
 
           {/* Number of Attempts Dropdown */}
-          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+          <div className="hidden bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-50">
@@ -258,6 +279,63 @@ export default function LessonConfigModal({
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-50">
+                  <Clock3 className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-900">Assessment Mode</label>
+                  <p className="text-xs text-gray-500">Enable rubric-level assessment timer setup</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600">
+                  {lessonConfig?.is_assessment ? "Enabled" : "Disabled"}
+                </span>
+                <div
+                  onClick={() =>
+                    setLessonConfig((current) => {
+                      const nextEnabled = !current?.is_assessment;
+                      return {
+                        ...current,
+                        is_assessment: nextEnabled,
+                        ...(nextEnabled
+                          ? {}
+                          : {
+                              timer_mode: null,
+                              time_allowed: null,
+                            }),
+                      };
+                    })
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    lessonConfig?.is_assessment ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      lessonConfig?.is_assessment ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => lessonConfig?.is_assessment && onOpenTimerSetup && onOpenTimerSetup()}
+                  disabled={!lessonConfig?.is_assessment}
+                  className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors border ${
+                    lessonConfig?.is_assessment
+                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                  }`}
+                >
+                  Setup Timer
+                </button>
+              </div>
             </div>
           </div>
 
@@ -365,6 +443,7 @@ export default function LessonConfigModal({
                   </div>
                 )}
                 <VideoTextButton target="after" />
+                <VideoTextButton target="transcript" />
               </div>
             )}
           </div>
@@ -388,6 +467,8 @@ export default function LessonConfigModal({
         title={
           editorState.target === "after"
             ? "Text After Video"
+            : editorState.target === "transcript"
+            ? "Video Transcript"
             : editorState.target === "overview"
             ? "Lesson Overview"
             : "Text Before Video"
@@ -498,7 +579,14 @@ function SkillsMultiSelect({ selectedSkills, onChange }) {
       setOpen(false);
       return;
     }
-    const next = [...(selectedSkills || []), { customer_facing_name: skill.name, status: skill.status }];
+    const next = [
+      ...(selectedSkills || []),
+      {
+        customer_facing_name: skill.name,
+        status: skill.status,
+        cert_type: skill.cert_type || "",
+      },
+    ];
     onChange(next);
     setQuery("");
     setOpen(false);

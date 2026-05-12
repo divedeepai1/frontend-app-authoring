@@ -16,6 +16,13 @@ const GradebookTable = ({
     return { text: String(cell.score), isMuted: false }
   }
 
+  const renderOverallGradeValue = (overallGrade) => {
+    if (overallGrade === null || overallGrade === undefined || Number.isNaN(Number(overallGrade))) {
+      return { text: "Not graded", isMuted: true }
+    }
+    return { text: String(overallGrade), isMuted: false }
+  }
+
   if (!students.length) {
     return (
       <div className="text-center py-4" style={{ color: "#6B7280" }}>
@@ -57,11 +64,15 @@ const GradebookTable = ({
                 )}
               </th>
             ))}
+            <th style={{ minWidth: 140 }}>
+              <div style={{ fontWeight: 600 }}>Overall Grade</div>
+            </th>
           </tr>
         </thead>
         <tbody>
           {students.map((student) => {
             const rowGrades = gradesByStudent[String(student.id)] || {}
+            const overallGradeValue = renderOverallGradeValue(rowGrades.overall_grade)
             const fullName =
               `${student.firstName || ""} ${student.lastName || ""}`.trim() ||
               student.name ||
@@ -105,6 +116,11 @@ const GradebookTable = ({
                     </td>
                   )
                 })}
+                <td>
+                  <span style={{ color: overallGradeValue.isMuted ? "#6B7280" : "#111827", fontWeight: overallGradeValue.isMuted ? 400 : 600 }}>
+                    {overallGradeValue.text}
+                  </span>
+                </td>
               </tr>
             )
           })}
