@@ -14,7 +14,8 @@ const ClassManagementForm = ({isNewStudent}) => {
   const { step } = useParams();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
-  const initialStep = Math.max(parseInt(step, 10) || 1, 1);
+  const sanitizedStep = Math.max(parseInt(step, 10) || 1, 1);
+  const initialStep = sanitizedStep > 4 ? 4 : sanitizedStep;
   const [activeStep, setActiveStep] = useState(initialStep);
   const [activeStepList, setActiveStepList] = useState([1]);
   const [formData, setFormData] = useState({
@@ -36,11 +37,8 @@ const ClassManagementForm = ({isNewStudent}) => {
   useEffect(() => {
     const data = sessionStorage.getItem("classData");
 
-    if (step <= 5) {
-      const completedSteps = [];
-      for (let i = 1; i <= step; i++) {
-        completedSteps.push(i);
-      }
+    if (initialStep <= 4) {
+      const completedSteps = [1, 2, 3, 4].filter((stepId) => stepId <= initialStep);
       setActiveStepList(completedSteps);
     }
 
@@ -199,7 +197,7 @@ const ClassManagementForm = ({isNewStudent}) => {
       }
     }
 
-    if (activeStep == 5) {
+    if (activeStep == 4) {
       // Only call announcement API if announcement is provided
       if (formData.announcement && formData.announcement.trim()) {
         const token = await fetchCsrfToken();
@@ -233,10 +231,11 @@ const ClassManagementForm = ({isNewStudent}) => {
       }
       navigate("/classes");
     }
-   if(step < 5 ){
-    setActiveStep((prev) => prev + 1);
-    navigate(`/manage-classes/${activeStep + 1}`);
-  }
+    if (activeStep < 4) {
+      const nextStepValue = activeStep + 1;
+      setActiveStep(nextStepValue);
+      navigate(`/manage-classes/${nextStepValue}`);
+    }
   };
 
   const fetchCourses = async () => {
@@ -266,9 +265,10 @@ const ClassManagementForm = ({isNewStudent}) => {
   };
 
   const prevStep = () => {
-    setActiveStep((prev) => prev - 1);
+    const prevStepValue = activeStep - 1;
+    setActiveStep(prevStepValue);
     setActiveStepList((prev) => prev.slice(0, -1));
-    navigate(`/manage-classes/${activeStep - 1}`);
+    navigate(`/manage-classes/${prevStepValue}`);
   };
 
   const renderForm = () => {
@@ -303,15 +303,6 @@ const ClassManagementForm = ({isNewStudent}) => {
           />
         );
       case 4:
-        return (
-          <ClassPreferences
-            formData={formData}
-            handleCheckboxChange={handleCheckboxChange}
-            nextStep={nextStep}
-            prevStep={prevStep}
-          />
-        );
-      case 5:
         return (
           <Messages
             formData={formData}
