@@ -416,7 +416,7 @@ const StudentDashboard = ({ classData, studentName }) => {
                     </td>
                     <td></td>
                     <td className="text-center" style={{ fontWeight: "600" }}>
-                      {loadingProgress.average >= 50 ? "Pass" : "--"}
+                      {loadingProgress.average >= 50 ? "Pass" : "-"}
                     </td>
                     <td></td>
                   </tr>
