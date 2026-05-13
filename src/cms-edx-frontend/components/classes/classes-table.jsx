@@ -4,7 +4,7 @@ import "./classes-table.css";
 import editIcon from "../../assests/edit-icon.svg";
 import viewIcon from "../../assests/view-icon.svg";
 import deleteIcon from "../../assests/delete-icon.svg";
-import messageIcon from "../../assests/message-icon.svg";
+// import messageIcon from "../../assests/message-icon.svg";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import DeleteModal from "../common/delete-modal";

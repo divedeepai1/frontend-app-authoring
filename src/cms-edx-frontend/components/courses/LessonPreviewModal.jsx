@@ -137,6 +137,97 @@ const collectImageUrls = (item) => {
   return urls
 }
 
+/** img src values embedded in lesson HTML (deduped with structured image fields). */
+const extractImgSrcsFromHtml = (html) => {
+  if (!html || typeof html !== "string") return []
+  const found = []
+  const re = /<img[^>]+src=["']([^"']+)["']/gi
+  let m
+  while ((m = re.exec(html))) {
+    const u = m[1].trim()
+    if (u) found.push(u)
+  }
+  return found
+}
+
+const mergeImageUrls = (itemOrQ, html) => {
+  const a = collectImageUrls(itemOrQ || {})
+  const b = extractImgSrcsFromHtml(html || "")
+  return [...new Set([...a, ...b].filter(Boolean))]
+}
+
+/** URLs from MCQ / multi-select option rows (`image_url`, `images`, nested objects). */
+const collectImageUrlsFromOption = (opt) => {
+  if (opt == null || typeof opt !== "object") return []
+  const urls = [...collectImageUrls(opt)]
+  const raw = opt.image_url
+  if (raw != null && typeof raw !== "string" && !Array.isArray(raw)) {
+    const s = toMediaSrc(raw)
+    if (s && typeof s === "string" && s.trim()) urls.push(s.trim())
+  }
+  const nested = opt.image && typeof opt.image === "object" ? opt.image.url || opt.image.presigned_url || opt.image.href : null
+  if (nested && typeof nested === "string" && nested.trim()) urls.push(nested.trim())
+  urls.push(...extractImgSrcsFromHtml(opt.natural_text || opt.html || ""))
+  return urls.filter(Boolean)
+}
+
+const collectImageUrlsFromOptionsList = (options) => {
+  if (!Array.isArray(options)) return []
+  const out = []
+  options.forEach((opt) => {
+    collectImageUrlsFromOption(opt).forEach((u) => out.push(u))
+  })
+  return out
+}
+
+const collectImageUrlsFromObjectList = (list) => {
+  if (!Array.isArray(list)) return []
+  const out = []
+  list.forEach((entry) => {
+    if (entry && typeof entry === "object") {
+      collectImageUrls(entry).forEach((u) => out.push(u))
+      extractImgSrcsFromHtml(entry.natural_text || entry.html || "").forEach((u) => out.push(u))
+    }
+  })
+  return out
+}
+
+const collectImageUrlsFromPairs = (pairs) => {
+  if (!Array.isArray(pairs)) return []
+  const out = []
+  pairs.forEach((p) => {
+    if (!p || typeof p !== "object") return
+    collectImageUrls(p).forEach((u) => out.push(u))
+  })
+  return out
+}
+
+/** Question stem + options + ordering / matching rows (deduped, stable order). */
+const collectAllObjectiveQuestionImages = (q) => {
+  if (!q || typeof q !== "object") return []
+  const merged = [
+    ...mergeImageUrls(q, q.natural_text),
+    ...collectImageUrlsFromOptionsList(q.options),
+    ...collectImageUrlsFromObjectList(q.items),
+    ...collectImageUrlsFromPairs(q.pairs),
+    ...collectImageUrlsFromObjectList(q.categories),
+    ...collectImageUrlsFromObjectList(q.blanks),
+  ].filter(Boolean)
+  const seen = new Set()
+  const ordered = []
+  merged.forEach((u) => {
+    if (seen.has(u)) return
+    seen.add(u)
+    ordered.push(u)
+  })
+  return ordered
+}
+
+const stripImgTagsFromHtml = (html) => {
+  if (!html || typeof html !== "string") return html
+  return html.replace(/<img\b[^>]*>/gi, "")
+}
+
 const normalizeObjectiveType = (q) => {
   const raw = String(q.objective_type || q.type || "").toLowerCase().replace(/_/g, "-")
   if (raw.includes("true") && raw.includes("false")) return "true-false"
@@ -186,7 +277,7 @@ const SectionLabel = ({ children }) => (
   </div>
 )
 
-const BlockNumber = ({ n }) => (
+const BlockNumber = ({ n, inline }) => (
   <div
     style={{
       display: "inline-flex",
@@ -199,12 +290,133 @@ const BlockNumber = ({ n }) => (
       color: "#334155",
       fontSize: 13,
       fontWeight: 700,
-      marginBottom: 12,
+      marginBottom: inline ? 0 : 12,
     }}
   >
     {n}
   </div>
 )
+
+/** Compact gallery: left-aligned, not full card width. */
+const GALLERY_MAX_W = 260
+const ImageGalleryPreview = ({ urls, resetKey }) => {
+  const list = useMemo(() => [...new Set((urls || []).filter(Boolean))], [urls])
+  const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    setActive(0)
+  }, [resetKey, list.join("|")])
+
+  if (list.length === 0) return null
+
+  const outer = { marginTop: 12, width: "100%", maxWidth: GALLERY_MAX_W }
+
+  if (list.length === 1) {
+    const src = list[0]
+    return (
+      <div style={outer}>
+        <div
+          style={{
+            borderRadius: 10,
+            border: `2px solid ${PRIMARY}`,
+            background: "#f8fafc",
+            padding: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 88,
+          }}
+        >
+          <img
+            src={src}
+            alt=""
+            referrerPolicy="no-referrer"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            style={{ maxWidth: "100%", maxHeight: 160, objectFit: "contain", display: "block", borderRadius: 6 }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={outer}>
+      <div
+        style={{
+          borderRadius: 10,
+          border: `2px solid ${PRIMARY}`,
+          background: "#f8fafc",
+          padding: 6,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 112,
+          marginBottom: 8,
+        }}
+      >
+        <img
+          key={list[active]}
+          src={list[active]}
+          alt=""
+          referrerPolicy="no-referrer"
+          draggable={false}
+          onDragStart={(e) => e.preventDefault()}
+          style={{ maxWidth: "100%", maxHeight: 170, objectFit: "contain", display: "block", borderRadius: 6 }}
+        />
+      </div>
+      <div
+        className="lesson-preview-thumb-strip"
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: 6,
+          overflowX: "auto",
+          overflowY: "hidden",
+          paddingBottom: 4,
+          maxWidth: "100%",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {list.map((src, i) => (
+          <button
+            key={`${src}-${i}`}
+            type="button"
+            onClick={() => setActive(i)}
+            aria-label={`Show image ${i + 1}`}
+            aria-current={i === active ? "true" : undefined}
+            style={{
+              flex: "0 0 auto",
+              padding: 2,
+              borderRadius: 8,
+              border: i === active ? `2px solid ${PRIMARY}` : "1px solid #e5e7eb",
+              background: "#fff",
+              cursor: "pointer",
+              boxSizing: "border-box",
+              lineHeight: 0,
+            }}
+          >
+            <img
+              src={src}
+              alt=""
+              referrerPolicy="no-referrer"
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
+              style={{
+                width: 56,
+                height: 56,
+                objectFit: "cover",
+                borderRadius: 6,
+                display: "block",
+                opacity: i === active ? 1 : 0.85,
+              }}
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const docPaneMediaBox = {
   width: "100%",
@@ -288,16 +500,6 @@ const DocumentPane = ({ title, value }) => {
       {showOpenLink && openFallback}
     </div>
   )
-}
-
-const getPartSourceValue = (lesson, rubric, isSyntheticRoot) => {
-  if (!lesson || typeof lesson !== "object") return ""
-  const fromLesson = lesson.source_document_url || lesson.source_document || lesson.source_key || ""
-  if (fromLesson) return fromLesson
-  if (isSyntheticRoot && rubric) {
-    return rubric.source_document_url || rubric.source_document || rubric.source_key || rubric.sourceDocument || ""
-  }
-  return ""
 }
 
 const getPartAnswerKeyValue = (lesson, rubric, isSyntheticRoot) => {
@@ -391,27 +593,16 @@ const ObjectiveQuestionCard = ({ q, qKey, displayNumber }) => {
   const response = pickResponse(q)
   const opts = Array.isArray(q.options) ? q.options : []
   const blanks = Array.isArray(q.blanks) ? q.blanks : []
-  const qImages = collectImageUrls(q)
+  const qImages = useMemo(() => collectAllObjectiveQuestionImages(q), [q])
   const name = `preview-${qKey}`
 
-  const stem = q.natural_text ? (
-    <PreviewStemHtml html={q.natural_text} style={{ fontSize: 14, color: "#1e293b", lineHeight: 1.55 }} />
+  const stemHtml =
+    q.natural_text && extractImgSrcsFromHtml(q.natural_text).length > 0
+      ? stripImgTagsFromHtml(q.natural_text)
+      : q.natural_text
+  const stem = stemHtml ? (
+    <PreviewStemHtml html={stemHtml} style={{ fontSize: 16, color: "#1e293b", lineHeight: 1.55 }} />
   ) : null
-
-  const imageRow = qImages.length > 0 && (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
-      {qImages.map((src, i) => (
-        <img
-          key={i}
-          src={src}
-          alt=""
-          draggable={false}
-          onDragStart={(e) => e.preventDefault()}
-          style={{ maxWidth: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 8, border: "1px solid #e2e8f0" }}
-        />
-      ))}
-    </div>
-  )
 
   let body = null
 
@@ -646,10 +837,18 @@ const ObjectiveQuestionCard = ({ q, qKey, displayNumber }) => {
 
   return (
     <Card>
-      {displayNumber != null && displayNumber !== "" && <BlockNumber n={displayNumber} />}
-      {stem}
-      {imageRow}
-      {body}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        {displayNumber != null && displayNumber !== "" && (
+          <div style={{ flexShrink: 0, paddingTop: 2, paddingBottom: 2 }}>
+            <BlockNumber n={displayNumber} inline />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 , marginTop: 5}}>
+          {stem}
+          <ImageGalleryPreview urls={qImages} resetKey={qKey} />
+          {body}
+        </div>
+      </div>
     </Card>
   )
 }
@@ -659,25 +858,20 @@ const ContentBlock = ({ item, index }) => {
   const blockNum = index + 1
   if (item.block_type === "instruction" || item.block_type === "text") {
     const html = item.natural_text || ""
-    const imgs = collectImageUrls(item)
+    const mergedImgs = mergeImageUrls(item, html)
+    const htmlForStem =
+      html && extractImgSrcsFromHtml(html).length > 0 ? stripImgTagsFromHtml(html) : html
     return (
       <Card key={key}>
-        <BlockNumber n={blockNum} />
-        {html && <PreviewStemHtml html={html} style={{ fontSize: 14, color: "#334155", lineHeight: 1.55 }} />}
-        {imgs.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
-            {imgs.map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt=""
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                style={{ maxWidth: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8, border: "1px solid #e2e8f0" }}
-              />
-            ))}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flexShrink: 0, paddingTop: 2 }}>
+            <BlockNumber n={blockNum} inline />
           </div>
-        )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {htmlForStem && <PreviewStemHtml html={htmlForStem} style={{ fontSize: 14, color: "#334155", lineHeight: 1.55 }} />}
+            <ImageGalleryPreview urls={mergedImgs} resetKey={key} />
+          </div>
+        </div>
       </Card>
     )
   }
@@ -703,8 +897,14 @@ const ContentBlock = ({ item, index }) => {
   if (item.block_type === "doc-comparison") {
     return (
       <Card key={key}>
-        <BlockNumber n={blockNum} />
-        <div style={{ marginTop: 4, fontSize: 14, color: "#475569" }}>Mode: {item.comparison_mode || "—"}</div>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flexShrink: 0, paddingTop: 2 }}>
+            <BlockNumber n={blockNum} inline />
+          </div>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#475569", paddingTop: 4 }}>
+            Mode: {item.comparison_mode || "—"}
+          </div>
+        </div>
       </Card>
     )
   }
@@ -818,10 +1018,11 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
         .lesson-preview-modal-root .preview-stem img { max-width: 100%; height: auto; border-radius: 8px; -webkit-user-drag: none; user-drag: none; }
         .lesson-preview-modal-root img { -webkit-user-drag: none; user-drag: none; }
         .lesson-preview-modal-root .preview-stem p:last-child { margin-bottom: 0; }
-        .lesson-preview-ref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .lesson-preview-thumb-strip { scrollbar-width: thin; }
+        .lesson-preview-thumb-strip::-webkit-scrollbar { height: 6px; }
+        .lesson-preview-thumb-strip::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .lesson-preview-skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         @media (max-width: 700px) {
-          .lesson-preview-ref-grid { grid-template-columns: 1fr; }
           .lesson-preview-skills-grid { grid-template-columns: 1fr; }
         }
       `}</style>
@@ -922,14 +1123,14 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
                       )}
                     </div>
                   )}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", letterSpacing: "0.01em" }}>Instructions in this lesson</div>
+                  </div>
                   {(currentLesson.items || []).map((item, ii) => (
                     <ContentBlock key={`${currentLesson.id}-${item.id ?? ii}`} item={item} index={ii} />
                   ))}
                   <div style={{ marginTop: 20 }}>
-                    <div className="lesson-preview-ref-grid">
-                      <DocumentPane title="Source" value={getPartSourceValue(currentLesson, rubric, isSyntheticRootLesson)} />
-                      <DocumentPane title="Answer key" value={getPartAnswerKeyValue(currentLesson, rubric, isSyntheticRootLesson)} />
-                    </div>
+                    <DocumentPane title="Answer key" value={getPartAnswerKeyValue(currentLesson, rubric, isSyntheticRootLesson)} />
                   </div>
                 </div>
               )}

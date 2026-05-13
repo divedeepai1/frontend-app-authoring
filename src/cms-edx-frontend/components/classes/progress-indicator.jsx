@@ -5,7 +5,7 @@ const ProgressIndicator = ({ activeStep,activeStepList }) => {
     { id: 1, name: 'Class Details' },
     { id: 2, name: 'Add Students' },
     { id: 3, name: 'Assign Course(s)' },
-    { id: 4, name: 'Send Messages' }
+    // { id: 4, name: 'Send Messages' }
   ];
 
   return (

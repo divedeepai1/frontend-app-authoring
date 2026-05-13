@@ -1,13 +1,13 @@
 
-import { Table, Container } from "react-bootstrap"
+import { Table } from "react-bootstrap"
 import { RotateCcw } from "lucide-react"
 import viewIcon from "../../assests/view-icon.svg";
 import deleteIcon from "../../assests/delete-icon.svg";
-import messageIcon from "../../assests/message-icon.svg";
+// import messageIcon from "../../assests/message-icon.svg";
 import { useNavigate } from "react-router";
-import { useEffect, useState } from "react";
-import { getConfig } from "@edx/frontend-platform";
-import { fetchCsrfToken } from "../../../cms-csrftoken";
+import { useState } from "react";
+// import { getConfig } from "@edx/frontend-platform";
+// import { fetchCsrfToken } from "../../../cms-csrftoken";
 import SaveInformationForLater from "./save-information-for-later";
 import ToastContainer from "../../../compugrade/pages/MultiPartLessonBuilder/components/ui/toast";
 import { base_url } from "../../../compugrade-constants";
@@ -15,52 +15,52 @@ import { base_url } from "../../../compugrade-constants";
 
 export default function StudentTable({students,setAddStudents, nextStep, prevStep , fromTeachers , selectedIds, handleDeleteStudents, handleSelectAllStudents, handleSelectStudents,classId}) {
   const navigate = useNavigate()
-  const [unreadByEmail, setUnreadByEmail] = useState({});
+  // const [unreadByEmail, setUnreadByEmail] = useState({});
   const [resettingStudentId, setResettingStudentId] = useState(null);
   const [toasts, setToasts] = useState([]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadStatuses = async () => {
-      try {
-        const token = await fetchCsrfToken();
-        const emails = Array.from(new Set((students || []).map(s => s.email).filter(Boolean)));
-        const results = await Promise.all(emails.map(async (email) => {
-          try {
-            const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/chat/unread-status/?email=${encodeURIComponent(email)}`, {
-              method: "GET",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": token,
-              },
-            });
-            if (!res.ok) throw new Error("status failed");
-            const data = await res.json();
-            return [email, !!data?.is_unread];
-          } catch (_) {
-            return [email, false];
-          }
-        }));
-        if (!cancelled) {
-          const map = {};
-          results.forEach(([email, flag]) => { map[email] = flag; });
-          setUnreadByEmail(map);
-        }
-      } catch (_) {}
-    }
-    if (fromTeachers) loadStatuses();
-    return () => { cancelled = true; }
-  }, [students, fromTeachers])
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   const loadStatuses = async () => {
+  //     try {
+  //       const token = await fetchCsrfToken();
+  //       const emails = Array.from(new Set((students || []).map(s => s.email).filter(Boolean)));
+  //       const results = await Promise.all(emails.map(async (email) => {
+  //         try {
+  //           const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/chat/unread-status/?email=${encodeURIComponent(email)}`, {
+  //             method: "GET",
+  //             credentials: "include",
+  //             headers: {
+  //               "Content-Type": "application/json",
+  //               "X-CSRFToken": token,
+  //             },
+  //           });
+  //           if (!res.ok) throw new Error("status failed");
+  //           const data = await res.json();
+  //           return [email, !!data?.is_unread];
+  //         } catch (_) {
+  //           return [email, false];
+  //         }
+  //       }));
+  //       if (!cancelled) {
+  //         const map = {};
+  //         results.forEach(([email, flag]) => { map[email] = flag; });
+  //         setUnreadByEmail(map);
+  //       }
+  //     } catch (_) {}
+  //   }
+  //   if (fromTeachers) loadStatuses();
+  //   return () => { cancelled = true; }
+  // }, [students, fromTeachers])
 
-  const handleMessageClick = (student) => {
-    navigate("/classes/chat", {
-      state: {
-        email: student.email,
-        name: student.username || `${student.first_name} ${student.last_name}` || student.email,
-      }
-    });
-  };
+  // const handleMessageClick = (student) => {
+  //   navigate("/classes/chat", {
+  //     state: {
+  //       email: student.email,
+  //       name: student.username || `${student.first_name} ${student.last_name}` || student.email,
+  //     }
+  //   });
+  // };
 
   
   const addToast = ({ title, message, variant = "info" }) => {
@@ -110,12 +110,47 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
 
   return (
       <>
-      {!fromTeachers && <button className="primary-button float-right px-3 py-2 mb-2 mt-4" onClick={(e)=>setAddStudents(true)}> Add More Students</button>}
+      <style>{`
+        .students-table-responsive-wrap {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .students-table-responsive-wrap .activity-table {
+          width: 100%;
+          max-width: 100%;
+          table-layout: fixed;
+        }
+        .students-table-responsive-wrap .activity-table th,
+        .students-table-responsive-wrap .activity-table td {
+          word-break: break-word;
+          overflow-wrap: anywhere;
+          vertical-align: top;
+        }
+        .students-table-responsive-wrap .activity-table td.students-table-actions-cell {
+          white-space: nowrap;
+          width: 1%;
+        }
+        .students-table-responsive-wrap .activity-table th.students-table-checkbox-col,
+        .students-table-responsive-wrap .activity-table td.students-table-checkbox-col {
+          width: 44px;
+          max-width: 44px;
+        }
+      `}</style>
+      {!fromTeachers && (
+        <div className="d-flex justify-content-end flex-wrap gap-2 mb-2 mt-4 w-100">
+          <button className="primary-button px-3 py-2" type="button" onClick={(e) => setAddStudents(true)}>
+            Add More Students
+          </button>
+        </div>
+      )}
       
-      <Table bordered hover responsive="md" className="activity-table" style={{ borderRadius:"12px"}}>
+      <div className="students-table-responsive-wrap">
+      <Table bordered hover className="activity-table" style={{ borderRadius:"12px"}}>
         <thead className="table-light">
           <tr>
-            {fromTeachers &&<th>
+            {fromTeachers &&<th className="students-table-checkbox-col">
             <div className="checkbox-wrapper">
                 <label htmlFor={"student-header"} className="form-check-label">
                   <input
@@ -143,13 +178,13 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
             <th>Fist Name</th>
             <th>Last Name</th>
             <th>Email Address</th>
-            <th>Actions</th>
+            {fromTeachers && <th>Actions</th>}
           </tr>
         </thead>
         <tbody>
           {students.map((student) => (
             <tr key={student.id}>
-              {fromTeachers &&<td>
+              {fromTeachers &&<td className="students-table-checkbox-col">
               <div className="checkbox-wrapper">
                   <label htmlFor={student.id} className="form-check-label">
                     <input
@@ -174,7 +209,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                 </div>
               
               </td>}
-              <td>
+              <td style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
                 <span
                   style={{
                     textDecoration: "underline",
@@ -185,13 +220,13 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                   {student.username}
                 </span>
               </td>
-              <td>{student.first_name}</td>
-              <td>{student.last_name}</td>
-              <td>{student.email}</td>
-              <td style={{ whiteSpace: "nowrap" }}>
+              <td style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>{student.first_name}</td>
+              <td style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>{student.last_name}</td>
+              <td style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>{student.email}</td>
+              {fromTeachers && (
+              <td className="students-table-actions-cell" style={{ whiteSpace: "nowrap" }}>
                 <div className="d-inline-flex align-items-center" style={{ gap: 8 }}>
-                {fromTeachers && (
-                  <button
+                <button
                     className="btn btn-link p-1 me-2"
                     onClick={() => {
                       navigate(`/classes/${classId}/${student.id}`)
@@ -204,17 +239,15 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                   >
                     <img src={viewIcon} alt="view" />
                   </button>
-                )}
                 <button
                   className="btn btn-link p-1 me-2"
-                  onClick={() => fromTeachers && handleDeleteStudents(student.id)}
+                  onClick={() => handleDeleteStudents(student.id)}
                   style={{ border: "none", background: "none" }}
                   title="Delete student"
                   aria-label="Delete student"
                 >
                   <img src={deleteIcon} alt="delete" />
                 </button>
-                {fromTeachers && (
                   <button
                     className="btn btn-link p-1"
                     onClick={() => handleResetStudentProgress(student.id)}
@@ -234,8 +267,7 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                   >
                     <RotateCcw size={14} color={resettingStudentId === student.id ? "#9CA3AF" : "#6B7280"} />
                   </button>
-                )}
-                {fromTeachers && (
+                {/* {fromTeachers && (
                   <button
                     className="btn btn-link p-1"
                     onClick={() => {
@@ -263,13 +295,15 @@ export default function StudentTable({students,setAddStudents, nextStep, prevSte
                       )}
                     </div>
                   </button>
-                )}
+                )} */}
                 </div>
               </td>
+              )}
             </tr>
           ))}
         </tbody>
       </Table>
+      </div>
     
       {!fromTeachers &&<div className="d-flex mt-4 justify-content-between">
           <div className="d-flex">

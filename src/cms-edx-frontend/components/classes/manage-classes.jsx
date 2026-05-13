@@ -3,8 +3,8 @@ import ProgressIndicator from "./progress-indicator";
 import ClassDetails from "./class-details";
 import AddStudent from "./add-student";
 import AssignCourses from "./assign-courses";
-import ClassPreferences from "./class-preferences";
-import Messages from "./send-messages";
+// import ClassPreferences from "./class-preferences";
+// import Messages from "./send-messages";
 import { getConfig } from "@edx/frontend-platform";
 import { fetchCsrfToken } from "../../../cms-csrftoken";
 import { useNavigate, useParams } from "react-router";
@@ -15,7 +15,7 @@ const ClassManagementForm = ({isNewStudent}) => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const sanitizedStep = Math.max(parseInt(step, 10) || 1, 1);
-  const initialStep = sanitizedStep > 4 ? 4 : sanitizedStep;
+  const initialStep = sanitizedStep > 3 ? 3 : sanitizedStep;
   const [activeStep, setActiveStep] = useState(initialStep);
   const [activeStepList, setActiveStepList] = useState([1]);
   const [formData, setFormData] = useState({
@@ -37,8 +37,8 @@ const ClassManagementForm = ({isNewStudent}) => {
   useEffect(() => {
     const data = sessionStorage.getItem("classData");
 
-    if (initialStep <= 4) {
-      const completedSteps = [1, 2, 3, 4].filter((stepId) => stepId <= initialStep);
+    if (initialStep <= 3) {
+      const completedSteps = [1, 2, 3].filter((stepId) => stepId <= initialStep);
       setActiveStepList(completedSteps);
     }
 
@@ -134,12 +134,11 @@ const ClassManagementForm = ({isNewStudent}) => {
     if (activeStep == 3) {
       const token = await fetchCsrfToken();
 
-      const data = JSON.stringify({
+      const coursesData = JSON.stringify({
         courses: formData.courses,
-       
       });
       try {
-        const response = await fetch(
+        const coursesResponse = await fetch(
           `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/courses/`,
           {
             method: "POST",
@@ -148,31 +147,22 @@ const ClassManagementForm = ({isNewStudent}) => {
               "Content-Type": "application/json",
               "X-CSRFToken": token,
             },
-            body: data,
+            body: coursesData,
           }
         );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to add: ${response.status} ${errorText}`);
+        if (!coursesResponse.ok) {
+          const errorText = await coursesResponse.text();
+          throw new Error(`Failed to add: ${coursesResponse.status} ${errorText}`);
         }
-        const result = await response.json();
-        console.log("courses added successfully:", result);
+        const coursesResult = await coursesResponse.json();
+        console.log("courses added successfully:", coursesResult);
 
-      } catch (error) {
-        console.error("Error in adding:", error.message);
-      }
-    }
-
-    if (activeStep == 4) {
-      const token = await fetchCsrfToken();
-
-      const data = JSON.stringify({
-        preferences: formData.preferences,
-       
-      });
-      try {
-        const response = await fetch(
+        // Save class preferences (merged from former step 4 — Send Messages UI removed)
+        const prefsData = JSON.stringify({
+          preferences: formData.preferences,
+        });
+        const prefsResponse = await fetch(
           `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/`,
           {
             method: "PUT",
@@ -181,33 +171,22 @@ const ClassManagementForm = ({isNewStudent}) => {
               "Content-Type": "application/json",
               "X-CSRFToken": token,
             },
-            body: data,
+            body: prefsData,
           }
         );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to add: ${response.status} ${errorText}`);
+        if (!prefsResponse.ok) {
+          const errorText = await prefsResponse.text();
+          throw new Error(`Failed to update preferences: ${prefsResponse.status} ${errorText}`);
         }
-        const result = await response.json();
-        console.log("preferences added", result);
+        const prefsResult = await prefsResponse.json();
+        console.log("preferences added", prefsResult);
 
-      } catch (error) {
-        console.error("Error in adding:", error.message);
-      }
-    }
-
-    if (activeStep == 4) {
-      // Only call announcement API if announcement is provided
-      if (formData.announcement && formData.announcement.trim()) {
-        const token = await fetchCsrfToken();
-
-        const data = JSON.stringify({
-          announcement: formData.announcement,
-         
-        });
-        try {
-          const response = await fetch(
+        if (formData.announcement && formData.announcement.trim()) {
+          const annData = JSON.stringify({
+            announcement: formData.announcement,
+          });
+          const annResponse = await fetch(
             `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/announcements/`,
             {
               method: "POST",
@@ -216,22 +195,25 @@ const ClassManagementForm = ({isNewStudent}) => {
                 "Content-Type": "application/json",
                 "X-CSRFToken": token,
               },
-              body: data,
+              body: annData,
             }
           );
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to add: ${response.status} ${errorText}`);
+          if (!annResponse.ok) {
+            const errorText = await annResponse.text();
+            throw new Error(`Failed to add announcement: ${annResponse.status} ${errorText}`);
           }
-          const result = await response.json();
-        } catch (error) {
-          console.error("Error in adding:", error.message);
+          await annResponse.json();
         }
+
+        navigate("/classes");
+      } catch (error) {
+        console.error("Error in adding:", error.message);
       }
-      navigate("/classes");
+      return;
     }
-    if (activeStep < 4) {
+
+    if (activeStep < 3) {
       const nextStepValue = activeStep + 1;
       setActiveStep(nextStepValue);
       navigate(`/manage-classes/${nextStepValue}`);
@@ -302,15 +284,15 @@ const ClassManagementForm = ({isNewStudent}) => {
             prevStep={prevStep}
           />
         );
-      case 4:
-        return (
-          <Messages
-            formData={formData}
-            handleInputChange={handleInputChange}
-            nextStep={nextStep}
-            prevStep={prevStep}
-          />
-        );
+      // case 4:
+      //   return (
+      //     <Messages
+      //       formData={formData}
+      //       handleInputChange={handleInputChange}
+      //       nextStep={nextStep}
+      //       prevStep={prevStep}
+      //     />
+      //   );
       default:
         return null;
     }

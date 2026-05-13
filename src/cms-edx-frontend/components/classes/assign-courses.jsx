@@ -83,7 +83,7 @@ const AssignCourses = ({
     <div className="d-flex  justify-content-between">
       <div className="d-flex">
         <button className="primary-button px-4 py-2" onClick={nextStep}>
-          Next
+          Finish
         </button>
         <button className="secondary-button px-4 ml-3" onClick={prevStep}>
           Back
