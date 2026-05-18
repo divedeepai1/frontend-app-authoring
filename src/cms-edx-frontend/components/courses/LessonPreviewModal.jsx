@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, X } from "lucide-react"
-import { base_url } from "../../../compugrade-constants"
+import { Award, BookOpen, ChevronLeft, ChevronRight, Layers } from "lucide-react"
+import TpCheckbox from "../common/TpCheckbox"
+import TpLessonModalFrame from "../../modules/lesson-modals/components/TpLessonModalFrame"
+import { fetchRubricForTeacher, unwrapRubric } from "../../modules/lesson-modals/services/previewApi"
+import "../../theme/teachers-portal-scope.css"
 
-/** Matches `src/global.css` `.primary-button` / `.primary-text` (e.g. course Access controls). */
-const PRIMARY = "#255A71"
+const TP_ACCENT = "#27aae1"
+const TP_NAVY = "#27576b"
+const TP_TEXT = "#101828"
+const TP_MUTED = "#6a7282"
 
 const shell = {
   overlay: { background: "rgba(15, 23, 42, 0.55)" },
@@ -64,14 +69,6 @@ const PreviewStemHtml = ({ html, style, className = "preview-stem" }) => {
     return () => root.removeEventListener("click", onClickCapture, true)
   }, [safe])
   return <div ref={ref} className={className} style={style} dangerouslySetInnerHTML={{ __html: safe }} />
-}
-
-const unwrapRubric = (json) => {
-  if (!json || typeof json !== "object") return null
-  if (json.rubric && typeof json.rubric === "object") return json.rubric
-  if (json.data?.rubric && typeof json.data.rubric === "object") return json.data.rubric
-  if (json.data && typeof json.data === "object" && !Array.isArray(json.data)) return json.data
-  return json
 }
 
 const toMediaSrc = (value) => {
@@ -272,8 +269,9 @@ const Card = ({ children, style = {} }) => (
 )
 
 const SectionLabel = ({ children }) => (
-  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", color: "#64748b", textTransform: "uppercase", marginBottom: 10 }}>
-    {children}
+  <div className="tp-lesson-preview-section-head">
+    <span className="tp-lesson-preview-section-bar" aria-hidden />
+    <h3 className="tp-lesson-preview-section-title">{children}</h3>
   </div>
 )
 
@@ -318,7 +316,7 @@ const ImageGalleryPreview = ({ urls, resetKey }) => {
         <div
           style={{
             borderRadius: 10,
-            border: `2px solid ${PRIMARY}`,
+            border: `2px solid ${TP_ACCENT}`,
             background: "#f8fafc",
             padding: 6,
             display: "flex",
@@ -345,7 +343,7 @@ const ImageGalleryPreview = ({ urls, resetKey }) => {
       <div
         style={{
           borderRadius: 10,
-          border: `2px solid ${PRIMARY}`,
+          border: `2px solid ${TP_ACCENT}`,
           background: "#f8fafc",
           padding: 6,
           display: "flex",
@@ -389,7 +387,7 @@ const ImageGalleryPreview = ({ urls, resetKey }) => {
               flex: "0 0 auto",
               padding: 2,
               borderRadius: 8,
-              border: i === active ? `2px solid ${PRIMARY}` : "1px solid #e5e7eb",
+              border: i === active ? `2px solid ${TP_ACCENT}` : "1px solid #e5e7eb",
               background: "#fff",
               cursor: "pointer",
               boxSizing: "border-box",
@@ -465,7 +463,7 @@ const DocumentPane = ({ title, value }) => {
   const openFallback = (
     <div style={{ ...docPaneMediaBox, flexDirection: "column", gap: 10, padding: 16 }}>
       <span style={{ fontSize: 13, color: "#64748b", textAlign: "center" }}>This file cannot be shown inline in the preview.</span>
-      <a href={src} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 600, color: PRIMARY }}>
+      <a href={src} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 600, color: TP_ACCENT }}>
         Open in new tab
       </a>
     </div>
@@ -536,27 +534,33 @@ const partitionFoundationCertificationSkills = (skills) => {
   return { foundation, certification }
 }
 
-const skillsCardShell = { ...blockShell, marginBottom: 0 }
-
 const SkillsPreviewGrid = ({ skills }) => {
   const { foundation, certification } = useMemo(() => partitionFoundationCertificationSkills(skills), [skills])
 
   const renderColumn = (title, arr) => (
-    <div style={skillsCardShell}>
+    <div className="tp-lesson-preview-card">
       <SectionLabel>{title}</SectionLabel>
       {arr.length === 0 ? (
-        <div style={{ fontSize: 13, color: "#94a3b8", fontStyle: "italic" }}>None listed</div>
+        <p className="tp-lesson-preview-skill-empty">None listed</p>
       ) : (
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: "#334155", lineHeight: 1.45 }}>
-          {arr.map((s, i) => {
-            const name = String(s.customer_facing_name ?? "").trim() || "Skill"
-            return (
-              <li key={`${name}-${i}`} style={{ marginBottom: 8 }}>
-                <div style={{ fontWeight: 600 }}>{name}</div>
-              </li>
-            )
-          })}
-        </ul>
+        arr.map((s, i) => {
+          const name = String(s.customer_facing_name ?? "").trim() || "Skill"
+          const isCert = title.toLowerCase().includes("certification")
+          const Icon = isCert ? Layers : Award
+          return (
+            <div
+              key={`${name}-${i}`}
+              className={`tp-lesson-preview-skill-card tp-lesson-preview-skill-card--${isCert ? "cert" : "foundation"}`}
+            >
+              <div className="tp-lesson-preview-skill-icon" aria-hidden>
+                <Icon size={22} color={isCert ? TP_NAVY : TP_ACCENT} strokeWidth={2} />
+              </div>
+              <div>
+                <p className="tp-lesson-preview-skill-name">{name}</p>
+              </div>
+            </div>
+          )
+        })
       )}
     </div>
   )
@@ -575,7 +579,7 @@ const optionRowStyle = (active) => ({
   gap: 10,
   padding: "10px 12px",
   borderRadius: 8,
-  border: active ? `2px solid ${PRIMARY}` : "1px solid #e5e7eb",
+  border: active ? `2px solid ${TP_ACCENT}` : "1px solid #e5e7eb",
   background: "#fff",
   cursor: "default",
 })
@@ -583,7 +587,7 @@ const optionRowStyle = (active) => ({
 const radioStyle = {
   width: 18,
   height: 18,
-  accentColor: PRIMARY,
+  accentColor: TP_ACCENT,
   cursor: "default",
   flexShrink: 0,
 }
@@ -665,15 +669,15 @@ const ObjectiveQuestionCard = ({ q, qKey, displayNumber }) => {
       selectedSet.add(raw)
     }
     body = (
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+      <div className="cms-tp-scope" style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
         {opts.map((opt, i) => {
           const text = optionText(opt, i)
           const checked = selectedSet.has(i)
           return (
-            <label key={i} style={optionRowStyle(checked)}>
-              <input type="checkbox" checked={checked} readOnly style={{ ...radioStyle, marginTop: 2 }} />
-              <span style={{ fontSize: 14, color: "#334155", lineHeight: 1.45 }}>{text}</span>
-            </label>
+            <div key={i} style={{ ...optionRowStyle(checked), alignItems: "center" }}>
+              <TpCheckbox id={`${name}-ms-${i}`} checked={checked} readOnly ariaLabel={text} />
+              <span style={{ fontSize: 14, color: "#334155", lineHeight: 1.45, flex: 1, minWidth: 0 }}>{text}</span>
+            </div>
           )
         })}
       </div>
@@ -936,20 +940,7 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
       setRubric(null)
       setPartIndex(0)
       try {
-        const encoded = encodeURIComponent(openedxBasedId)
-        const response = await fetch(
-          `${base_url}/api/openedx/get_rubric_for_teacher?openedx_based_id=${encoded}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-          },
-        )
-        if (!response.ok) {
-          const text = await response.text()
-          throw new Error(text || "Failed to load lesson preview.")
-        }
-        const json = await response.json()
+        const json = await fetchRubricForTeacher(openedxBasedId)
         const raw = unwrapRubric(json)
         setRubric(raw && typeof raw === "object" ? raw : null)
       } catch (e) {
@@ -997,27 +988,38 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
     }
   }, [partCount, partIndex])
 
-  if (!isOpen) return null
+  const previewSubtitle =
+    partCount > 1
+      ? `Part ${safePart + 1} of ${partCount}${currentLesson?.title ? ` — ${currentLesson.title}` : ""}`
+      : title || "Lesson"
 
-  const btnBase = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "10px 18px",
-    fontSize: 13,
-    fontWeight: 600,
-    borderRadius: 8,
-    border: "none",
-    cursor: "pointer",
-    transition: "opacity 0.15s",
-  }
+  const previewFooter =
+    partCount > 1 && !loading && rubric ? (
+      <div className="tp-lesson-modal-footer-inner tp-lesson-modal-footer-inner--spread">
+        <button type="button" className="tp-btn tp-btn-secondary" onClick={goPrev} disabled={safePart <= 0}>
+          <ChevronLeft size={18} aria-hidden /> Back
+        </button>
+        <span className="tp-lesson-modal-footer-meta">{currentLesson?.title || `Part ${safePart + 1}`}</span>
+        <button type="button" className="tp-btn tp-btn-primary" onClick={goNext} disabled={safePart >= partCount - 1}>
+          Next <ChevronRight size={18} aria-hidden />
+        </button>
+      </div>
+    ) : null
 
   return (
-    <div className="lesson-preview-modal-root" style={{ position: "fixed", inset: 0, zIndex: 1050, padding: "2vh 12px 24px", overflowY: "auto" }}>
+    <TpLessonModalFrame
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Unit preview"
+      subtitle={previewSubtitle}
+      icon={BookOpen}
+      size="preview"
+      footer={previewFooter}
+    >
       <style>{`
-        .lesson-preview-modal-root .preview-stem img { max-width: 100%; height: auto; border-radius: 8px; -webkit-user-drag: none; user-drag: none; }
-        .lesson-preview-modal-root img { -webkit-user-drag: none; user-drag: none; }
-        .lesson-preview-modal-root .preview-stem p:last-child { margin-bottom: 0; }
+        .tp-lesson-modal-body .preview-stem img { max-width: 100%; height: auto; border-radius: 8px; -webkit-user-drag: none; user-drag: none; }
+        .tp-lesson-modal-body img { -webkit-user-drag: none; user-drag: none; }
+        .tp-lesson-modal-body .preview-stem p:last-child { margin-bottom: 0; }
         .lesson-preview-thumb-strip { scrollbar-width: thin; }
         .lesson-preview-thumb-strip::-webkit-scrollbar { height: 6px; }
         .lesson-preview-thumb-strip::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -1026,51 +1028,11 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
           .lesson-preview-skills-grid { grid-template-columns: 1fr; }
         }
       `}</style>
-      <div style={{ position: "fixed", inset: 0, ...shell.overlay }} onClick={onClose} role="presentation" aria-hidden />
-      <div style={{ position: "relative", margin: "0 auto", ...shell.panel }}>
-        <div style={shell.header}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: PRIMARY, textTransform: "uppercase", marginBottom: 4 }}>
-                Preview
-              </div>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>{title || "Lesson"}</h2>
-              {partCount > 1 && (
-                <div style={{ marginTop: 8, fontSize: 13, color: "#64748b" }}>
-                  Part <strong style={{ color: "#0f172a" }}>{safePart + 1}</strong> of <strong style={{ color: "#0f172a" }}>{partCount}</strong>
-                  {currentLesson?.title ? ` — ${currentLesson.title}` : ""}
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close preview"
-              style={{
-                border: "none",
-                background: "#f1f5f9",
-                borderRadius: 10,
-                padding: 8,
-                cursor: "pointer",
-                color: "#475569",
-                lineHeight: 0,
-              }}
-            >
-              <X size={22} />
-            </button>
-          </div>
-        </div>
-
-        <div style={shell.body}>
-          {error && (
-            <div style={{ padding: 12, borderRadius: 8, background: "#fef2f2", color: "#b91c1c", fontSize: 13, marginBottom: 12 }}>
-              {error}
-            </div>
-          )}
+      <div className="tp-lesson-preview-body">
+          {error && <div className="tp-lesson-modal-alert tp-lesson-modal-alert--error">{error}</div>}
           {loading && (
-            <div style={{ textAlign: "center", padding: 48, color: "#64748b", fontSize: 14 }}>
-              <div style={{ display: "inline-block", width: 28, height: 28, border: "3px solid #e2e8f0", borderTopColor: PRIMARY, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <div className="tp-lesson-preview-loading">
+              <div className="tp-lesson-preview-spinner" />
               <div style={{ marginTop: 12 }}>Loading preview…</div>
             </div>
           )}
@@ -1082,9 +1044,9 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
                   {videoSrc && (
                     <Card style={{ padding: 0, overflow: "hidden", marginBottom: 12 }}>
                       <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
-                        <SectionLabel>Video</SectionLabel>
+                        <SectionLabel>Lesson video</SectionLabel>
                       </div>
-                      <video controls src={videoSrc} style={{ width: "100%", maxHeight: 420, display: "block", background: "#0f172a" }} />
+                      <video controls src={videoSrc} style={{ width: "100%", maxHeight: 420, display: "block", background: "#101828" }} />
                     </Card>
                   )}
 
@@ -1108,24 +1070,22 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
                   {partCount <= 1 && (currentLesson.title || currentLesson.weightage != null) && (
                     <div style={{ marginBottom: 14 }}>
                       {currentLesson.title && (
-                        <div style={{ fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentLesson.title}</div>
+                        <div className="tp-lesson-preview-part-title">{currentLesson.title}</div>
                       )}
                       {currentLesson.weightage != null && (
-                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Weight {currentLesson.weightage}%</div>
+                        <div className="tp-lesson-preview-part-meta">Weight {currentLesson.weightage}%</div>
                       )}
                     </div>
                   )}
                   {partCount > 1 && (
                     <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentLesson.title || `Part ${safePart + 1}`}</div>
+                      <div className="tp-lesson-preview-part-title">{currentLesson.title || `Part ${safePart + 1}`}</div>
                       {currentLesson.weightage != null && (
-                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Weight {currentLesson.weightage}%</div>
+                        <div className="tp-lesson-preview-part-meta">Weight {currentLesson.weightage}%</div>
                       )}
                     </div>
                   )}
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", letterSpacing: "0.01em" }}>Instructions in this lesson</div>
-                  </div>
+                  <div className="tp-lesson-preview-instructions-title">Instructions in this lesson</div>
                   {(currentLesson.items || []).map((item, ii) => (
                     <ContentBlock key={`${currentLesson.id}-${item.id ?? ii}`} item={item} index={ii} />
                   ))}
@@ -1141,46 +1101,8 @@ const LessonPreviewModal = ({ isOpen, onClose, title, openedxBasedId }) => {
           {!loading && !rubric && !error && (
             <div style={{ textAlign: "center", padding: 40, color: "#94a3b8", fontSize: 14 }}>No preview data returned.</div>
           )}
-        </div>
-
-        {partCount > 1 && !loading && rubric && (
-          <div style={shell.footer}>
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={safePart <= 0}
-              style={{
-                ...btnBase,
-                background: safePart <= 0 ? "#e2e8f0" : "#fff",
-                color: safePart <= 0 ? "#94a3b8" : "#0f172a",
-                border: "1px solid #cbd5e1",
-                cursor: safePart <= 0 ? "not-allowed" : "pointer",
-              }}
-            >
-              <ChevronLeft size={18} /> Back
-            </button>
-            <div style={{ fontSize: 13, color: "#64748b", textAlign: "center", flex: 1 }}>
-              {currentLesson?.title || `Part ${safePart + 1}`}
-            </div>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={safePart >= partCount - 1}
-              className={safePart >= partCount - 1 ? undefined : "primary-button"}
-              style={{
-                ...btnBase,
-                background: safePart >= partCount - 1 ? "#e2e8f0" : undefined,
-                color: safePart >= partCount - 1 ? "#94a3b8" : undefined,
-                cursor: safePart >= partCount - 1 ? "not-allowed" : "pointer",
-              }}
-            >
-              Next <ChevronRight size={18} />
-            </button>
-          </div>
-        )}
-
       </div>
-    </div>
+    </TpLessonModalFrame>
   )
 }
 
