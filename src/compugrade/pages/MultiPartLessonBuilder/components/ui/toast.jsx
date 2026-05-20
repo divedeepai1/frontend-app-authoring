@@ -22,7 +22,7 @@ export default function ToastContainer({ toasts = [], removeToast }) {
   };
 
   return (
-    <div className="fixed top-20 right-4 z-[100] space-y-2 max-w-sm w-[92vw] sm:w-96">
+    <div className="fixed top-20 right-4 z-[1100] space-y-2 max-w-sm w-[92vw] sm:w-96">
       {toasts.map((t) => {
         const variant = variantStyles[t.variant] || variantStyles.info;
         const Icon = variant.Icon;

@@ -51,6 +51,7 @@ export default function InstructionStateUpload({
   loading,
   courseType,
   canUpload,
+  addToast,
 }) {
   const correctInputRef = useRef(null);
   const wrongInputRef = useRef(null);
@@ -88,6 +89,14 @@ const getFileTypeText = () => {
   return "";
 };
 
+const notifyInvalidFiles = () => {
+  addToast?.({
+    title: "Invalid file type",
+    message: `Please upload ${getFileTypeText()} files only.`,
+    variant: "error",
+  });
+};
+
 const handleFileSelect = async (stateType, event) => {
   const files = Array.from(event.target.files || []);
   if (files.length === 0) return;
@@ -97,6 +106,7 @@ const handleFileSelect = async (stateType, event) => {
   );
 
   if (validFiles.length === 0) {
+    notifyInvalidFiles();
     event.target.value = "";
     return;
   }
@@ -143,7 +153,10 @@ const handleFileSelect = async (stateType, event) => {
 
     const validFiles = files.filter((file) => isAllowedByExtension(file.name || ""));
 
-    if (validFiles.length === 0) return;
+    if (validFiles.length === 0) {
+      notifyInvalidFiles();
+      return;
+    }
 
     await onUploadStateFiles(stateType, validFiles);
   };

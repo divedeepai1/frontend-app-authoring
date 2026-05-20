@@ -28,6 +28,9 @@ import { useUniqueId } from "@dnd-kit/utilities";
 
 export default function LessonBuilder() {
   const { blockId, sequenceId, courseId } = useParams();
+  
+  console.log("sequenceId", sequenceId);
+  
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const [isVideoOpen, setIsVideoOpen] = useState(false);
