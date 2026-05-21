@@ -34,19 +34,25 @@ export default function LessonAttemptsModal({ isOpen, onClose, title, rubricId, 
             <label className="tp-label">Max attempts for this lesson</label>
             <select
               className="tp-input"
-              value={a.maxAttempts}
+              value={a.loading ? "" : a.maxAttempts}
               onChange={(e) => {
                 const value = e.target.value
                 a.setMaxAttempts(value === "unlimited" ? "unlimited" : Number(value))
               }}
               disabled={a.loading || a.savingClass || !!a.savingStudentId}
             >
-              {a.attemptOptions.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-              <option value="unlimited">Unlimited Attempts</option>
+              {a.loading ? (
+                <option value="">Loading default attempts…</option>
+              ) : (
+                <>
+                  {a.attemptOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                  <option value="unlimited">Unlimited Attempts</option>
+                </>
+              )}
             </select>
           </div>
           <button

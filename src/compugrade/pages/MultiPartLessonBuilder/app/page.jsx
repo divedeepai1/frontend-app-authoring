@@ -2322,11 +2322,13 @@ export default function LessonBuilder() {
           onClose={() => setAssessmentTimerOpen(false)}
           initialTimerMode={lessonConfig?.timer_mode}
           initialTimeAllowed={lessonConfig?.time_allowed}
-          onSave={({ timer_mode, time_allowed }) => {
+          initialNumOfAttempts={lessonConfig?.num_of_attempts}
+          onSave={({ timer_mode, time_allowed, num_of_attempts }) => {
             setLessonConfig((current) => ({
               ...current,
               timer_mode,
               time_allowed,
+              num_of_attempts,
             }));
           }}
         />

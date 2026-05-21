@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { tpToast } from "../../../components/common/tpToast"
 import * as api from "../services/rubricSettingsApi"
+import { fetchRubricForTeacher, unwrapRubric } from "../services/previewApi"
 import { mapStudentDisplay, normalizeStudentIds } from "../utils/students"
 import {
   buildAttemptOptions,
-  getRubricAttemptsAllotted,
   MAX_ATTEMPTS,
   MIN_ATTEMPTS,
   normalizeAttemptsPayload,
+  parseAttemptsLimitValue,
+  resolveClassAttemptsLimit,
+  toDropdownAttemptsValue,
   toStudentAttemptMap,
 } from "../utils/attempts"
 
 export function useLessonAttempts({ isOpen, rubricId, students }) {
-  const [maxAttempts, setMaxAttempts] = useState(1)
+  const [maxAttempts, setMaxAttempts] = useState(MIN_ATTEMPTS)
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
@@ -41,16 +44,15 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
       setError("")
       setSuccess("")
       try {
-        const json = await api.fetchRubricNumAttempts(rubricId, studentIds)
+        const [json, rubricJson] = await Promise.all([
+          api.fetchRubricNumAttempts(rubricId, studentIds),
+          fetchRubricForTeacher(rubricId).catch(() => null),
+        ])
         const data = normalizeAttemptsPayload(json)
-        const loadedClassMax = getRubricAttemptsAllotted(data)
-        const parsedClassMax = Number(loadedClassMax)
-        const safeClassMax =
-          loadedClassMax === null
-            ? "unlimited"
-            : Number.isInteger(parsedClassMax) && parsedClassMax >= MIN_ATTEMPTS
-              ? Math.min(parsedClassMax, MAX_ATTEMPTS)
-              : 1
+        const rubric = unwrapRubric(rubricJson)
+        const rubricDefaultAttempts = parseAttemptsLimitValue(rubric?.num_of_attempts)
+        const resolvedClassMax = resolveClassAttemptsLimit(json, data, rubricDefaultAttempts)
+        const safeClassMax = toDropdownAttemptsValue(resolvedClassMax, rubricDefaultAttempts)
         setMaxAttempts(safeClassMax)
 
         const studentAttemptMap = toStudentAttemptMap(data)
@@ -60,12 +62,18 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
             const id = String(base.id)
             const allottedValue = studentAttemptMap[id]?.allotted
             const numberOfAttemptsValue = studentAttemptMap[id]?.numberOfAttempts
+            const fallbackAllotted =
+              safeClassMax === "unlimited"
+                ? null
+                : Number.isInteger(safeClassMax)
+                  ? safeClassMax
+                  : MIN_ATTEMPTS
             const attemptsAllotted =
               allottedValue === null
                 ? null
                 : Number.isInteger(allottedValue) && allottedValue >= MIN_ATTEMPTS
                   ? Math.min(allottedValue, MAX_ATTEMPTS)
-                  : safeClassMax
+                  : fallbackAllotted
             const numberOfAttempts =
               numberOfAttemptsValue === null
                 ? null
@@ -78,11 +86,32 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
       } catch {
         setError("Unable to load attempt settings right now.")
         if (!silent) {
-          setMaxAttempts(1)
+          let fallbackMax = MIN_ATTEMPTS
+          try {
+            const rubricJson = await fetchRubricForTeacher(rubricId)
+            const rubric = unwrapRubric(rubricJson)
+            fallbackMax = toDropdownAttemptsValue(
+              parseAttemptsLimitValue(rubric?.num_of_attempts),
+              MIN_ATTEMPTS
+            )
+          } catch {
+            fallbackMax = MIN_ATTEMPTS
+          }
+          setMaxAttempts(fallbackMax)
+          const fallbackAllotted =
+            fallbackMax === "unlimited"
+              ? null
+              : Number.isInteger(fallbackMax)
+                ? fallbackMax
+                : MIN_ATTEMPTS
           setRows(
             (students || []).map((student) => {
               const base = mapStudentDisplay(student)
-              return { ...base, attemptsAllotted: 1, numberOfAttempts: 1 }
+              return {
+                ...base,
+                attemptsAllotted: fallbackAllotted,
+                numberOfAttempts: fallbackAllotted,
+              }
             })
           )
         }
@@ -95,7 +124,7 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
 
   useEffect(() => {
     if (!isOpen) {
-      setMaxAttempts(1)
+      setMaxAttempts(MIN_ATTEMPTS)
       setRows([])
       setSearch("")
       setLoading(false)
