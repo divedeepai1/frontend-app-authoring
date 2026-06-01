@@ -140,8 +140,8 @@ const ActivityFeed = ({ classes, setClasses }) => {
                     <td>
                       <div className="tp-cell-strong">{cls.name}</div>
                     </td>
-                    <td>{cls.grade}</td>
-                    <td>{cls.period}</td>
+                    <td>{cls.grade != null && cls.grade !== "" ? cls.grade : "—"}</td>
+                    <td>{cls.period != null && cls.period !== "" ? cls.period : "—"}</td>
                     <td>{cls?.students?.length ?? 0}</td>
                     <td>
                       <div className="tp-cell-truncate" title={cls?.courses?.map((c) => c.display_name).join(", ")}>

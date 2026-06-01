@@ -19,6 +19,12 @@ export async function fetchCoursesList() {
   return res.json()
 }
 
+const normalizeOptionalClassNumber = (value) => {
+  if (value === null || value === undefined || value === "") return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 export async function saveClassroom({ name, grade, period }, existingClassId) {
   const base = `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/`
   const url = existingClassId ? `${base}${existingClassId}/` : base
@@ -26,7 +32,11 @@ export async function saveClassroom({ name, grade, period }, existingClassId) {
     method: existingClassId ? "PUT" : "POST",
     credentials: "include",
     headers: await jsonHeaders(),
-    body: JSON.stringify({ name, grade, period }),
+    body: JSON.stringify({
+      name,
+      grade: normalizeOptionalClassNumber(grade),
+      period: normalizeOptionalClassNumber(period),
+    }),
   })
   if (!res.ok) throw new Error(await res.text() || String(res.status))
   return res.json()

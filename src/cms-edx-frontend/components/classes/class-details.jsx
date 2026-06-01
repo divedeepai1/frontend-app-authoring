@@ -15,7 +15,7 @@ const ClassDetails = ({ formData, handleInputChange, nextStep, embedInModal = fa
       className="tp-class-details"
     >
       <h3 className="tp-title">Class Details</h3>
-      <p className="tp-subtitle">Name your class and set grade and period.</p>
+      <p className="tp-subtitle">Name your class. Grade and period are optional.</p>
       <div className="tp-field">
         <label htmlFor="name" className="tp-label">
           Class Name *
@@ -33,7 +33,7 @@ const ClassDetails = ({ formData, handleInputChange, nextStep, embedInModal = fa
       <div className="tp-grid-2 tp-field-row">
         <div>
           <label htmlFor="grade" className="tp-label">
-            Grade *
+            Grade (optional)
           </label>
           <input
             type="number"
@@ -45,12 +45,11 @@ const ClassDetails = ({ formData, handleInputChange, nextStep, embedInModal = fa
             name="grade"
             value={formData.grade}
             onChange={handleInputChange}
-            required
           />
         </div>
         <div>
           <label htmlFor="period" className="tp-label">
-            Period number *
+            Period number (optional)
           </label>
           <input
             type="number"
@@ -62,7 +61,6 @@ const ClassDetails = ({ formData, handleInputChange, nextStep, embedInModal = fa
             name="period"
             value={formData.period}
             onChange={handleInputChange}
-            required
           />
         </div>
       </div>
