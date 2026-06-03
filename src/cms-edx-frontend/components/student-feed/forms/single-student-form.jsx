@@ -1,156 +1,170 @@
-import React, { useState } from "react";
+import { useState } from "react"
+import { fetchCsrfToken } from "../../../../cms-csrftoken"
+import { getConfig } from "@edx/frontend-platform"
+import { useNavigate } from "react-router"
+import { tpToast } from "../../common/tpToast"
 
-import { fetchCsrfToken } from '../../../../cms-csrftoken';
-import { getConfig } from '@edx/frontend-platform';
-import { useNavigate } from "react-router";
-
-
-const SingleStudentForm = ({ setSelectedOption ,setAddStudents, isNewStudent, onStudentAdded}) => {
-  const navigate= useNavigate();
+const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStudentAdded }) => {
+  const navigate = useNavigate()
   const [studentData, setStudentData] = useState({
     username: "",
     firstName: "",
     lastName: "",
     password: "",
     email: "",
-  });
+  })
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     if ((name === "firstName" || name === "lastName") && /[^a-zA-Z\s]/.test(value)) {
-      return; 
+      return
     }
     setStudentData((prev) => ({
       ...prev,
       [name]: value,
-    }));
-  };
+    }))
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-          
-              const id= sessionStorage.getItem('classId');
-              const token= await fetchCsrfToken();
-              
-              const data = JSON.stringify({
-                username: studentData.username,
-                first_name: studentData.firstName,
-                password: studentData.password,
-                last_name: studentData.lastName,
-                email: studentData.email,
-              });
-              try {
-                const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${id}/add-student/`, {
-                  method: 'POST',
-                  credentials: 'include',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': token,
-                  },
-                  body: data,
-                });
-              
-                if (!response.ok) {
-                  const errorText = await response.text();
-                  throw new Error(`Failed to add: ${response.status} ${errorText}`);
-                }
-                const result = await response.json();
-                if(isNewStudent){
-                  navigate(-1)
-                }
-                else{
-                  if (onStudentAdded) {
-                    onStudentAdded();
-                  } else {
-                    setAddStudents(false);
-                  }
-                }
-              } catch (error) {
-                console.error('Error in adding:', error.message);
-                
-              }
-              };
-    
-    
-  
+    e.preventDefault()
+
+    const id = sessionStorage.getItem("classId")
+    const token = await fetchCsrfToken()
+
+    const data = JSON.stringify({
+      username: studentData.username,
+      first_name: studentData.firstName,
+      password: studentData.password,
+      last_name: studentData.lastName,
+      email: studentData.email,
+    })
+
+    try {
+      const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${id}/add-student/`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": token,
+        },
+        body: data,
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to add: ${response.status} ${errorText}`)
+      }
+
+      await response.json()
+      tpToast.success("Student added successfully")
+      if (isNewStudent) {
+        navigate(-1)
+      } else if (onStudentAdded) {
+        onStudentAdded()
+      } else {
+        setAddStudents(false)
+      }
+    } catch (error) {
+      tpToast.error("Unable to add student", error?.message || "Please try again.")
+    }
+  }
+
+  const handleCancel = () => {
+    setSelectedOption(null)
+    setAddStudents(false)
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 class-div-style">
-      <h3 className="primary-text">Add a Single Student to your class</h3>
-      <div className="row">
-        <div className="col-md-6 mt-3">
-          <div className="mt-2">
-            <label>Student's Username *</label>
-            <input
-              name="username"
-              value={studentData.username}
-              onChange={handleChange}
-              required
-              className="form-control bg-transparent mb-2"
-            />
-          </div>
-          <div className="mt-2">
-            <label>Student's First Name *</label>
-            <input
-              name="firstName"
-              value={studentData.firstName}
-              onChange={handleChange}
-              required
-              className="form-control bg-transparent mb-2"
-            />
-          </div>
-        </div>
-        <div className="col-md-6 mt-3">
-          <div className="mt-2">
-            <label>Student's Password *</label>
-            <input
-              name="password"
-              value={studentData.password}
-              onChange={handleChange}
-              required
-              className="form-control bg-transparent mb-2"
-            />
-          </div>
-          <div className="mt-2">
-            <label>Student's Last Name *</label>
-            <input
-              name="lastName"
-              value={studentData.lastName}
-              onChange={handleChange}
-              required
-              className="form-control bg-transparent mb-2"
-            />
-          </div>
-        </div>
-        <div className="col-md-12 mt-2">
-          <label>Student Email Address *</label>
+    <form onSubmit={handleSubmit} className="tp-student-form">
+      <h3 className="tp-title tp-student-form-title">Add a single student</h3>
+      <p className="tp-subtitle tp-student-form-desc">Enter student details to add them to this class.</p>
+
+      <div className="tp-grid-2">
+        <div className="tp-field">
+          <label className="tp-label" htmlFor="tp-student-username">
+            Student username <span className="tp-required">*</span>
+          </label>
           <input
-            type="email"
-            name="email"
-            value={studentData.email}
+            id="tp-student-username"
+            name="username"
+            value={studentData.username}
             onChange={handleChange}
             required
-            className="form-control bg-transparent mb-2"
+            className="tp-input"
+            autoComplete="off"
+          />
+        </div>
+        <div className="tp-field">
+          <label className="tp-label" htmlFor="tp-student-password">
+            Password <span className="tp-required">*</span>
+          </label>
+          <input
+            id="tp-student-password"
+            name="password"
+            type="password"
+            value={studentData.password}
+            onChange={handleChange}
+            required
+            className="tp-input"
+            autoComplete="new-password"
+          />
+        </div>
+        <div className="tp-field">
+          <label className="tp-label" htmlFor="tp-student-first-name">
+            First name <span className="tp-required">*</span>
+          </label>
+          <input
+            id="tp-student-first-name"
+            name="firstName"
+            value={studentData.firstName}
+            onChange={handleChange}
+            required
+            className="tp-input"
+            autoComplete="given-name"
+          />
+        </div>
+        <div className="tp-field">
+          <label className="tp-label" htmlFor="tp-student-last-name">
+            Last name <span className="tp-required">*</span>
+          </label>
+          <input
+            id="tp-student-last-name"
+            name="lastName"
+            value={studentData.lastName}
+            onChange={handleChange}
+            required
+            className="tp-input"
+            autoComplete="family-name"
           />
         </div>
       </div>
-      <div className="mt-2">
-        <button className="primary-button px-4 py-2" type="submit">
-          Add Student
+
+      <div className="tp-field">
+        <label className="tp-label" htmlFor="tp-student-email">
+          Email address <span className="tp-required">*</span>
+        </label>
+        <input
+          id="tp-student-email"
+          type="email"
+          name="email"
+          value={studentData.email}
+          onChange={handleChange}
+          required
+          className="tp-input"
+          autoComplete="email"
+        />
+      </div>
+
+      <div className="tp-student-form-actions">
+        <button type="submit" className="tp-btn tp-btn-primary">
+          Add student
         </button>
-        <button
-          type="button"
-          className="secondary-button px-4 py-2 ml-3"
-          onClick={() => {
-            setSelectedOption(null);
-            setAddStudents(false);
-          }}
-        >
+        <button type="button" className="tp-btn tp-btn-secondary" onClick={handleCancel}>
           Cancel
         </button>
       </div>
     </form>
-  );
-};
+  )
+}
 
-export default SingleStudentForm;
+export default SingleStudentForm

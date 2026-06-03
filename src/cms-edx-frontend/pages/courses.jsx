@@ -1,30 +1,17 @@
-import HeaderTop from "../../header";
-import { Header } from "../components/header";
-import { ManagementSection } from "../components/management-section";
-import CourseScreen from "../components/courses/course-screen";
-import { Container } from "react-bootstrap";
+import TeacherPortalShell from "../layout/TeacherPortalShell"
+import ManageCourseApp from "../modules/manage-course/ManageCourseApp"
+import "../theme/teachers-portal-scope.css"
 
-const Courses = () => {
-  return (
-    <div>
-      <HeaderTop isHiddenMainMenu />
-      <div className="min-vh-100 bg-white">
-        <Header
-          heading="Manage Courses & Curriculum"
-          bg="linear-gradient(90deg, #255A71 0%, #0096D7 100%)"
-          color="white"
-          outline="outline-white-button"
-        />
-        <ManagementSection />
-
-        <section className="px-5">
-          <Container>
-            <CourseScreen />
-          </Container>
-        </section>
-      </div>
+const Courses = () => (
+  <div className="min-vh-100 bg-white d-flex flex-column">
+    <div className="cms-tp-scope flex-grow-1 d-flex flex-column min-vh-0">
+      <TeacherPortalShell headerTitle="Manage Courses & Curriculum">
+        <div className="tp-portal-page">
+          <ManageCourseApp />
+        </div>
+      </TeacherPortalShell>
     </div>
-  );
-};
+  </div>
+)
 
-export default Courses;
+export default Courses

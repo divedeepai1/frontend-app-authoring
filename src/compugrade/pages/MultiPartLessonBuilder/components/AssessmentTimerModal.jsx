@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Clock3, X } from "lucide-react";
+import { ChevronDown, Clock3, Settings, X } from "lucide-react";
 import HeaderActionButton from "./ui/HeaderActionButton";
 
 const TIMER_MODE_OPTIONS = [
@@ -101,10 +101,18 @@ const ScrollableDropdown = ({ label, value, options, suffix, placeholder, disabl
   );
 };
 
-export default function AssessmentTimerModal({ open, onClose, initialTimerMode, initialTimeAllowed, onSave }) {
+export default function AssessmentTimerModal({
+  open,
+  onClose,
+  initialTimerMode,
+  initialTimeAllowed,
+  initialNumOfAttempts,
+  onSave,
+}) {
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
   const [timerMode, setTimerMode] = useState("");
+  const [numOfAttempts, setNumOfAttempts] = useState("3");
   const [error, setError] = useState("");
 
   const hourOptions = useMemo(
@@ -134,8 +142,13 @@ export default function AssessmentTimerModal({ open, onClose, initialTimerMode, 
       setMinutes("");
     }
     setTimerMode(initialTimerMode === "display" || initialTimerMode === "lock" ? initialTimerMode : "");
+    setNumOfAttempts(
+      initialNumOfAttempts === null || initialNumOfAttempts === undefined
+        ? "infinity"
+        : String(initialNumOfAttempts || 3),
+    );
     setError("");
-  }, [open, initialTimeAllowed, initialTimerMode]);
+  }, [open, initialTimeAllowed, initialTimerMode, initialNumOfAttempts]);
 
   const handleSave = () => {
     const parsedHours = Number(hours);
@@ -161,6 +174,8 @@ export default function AssessmentTimerModal({ open, onClose, initialTimerMode, 
     onSave({
       timer_mode: timerMode,
       time_allowed: String(totalSeconds),
+      num_of_attempts:
+        numOfAttempts === "infinity" ? null : parseInt(numOfAttempts, 10),
     });
     onClose();
   };
@@ -177,8 +192,8 @@ export default function AssessmentTimerModal({ open, onClose, initialTimerMode, 
               <Clock3 className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <div className="text-base font-semibold">Lesson timer setup</div>
-              <p className="text-xs text-gray-500">Configure assessment mode timer settings</p>
+              <div className="text-base font-semibold">Assessment timer setup</div>
+              <p className="text-xs text-gray-500">Configure assessment timer settings</p>
             </div>
           </div>
           <div className="p-1 rounded hover:bg-gray-100 border-none cursor-pointer" onClick={onClose}>
@@ -192,6 +207,29 @@ export default function AssessmentTimerModal({ open, onClose, initialTimerMode, 
               {error}
             </div>
           )}
+
+          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-50">
+                  <Settings className="w-5 h-5 text-green-600" />
+                </div>
+                <label className="text-sm font-semibold text-gray-900">Number of Attempts</label>
+              </div>
+              <select
+                value={numOfAttempts}
+                onChange={(event) => setNumOfAttempts(event.target.value)}
+                className="block w-28 rounded-md border border-gray-300 py-1.5 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm sm:leading-6"
+              >
+                <option value="infinity">Infinity</option>
+                {[...Array(20)].map((_, index) => (
+                  <option key={index + 1} value={index + 1}>
+                    {index + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
             <div className="mb-2">

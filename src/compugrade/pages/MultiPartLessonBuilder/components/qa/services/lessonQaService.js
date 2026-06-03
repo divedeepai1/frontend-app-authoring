@@ -1,5 +1,66 @@
 import { base_url } from "../../../../../../compugrade-constants";
 
+async function parseResponseBody(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function extractApiMessage(data, fallback = "") {
+  if (!data) return fallback;
+  if (typeof data === "string") return data.trim() || fallback;
+
+  const candidates = [
+    data.message,
+    data.error_message,
+    data.success_message,
+    data.status_message,
+    data.msg,
+    data.detail,
+    data.error,
+    data.description,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  if (Array.isArray(data.detail)) {
+    const detailMessage = data.detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return item?.message || item?.msg || item?.detail || "";
+      })
+      .filter(Boolean)
+      .join(", ");
+    if (detailMessage) return detailMessage;
+  }
+
+  if (data.error && typeof data.error === "object") {
+    const nested = extractApiMessage(data.error, "");
+    if (nested) return nested;
+  }
+
+  return fallback;
+}
+
+function extractApiTitle(data, fallback = "") {
+  if (!data || typeof data !== "object") return fallback;
+
+  const candidates = [data.title, data.success_title, data.error_title];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return fallback;
+}
+
 function getFileNameFromUrl(url) {
   if (!url || typeof url !== "string") return "state file";
   const withoutQuery = url.split("?")[0];
@@ -52,11 +113,13 @@ export async function getLessonQaStates(subRubricId) {
     },
   );
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch QA states (${response.status})`);
-  }
+  const data = await parseResponseBody(response);
 
-  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(
+      extractApiMessage(data, `Failed to fetch QA states (${response.status})`),
+    );
+  }
   const list = data?.states || [];
 
   return list.map(normalizeQaState).filter((s) => s.id && s.rubricItemId);
@@ -82,11 +145,22 @@ export async function uploadQaState({
     },
   );
 
+  const data = await parseResponseBody(response);
+
   if (!response.ok) {
-    throw new Error(`Failed to upload QA state (${response.status})`);
+    const error = new Error(
+      extractApiMessage(data, `Failed to upload QA state (${response.status})`),
+    );
+    error.title = extractApiTitle(data, "Upload failed");
+    throw error;
   }
 
-  const data = await response.json();
+  if (data?.success === false) {
+    const error = new Error(extractApiMessage(data, "Upload failed"));
+    error.title = extractApiTitle(data, "Upload failed");
+    throw error;
+  }
+
   const candidate =
     data?.document_url ||
     data?.display_name ||
@@ -109,7 +183,15 @@ export async function uploadQaState({
       return normalizeQaState(data.qa_states[0] || {});
   }
 
-  return normalizeQaState(candidate || data);
+  const state = normalizeQaState(candidate || data);
+  const apiMessage = extractApiMessage(data, "");
+  const apiTitle = extractApiTitle(data, "");
+
+  return {
+    ...state,
+    apiMessage,
+    apiTitle,
+  };
 }
 
 export async function deleteQaState({ subRubricId, stateId }) {
@@ -123,8 +205,14 @@ export async function deleteQaState({ subRubricId, stateId }) {
     },
   );
 
+  const data = await parseResponseBody(response);
+
   if (!response.ok) {
-    throw new Error(`Failed to delete QA state (${response.status})`);
+    const error = new Error(
+      extractApiMessage(data, `Failed to delete QA state (${response.status})`),
+    );
+    error.title = extractApiTitle(data, "Delete failed");
+    throw error;
   }
 }
 

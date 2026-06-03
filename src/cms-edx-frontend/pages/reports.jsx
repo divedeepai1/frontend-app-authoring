@@ -1,28 +1,17 @@
+import TeacherPortalShell from "../layout/TeacherPortalShell"
+import ReportsApp from "../modules/reports/ReportsApp"
+import "../theme/teachers-portal-scope.css"
 
-import HeaderTop from '../../header';
-import { Header } from '../components/header';
-import { ManagementSection } from "../components/management-section";
-import ReportsDashboard from '../components/reports/reports';
-import { Container} from "react-bootstrap"
-
-
-const Reports = () => {
-    return (
-       <div>
-         <HeaderTop isHiddenMainMenu/>
-        <div className="min-vh-100 bg-white">
-        <Header heading="Reports" bg="linear-gradient(90deg, #255A71 0%, #0096D7 100%)"  color="white" outline="outline-white-button"/>
-        <ManagementSection />
-        <section className="px-5">
-        <Container>
-        
-          <ReportsDashboard />
-          </Container>
-        </section>
+const Reports = () => (
+  <div className="min-vh-100 bg-white d-flex flex-column">
+    <div className="cms-tp-scope flex-grow-1 d-flex flex-column min-vh-0">
+      <TeacherPortalShell headerTitle="Reports">
+        <div className="tp-portal-page">
+          <ReportsApp />
         </div>
-       </div>
-       
-    );
-};
+      </TeacherPortalShell>
+    </div>
+  </div>
+)
 
-export default Reports;
+export default Reports

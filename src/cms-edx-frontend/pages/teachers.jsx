@@ -1,37 +1,69 @@
-import HeaderTop from "../../header";
-import { Header } from "../components/header";
-import DeleteModal from "../components/common/delete-modal";
-import { ManagementSection } from "../components/management-section";
-import { Container } from "react-bootstrap";
-import { useNavigate, useParams } from "react-router";
-import { fetchCsrfToken } from "../../cms-csrftoken";
-import { getConfig } from "@edx/frontend-platform";
-import { useEffect, useState } from "react";
-import TeachersTable from "../components/classes/teachers-table";
-import StudentTable from "../components/classes/students-table";
+import TpDeleteConfirmationModal from "../components/common/TpDeleteConfirmationModal"
+import TpPortalSearchField from "../components/common/TpPortalSearchField"
+import TeacherPortalShell from "../layout/TeacherPortalShell"
+import ManageClassModalFrame from "../modules/manage-classes/components/ManageClassModalFrame"
+import { useNavigate, useParams } from "react-router"
+import { fetchCsrfToken } from "../../cms-csrftoken"
+import { getConfig } from "@edx/frontend-platform"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Pencil } from "lucide-react"
+import TeachersTable from "../components/classes/teachers-table"
+import StudentTable from "../components/classes/students-table"
+import { tpToast } from "../components/common/tpToast"
+import "../theme/teachers-portal-scope.css"
 
 const Teachers = () => {
-  const { classId } = useParams();
-  const navigate = useNavigate();
+  const { classId } = useParams()
+  const navigate = useNavigate()
 
   const [teacherState, setTeacherState] = useState({
     list: [],
     selectedEmails: [],
     showDeleteModal: false,
-  });
+  })
 
-  const [teacherSearch, setTeacherSearch] = useState("");
+  const [teacherSearch, setTeacherSearch] = useState("")
 
   const [studentState, setStudentState] = useState({
     list: [],
     selectedIds: [],
     showDeleteModal: false,
-  });
+  })
 
-  const [studentSearch, setStudentSearch] = useState("");
+  const [studentSearch, setStudentSearch] = useState("")
+
+  const pendingTeacherDeleteRef = useRef([])
+  const pendingStudentDeleteRef = useRef([])
+
+  const classMeta = useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem("classData")
+      if (!raw) return null
+      const d = JSON.parse(raw)
+      return d && typeof d === "object" ? d : null
+    } catch {
+      return null
+    }
+  }, [classId])
+
+  const modalTitle = classMeta?.name?.trim() || `Class ${classId}`
+  const modalSubtitle = "View teachers and students assigned to this class."
+
+  const closeClassView = useCallback(() => {
+    navigate("/classes")
+  }, [navigate])
+
+  const goEditClass = useCallback(() => {
+    sessionStorage.setItem("manageClassMode", "edit")
+    sessionStorage.setItem("classId", String(classId))
+    if (!sessionStorage.getItem("classData") && classMeta) {
+      sessionStorage.setItem("classData", JSON.stringify(classMeta))
+    }
+    navigate("/manage-classes/1")
+  }, [classId, classMeta, navigate])
 
   const fetchTeachers = async () => {
-    const token = await fetchCsrfToken();
+    const token = await fetchCsrfToken()
     try {
       const response = await fetch(
         `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/teachers/`,
@@ -43,21 +75,21 @@ const Teachers = () => {
             "X-CSRFToken": token,
           },
         }
-      );
+      )
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to get: ${response.status} ${errorText}`);
+        const errorText = await response.text()
+        throw new Error(`Failed to get: ${response.status} ${errorText}`)
       }
-      const result = await response.json();
-      setTeacherState(prev => ({ ...prev, list: result?.all_teachers || [] }));
-    } catch (error) {
-      console.error("Error:", error.message);
+      const result = await response.json()
+      setTeacherState((prev) => ({ ...prev, list: result?.all_teachers || [] }))
+    } catch {
+      setTeacherState((prev) => ({ ...prev, list: [] }))
     }
-  };
+  }
 
   const fetchStudents = async () => {
-    const token = await fetchCsrfToken();
+    const token = await fetchCsrfToken()
     try {
       const response = await fetch(
         `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students-list/`,
@@ -69,298 +101,309 @@ const Teachers = () => {
             "X-CSRFToken": token,
           },
         }
-      );
+      )
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to get: ${response.status} ${errorText}`);
+        const errorText = await response.text()
+        throw new Error(`Failed to get: ${response.status} ${errorText}`)
       }
-      const result = await response.json();
-      setStudentState(prev => ({ ...prev, list: result?.students || [] }));
-    } catch (error) {
-      console.error("Error:", error.message);
+      const result = await response.json()
+      setStudentState((prev) => ({ ...prev, list: result?.students || [] }))
+    } catch {
+      setStudentState((prev) => ({ ...prev, list: [] }))
     }
-  };
+  }
 
   useEffect(() => {
-    sessionStorage.setItem("classId", classId);
-    fetchStudents();
-    fetchTeachers();
-  }, []);
+    sessionStorage.setItem("classId", classId)
+    fetchStudents()
+    fetchTeachers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload lists when class id changes
+  }, [classId])
 
   const filteredTeachers = teacherState.list.filter((t) => {
-    const q = teacherSearch.trim().toLowerCase();
-    if (!q) return true;
+    const q = teacherSearch.trim().toLowerCase()
+    if (!q) return true
     return (
       (t.username || "").toLowerCase().includes(q) ||
       (t.email || "").toLowerCase().includes(q)
-    );
-  });
+    )
+  })
 
   const filteredStudents = studentState.list.filter((s) => {
-    const q = studentSearch.trim().toLowerCase();
-    if (!q) return true;
+    const q = studentSearch.trim().toLowerCase()
+    if (!q) return true
     return (
       (s.username || "").toLowerCase().includes(q) ||
       (s.first_name || "").toLowerCase().includes(q) ||
       (s.last_name || "").toLowerCase().includes(q) ||
       (s.email || "").toLowerCase().includes(q)
-    );
-  });
+    )
+  })
 
   const handleSelectTeachers = (email) => {
-    setTeacherState(prev => ({
+    setTeacherState((prev) => ({
       ...prev,
       selectedEmails: prev.selectedEmails.includes(email)
         ? prev.selectedEmails.filter((i) => i !== email)
         : [...prev.selectedEmails, email],
-    }));
-  };
+    }))
+  }
 
   const handleSelectAllTeachers = () => {
-    setTeacherState(prev => ({
+    setTeacherState((prev) => ({
       ...prev,
       selectedEmails:
-        prev.selectedEmails.length === prev.list.length
-          ? []
-          : prev.list.map((t) => t.email),
-    }));
-  };
+        prev.selectedEmails.length === prev.list.length ? [] : prev.list.map((t) => t.email),
+    }))
+  }
 
-  const handleDeleteTeachers = async (email) => {
-    if (!email?.target) {
-      setTeacherState(prev => ({ ...prev, selectedEmails: [email] }));
-    }
-    setTeacherState(prev => ({ ...prev, showDeleteModal: true }));
-  };
-
- 
+  const openTeacherDeleteConfirm = useCallback((email) => {
+    setTeacherState((prev) => {
+      const emails =
+        typeof email === "string" && email ? [email] : [...prev.selectedEmails]
+      if (!emails.length) return prev
+      pendingTeacherDeleteRef.current = emails
+      return { ...prev, selectedEmails: emails, showDeleteModal: true }
+    })
+  }, [])
 
   const handleSelectStudents = (id) => {
-    setStudentState(prev => ({
+    setStudentState((prev) => ({
       ...prev,
       selectedIds: prev.selectedIds.includes(id)
         ? prev.selectedIds.filter((i) => i !== id)
         : [...prev.selectedIds, id],
-    }));
-  };
+    }))
+  }
 
   const handleSelectAllStudents = () => {
-    setStudentState(prev => ({
+    setStudentState((prev) => ({
       ...prev,
       selectedIds:
-        prev.selectedIds.length === prev.list.length
-          ? []
-          : prev.list.map((s) => s.id),
-    }));
-  };
+        prev.selectedIds.length === prev.list.length ? [] : prev.list.map((s) => s.id),
+    }))
+  }
 
-  const handleDeleteStudents = async (id) => {
-    
-    if (!id?.target) {
-      setStudentState(prev => ({ ...prev, selectedIds: [id] }));
-    }
-    setStudentState(prev => ({ ...prev, showDeleteModal: true }));
-  };
+  const openStudentDeleteConfirm = useCallback((id) => {
+    setStudentState((prev) => {
+      const isSingle = typeof id === "number" || typeof id === "string"
+      const ids = isSingle ? [id] : [...prev.selectedIds]
+      if (!ids.length) return prev
+      pendingStudentDeleteRef.current = ids
+      return { ...prev, selectedIds: ids, showDeleteModal: true }
+    })
+  }, [])
 
-  const deleteAllTeacher = async () => {
-    const token = await fetchCsrfToken();
-    try {
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/teachers/`, 
-        {
-          method: "DELETE",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-          body: JSON.stringify({
-            emails: teacherState.selectedEmails,
-          }),
-        }
-      );
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to delete: ${response.status} ${errorText}`);
-      }
-  
-      
-      await fetchTeachers();
-      setTeacherState(prev => ({
-        ...prev,
-        selectedEmails: [],
-        showDeleteModal: false,
-      }));
-    } catch (error) {
-      console.error("Error deleting teachers:", error.message);
+  const deleteAllTeacher = useCallback(async () => {
+    const emails = pendingTeacherDeleteRef.current
+    if (!emails.length) {
+      throw new Error("No teachers selected for removal.")
     }
-  };
-  
-  const deleteAllStudent = async () => {
-    const token = await fetchCsrfToken();
-    try {
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students/`, 
-        {
-          method: "DELETE",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-          body: JSON.stringify({
-            students: studentState.selectedIds,
-          }),
-        }
-      );
-  
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to delete: ${response.status} ${errorText}`);
-      }
-  
-      await fetchStudents();
-      setStudentState(prev => ({
-        ...prev,
-        selectedIds: [],
-        showDeleteModal: false,
-      }));
-    } catch (error) {
-      console.error("Error deleting students:", error.message);
-    }
-  };
-  
+    const token = await fetchCsrfToken()
+    const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/teachers/`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": token,
+      },
+      body: JSON.stringify({ emails }),
+    })
 
-  
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || `Failed to delete: ${response.status}`)
+    }
+
+    await fetchTeachers()
+    pendingTeacherDeleteRef.current = []
+    setTeacherState((prev) => ({
+      ...prev,
+      selectedEmails: [],
+      showDeleteModal: false,
+    }))
+    tpToast.success("Teacher(s) removed successfully")
+  }, [classId])
+
+  const deleteAllStudent = useCallback(async () => {
+    const students = pendingStudentDeleteRef.current
+    if (!students.length) {
+      throw new Error("No students selected for removal.")
+    }
+    const token = await fetchCsrfToken()
+    const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students/`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": token,
+      },
+      body: JSON.stringify({ students }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || `Failed to delete: ${response.status}`)
+    }
+
+    await fetchStudents()
+    pendingStudentDeleteRef.current = []
+    setStudentState((prev) => ({
+      ...prev,
+      selectedIds: [],
+      showDeleteModal: false,
+    }))
+    tpToast.success("Student(s) removed successfully")
+  }, [classId])
+
+  const closeTeacherModal = () =>
+    setTeacherState((prev) => ({
+      ...prev,
+      showDeleteModal: false,
+    }))
+
+  const closeStudentModal = () =>
+    setStudentState((prev) => ({
+      ...prev,
+      showDeleteModal: false,
+    }))
+
+  const teacherDeleteLabel = useMemo(() => {
+    if (teacherState.selectedEmails.length === 1) {
+      const teacher = teacherState.list.find((t) => t.email === teacherState.selectedEmails[0])
+      return teacher?.username || teacher?.email || ""
+    }
+    if (teacherState.selectedEmails.length > 1) {
+      return `${teacherState.selectedEmails.length} teachers`
+    }
+    return ""
+  }, [teacherState.selectedEmails, teacherState.list])
+
+  const studentDeleteLabel = useMemo(() => {
+    if (studentState.selectedIds.length === 1) {
+      const student = studentState.list.find((s) => String(s.id) === String(studentState.selectedIds[0]))
+      return student?.username || student?.email || ""
+    }
+    if (studentState.selectedIds.length > 1) {
+      return `${studentState.selectedIds.length} students`
+    }
+    return ""
+  }, [studentState.selectedIds, studentState.list])
+
+  const teacherToolbar = (
+    <div className="tp-portal-data-table-toolbar-inner">
+      <TpPortalSearchField
+        value={teacherSearch}
+        onChange={setTeacherSearch}
+        placeholder="Search teachers by name or email…"
+        aria-label="Search teachers"
+        id="tp-search-teachers"
+      />
+      <div className="tp-portal-data-table-toolbar-actions">
+        {teacherState.selectedEmails.length > 0 ? (
+          <button type="button" className="tp-btn tp-btn-secondary" onClick={() => openTeacherDeleteConfirm()}>
+            Remove teachers
+          </button>
+        ) : null}
+        <button type="button" className="tp-btn tp-btn-primary" onClick={() => navigate("/manage-classes/add-teacher")}>
+          + Add more teachers
+        </button>
+      </div>
+    </div>
+  )
+
+  const studentToolbar = (
+    <div className="tp-portal-data-table-toolbar-inner">
+      <TpPortalSearchField
+        value={studentSearch}
+        onChange={setStudentSearch}
+        placeholder="Search students by name or email…"
+        aria-label="Search students"
+        id="tp-search-students"
+      />
+      <div className="tp-portal-data-table-toolbar-actions">
+        {studentState.selectedIds.length > 0 ? (
+          <button type="button" className="tp-btn tp-btn-secondary" onClick={() => openStudentDeleteConfirm()}>
+            Remove students
+          </button>
+        ) : null}
+        <button type="button" className="tp-btn tp-btn-primary" onClick={() => navigate("/manage-classes/add-student")}>
+          + Add more students
+        </button>
+      </div>
+    </div>
+  )
+
+  const headerEnd = (
+    <button type="button" className="tp-btn tp-btn-secondary tp-mc-modal-header-btn" onClick={goEditClass}>
+      <Pencil size={16} strokeWidth={2} aria-hidden />
+      Edit class
+    </button>
+  )
 
   return (
-    <div>
-      <HeaderTop isHiddenMainMenu />
-      <div className="min-vh-100 bg-white">
-        <Header
-          heading="Manage Classes & Students"
-          bg="linear-gradient(90deg, #255A71 0%, #0096D7 100%)"
-          color="white"
-          outline="outline-white-button"
-        />
-        <ManagementSection />
-        <section className="px-5">
-          <Container>
-            <div className="py-4" style={{ width: "80%"  }}>
-              <div className="p-4 class-div-style-2">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h3 className="primary-text">Assigned Teachers</h3>
-                  <div>
-                    <input
-                      type="text"
-                      className="form-control d-inline-block mr-3"
-                      placeholder="Search teachers..."
-                      value={teacherSearch}
-                      onChange={(e) => setTeacherSearch(e.target.value)}
-                      style={{ width: 240, display: "inline-block" }}
-                    />
-                    {teacherState.selectedEmails.length > 0 && (
-                      <button
-                        className="outline-black-button px-3 py-2 mr-3"
-                        onClick={handleDeleteTeachers}
-                      >
-                        Remove Teachers
-                      </button>
-                    )}
-                    <button
-                      className="primary-button px-3 py-2"
-                      onClick={() => navigate(`/manage-classes/add-teacher`)}
-                    >
-                      + Add More Teachers
-                    </button>
-                  </div>
-                </div>
+    <div className="min-vh-100 bg-white d-flex flex-column">
+      <div className="cms-tp-scope flex-grow-1 d-flex flex-column min-vh-0">
+        <TeacherPortalShell headerTitle="Manage Classes & Students" headerSubtitle={modalTitle}>
+          <div className="tp-portal-page tp-class-detail-modal-host">
+            <ManageClassModalFrame
+              title={modalTitle}
+              subtitle={modalSubtitle}
+              onClose={closeClassView}
+              headerEnd={headerEnd}
+              showProgress={false}
+              footer={null}
+              wide
+            >
+              <div className="tp-class-detail-modal-body">
                 <TeachersTable
+                  toolbar={teacherToolbar}
                   teachers={filteredTeachers}
                   selectedEmails={teacherState.selectedEmails}
-                  handleDeleteTeachers={handleDeleteTeachers}
+                  handleDeleteTeachers={openTeacherDeleteConfirm}
                   handleSelectAllTeachers={handleSelectAllTeachers}
                   handleSelectTeachers={handleSelectTeachers}
                 />
-              </div>
-              <div className="p-4 class-div-style-2 mt-5 mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h3 className="primary-text">Students Information</h3>
-                  <div>
-                    <input
-                      type="text"
-                      className="form-control d-inline-block mr-3"
-                      placeholder="Search students..."
-                      value={studentSearch}
-                      onChange={(e) => setStudentSearch(e.target.value)}
-                      style={{ width: 240, display: "inline-block" }}
-                    />
-                    {studentState.selectedIds.length > 0 && (
-                      <button
-                        className="outline-black-button px-3 py-2 mr-3"
-                        onClick={handleDeleteStudents}
-                      >
-                        Remove Students
-                      </button>
-                    )}
-                    <button
-                      className="primary-button px-3 py-2"
-                      onClick={() => navigate(`/manage-classes/add-student`)}
-                    >
-                      + Add More Students
-                    </button>
-                  </div>
-                </div>
                 <StudentTable
+                  toolbar={studentToolbar}
                   students={filteredStudents}
-                  fromTeachers={true}
+                  fromTeachers
                   classId={classId}
                   selectedIds={studentState.selectedIds}
-                  handleDeleteStudents={handleDeleteStudents}
+                  handleDeleteStudents={openStudentDeleteConfirm}
                   handleSelectAllStudents={handleSelectAllStudents}
                   handleSelectStudents={handleSelectStudents}
                 />
               </div>
-            </div>
-          </Container>
-        </section>
+            </ManageClassModalFrame>
+          </div>
+        </TeacherPortalShell>
       </div>
 
-      <DeleteModal
-        category="component"
-        title="Are you sure you want to remove?"
+      <TpDeleteConfirmationModal
         isOpen={teacherState.showDeleteModal}
-        close={() =>
-          setTeacherState(prev => ({
-            ...prev,
-            showDeleteModal: false,
-          }))
-        }
-        description={"Teacher(s) will be removed from this class"}
-        btnDefaultLabel={"Remove"}
-        btnPendingLabel={"Deleting"}
-        onDeleteSubmit={deleteAllTeacher}
+        onClose={closeTeacherModal}
+        onConfirm={deleteAllTeacher}
+        title="Remove teachers"
+        message="Teacher(s) will be removed from this class."
+        itemName={teacherDeleteLabel}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
       />
 
-      <DeleteModal
-        category="component"
-        title="Are you sure you want to remove?"
+      <TpDeleteConfirmationModal
         isOpen={studentState.showDeleteModal}
-        close={() =>
-          setStudentState(prev => ({
-            ...prev,
-            showDeleteModal: false,
-          }))
-        }
-        description={"Student(s) will be removed from this class"}
-        btnDefaultLabel={"Remove"}
-        btnPendingLabel={"Deleting"}
-        onDeleteSubmit={deleteAllStudent}
+        onClose={closeStudentModal}
+        onConfirm={deleteAllStudent}
+        title="Remove students"
+        message="Student(s) will be removed from this class."
+        itemName={studentDeleteLabel}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
       />
     </div>
-  );
-};
+  )
+}
 
-export default Teachers;
+export default Teachers
