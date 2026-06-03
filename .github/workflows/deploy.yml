@@ -1,21 +1,21 @@
-name: Deploy on Push 
-on: 
-  push: 
-    branches: 
-      - cms-edx-frontend
-jobs: 
-  deploy: 
-    runs-on: ubuntu-latest
-    timeout-minutes: 60  # Set to 60 minutes
-    steps: 
-      - name: Checkout code 
-        uses: actions/checkout@v3 
-      - name: Deploy to EC2 via SSH 
-        uses: appleboy/ssh-action@v1.0.0 
-        with: 
-          host: ${{ secrets.SANDBOX_IP }} 
-          username: ubuntu 
-          key: ${{ secrets.SANDBOX_KEY }}
-          command_timeout: 60m  # SSH command timeout
-          script: | 
-            bash ~/deploy_cms_frontend.sh
+# name: Deploy on Push 
+# on: 
+#   push: 
+#     branches: 
+#       - cms-edx-frontend
+# jobs: 
+#   deploy: 
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 60  # Set to 60 minutes
+#     steps: 
+#       - name: Checkout code 
+#         uses: actions/checkout@v3 
+#       - name: Deploy to EC2 via SSH 
+#         uses: appleboy/ssh-action@v1.0.0 
+#         with: 
+#           host: ${{ secrets.SANDBOX_IP }} 
+#           username: ubuntu 
+#           key: ${{ secrets.SANDBOX_KEY }}
+#           command_timeout: 60m  # SSH command timeout
+#           script: | 
+#             bash ~/deploy_cms_frontend.sh
