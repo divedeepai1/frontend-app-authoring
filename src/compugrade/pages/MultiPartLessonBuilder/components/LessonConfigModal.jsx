@@ -333,7 +333,7 @@ export default function LessonConfigModal({
                       : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                   }`}
                 >
-                  Setup Timer
+                  Setup timer and attempts
                 </button>
               </div>
             </div>

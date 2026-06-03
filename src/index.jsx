@@ -233,6 +233,7 @@ initialize({
             process.env.ENABLE_OPEN_MANAGED_TEAM_TYPE === "true",
           BBB_LEARN_MORE_URL: process.env.BBB_LEARN_MORE_URL || "",
           STUDIO_BASE_URL: process.env.STUDIO_BASE_URL || null,
+          CMS_HOST: process.env.CMS_HOST || null,
           STUDIO_SHORT_NAME: process.env.STUDIO_SHORT_NAME || null,
           TERMS_OF_SERVICE_URL: process.env.TERMS_OF_SERVICE_URL || null,
           PRIVACY_POLICY_URL: process.env.PRIVACY_POLICY_URL || null,

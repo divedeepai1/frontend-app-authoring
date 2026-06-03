@@ -1,157 +1,170 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { Form, Badge } from 'react-bootstrap';
+import { useState, useRef, useEffect, useCallback } from "react"
+import { useNavigate } from "react-router"
+import { Search, X } from "lucide-react"
 
 const AddTeacher = ({ teachers, selectedTeachers, setSelectedTeachers, nextStep }) => {
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const wrapperRef = useRef(null);
-  const inputRef = useRef(null);
-  const dropdownRef = useRef(null);
-  const containerRef = useRef(null);
+  const navigate = useNavigate()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isOpen, setIsOpen] = useState(false)
+  const wrapperRef = useRef(null)
+  const inputRef = useRef(null)
 
-  
   useEffect(() => {
     const handleClickOutside = (event) => {
-        setShowDropdown(false);
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(event.target)
-      ) {
-        setShowDropdown(false);
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false)
       }
-    };
-  
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside); 
-  
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, []);
+    }
 
-  
-  const getFilteredTeachers = () => {
-    return teachers.filter(
-      (teacher) =>
-        teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !selectedTeachers.some((sel) => sel.email === teacher.email)
-    );
-  };
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("touchstart", handleClickOutside)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("touchstart", handleClickOutside)
+    }
+  }, [])
+
+  const getFilteredTeachers = useCallback(
+    () =>
+      (teachers || []).filter(
+        (teacher) =>
+          teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !selectedTeachers.some((sel) => sel.email === teacher.email),
+      ),
+    [teachers, searchTerm, selectedTeachers],
+  )
+
+  const filteredOptions = getFilteredTeachers()
+  const showDropdown = isOpen && searchTerm.trim().length > 0 && filteredOptions.length > 0
 
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setShowDropdown(true);
-  };
+    setSearchTerm(e.target.value)
+    setIsOpen(true)
+  }
 
   const handleSelectTeacher = (teacher) => {
     if (!selectedTeachers.some((t) => t.email === teacher.email)) {
-      setSelectedTeachers([...selectedTeachers, teacher]);
+      setSelectedTeachers([...selectedTeachers, teacher])
     }
-    setSearchTerm('');
-    setShowDropdown(false);
-    inputRef.current.focus();
-  };
+    setSearchTerm("")
+    setIsOpen(false)
+    inputRef.current?.focus()
+  }
 
   const handleRemoveTeacher = (email) => {
-    const updated = selectedTeachers.filter((t) => t.email !== email);
-    setSelectedTeachers(updated);
-    setShowDropdown(true);
-  };
+    setSelectedTeachers(selectedTeachers.filter((t) => t.email !== email))
+  }
 
-  const handleInputClick = () => {
-    setShowDropdown(true);
-  };
+  const handleComboboxClick = () => {
+    inputRef.current?.focus()
+  }
 
-  const filteredOptions = getFilteredTeachers();
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") {
+      setIsOpen(false)
+      return
+    }
+    if (e.key === "Backspace" && !searchTerm && selectedTeachers.length > 0) {
+      const last = selectedTeachers[selectedTeachers.length - 1]
+      handleRemoveTeacher(last.email)
+    }
+  }
 
   return (
-    <div className="container mb-5 border rounded shadow-sm p-5">
-      <Form onSubmit={(e) => nextStep(e)} className="p-4 class-div-style">
-        <h3 className="primary-text mb-4">Add More Teachers</h3>
+    <div className="tp-mc-add-teacher-form">
+      <form onSubmit={(e) => nextStep(e)} className="tp-mc-add-teacher-fields">
+        <h3 className="tp-title tp-mc-add-teacher-heading">Add more teachers</h3>
+        <p className="tp-subtitle tp-mc-add-teacher-desc">
+          Search by email and select teachers to assign to this class.
+        </p>
 
-        <Form.Group controlId="formTeachers" className="mb-4" ref={wrapperRef}>
-          <Form.Label><strong>Email Address *</strong></Form.Label>
+        <div className="tp-field tp-mc-add-teacher-field">
+          <label className="tp-label" htmlFor="tp-add-teacher-search">
+            Email address <span className="tp-required">*</span>
+          </label>
 
           <div
-            ref={containerRef}
-            className="d-flex flex-wrap align-items-center form-control position-relative"
-            onClick={handleInputClick}
-            style={{ minHeight: '60px', cursor: 'text' }}
+            className={`tp-add-teacher-combobox-wrap${showDropdown ? " tp-add-teacher-combobox-wrap--open" : ""}`}
+            ref={wrapperRef}
           >
-            {selectedTeachers.map((teacher) => (
-              <Badge
-                key={teacher.email}
-                pill
-                bg="light"
-                className="border mt-1 px-2 py-1 text-dark"
-                style={{ cursor: 'pointer',fontSize:"18px" }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemoveTeacher(teacher.email);
-                }}
-              >
-                <span className='mt-1'>{teacher.email} &times;</span> 
-              </Badge>
-            ))}
-
-            <input
-              ref={inputRef}
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Search by email..."
-              autoComplete="off"
-              className="border-0 flex-grow-1"
-              style={{ outline: 'none', flex: 1 }}
-              onFocus={handleInputClick}
-            />
-          </div>
-
-          {showDropdown && (
             <div
-              ref={dropdownRef}
-              className="border bg-white position-absolute mt-1 shadow-sm rounded"
-              style={{
-                zIndex: 1000,
-                width: containerRef.current?.offsetWidth || '100%',
-                maxHeight: '200px',
-                overflowY: 'auto',
-              }}
+              className={`tp-add-teacher-combobox${showDropdown ? " tp-add-teacher-combobox--open" : ""}`}
+              onClick={handleComboboxClick}
+              role="combobox"
+              aria-expanded={showDropdown}
+              aria-haspopup="listbox"
+              aria-controls="tp-add-teacher-listbox"
             >
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((teacher) => (
-                  <div
-                    key={teacher.email}
-                    className="p-2 dropdown-item"
-                    onMouseDown={() => handleSelectTeacher(teacher)}
-                    style={{ cursor: 'pointer' }}
+              {selectedTeachers.map((teacher) => (
+                <span key={teacher.email} className="tp-add-teacher-chip">
+                  <span className="tp-add-teacher-chip-text">{teacher.email}</span>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="tp-add-teacher-chip-remove"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveTeacher(teacher.email)
+                    }}
+                    aria-label={`Remove ${teacher.email}`}
                   >
-                    {teacher.email}
-                  </div>
-                ))
-              ) : (
-                <div className="p-2 text-muted">No results found</div>
-              )}
-            </div>
-          )}
-        </Form.Group>
+                    <X size={14} strokeWidth={2} aria-hidden />
+                  </button>
+                </span>
+              ))}
 
-        <div className="d-flex mt-4">
-          <button className="primary-button px-3 py-2" disabled={selectedTeachers.length == 0}>Add Teacher</button>
-          <button
-            type="button"
-            className="ms-3 px-3 secondary-button py-2 ml-3"
-            onClick={() => navigate(-1)}
-          >
+              <div className="tp-add-teacher-search-wrap">
+                <Search size={16} className="tp-add-teacher-search-icon" aria-hidden />
+                <input
+                  ref={inputRef}
+                  id="tp-add-teacher-search"
+                  type="text"
+                  role="searchbox"
+                  aria-autocomplete="list"
+                  aria-controls="tp-add-teacher-listbox"
+                  className="tp-add-teacher-search-input"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  onFocus={() => setIsOpen(true)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={selectedTeachers.length ? "Add another email…" : "Search by email…"}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+
+            {showDropdown ? (
+              <ul id="tp-add-teacher-listbox" className="tp-add-teacher-dropdown" role="listbox">
+                {filteredOptions.map((teacher) => (
+                  <li key={teacher.email} role="option">
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="tp-add-teacher-dropdown-item"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSelectTeacher(teacher)}
+                    >
+                      {teacher.email}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="tp-mc-add-teacher-actions">
+          <button type="submit" className="tp-btn tp-btn-primary" disabled={selectedTeachers.length === 0}>
+            Add teacher
+          </button>
+          <button type="button" className="tp-btn tp-btn-secondary" onClick={() => navigate(-1)}>
             Cancel
           </button>
         </div>
-      </Form>
+      </form>
     </div>
-  );
-};
+  )
+}
 
-export default AddTeacher;
+export default AddTeacher

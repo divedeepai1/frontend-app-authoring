@@ -1,32 +1,52 @@
-import React from 'react';
-
-const ProgressIndicator = ({ activeStep,activeStepList }) => {
-  const steps = [
-    { id: 1, name: 'Class Details' },
-    { id: 2, name: 'Add Students' },
-    { id: 3, name: 'Assign Course(s)' },
-    { id: 4, name: 'Send Messages' }
-  ];
-
-  return (
-    <div className="d-flex justify-content-between mb-4">
-      {steps.map((step) => (
-        <div key={step.id} className="position-relative d-flex align-items-center" style={{ width: `${100 / steps.length}%` }}>
-          <div
-            className={`w-100 py-3 text-center text-white ${activeStep === step.id || activeStepList?.includes(step.id) ? 'primary-shape' : 'secondary-shape'}`}
-            style={{
-              clipPath: 'polygon(0% 0%, 90% 0%, 100% 50%, 90% 100%, 0% 100%, 10% 50%)',
-              paddingLeft: '10px',
-              paddingRight: '10px',
-              zIndex: step.id
-            }}
-          >
-            {step.name}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-export default ProgressIndicator;
+import React from "react"
+
+const STEPS = [
+  { id: 1, label: "Class Details" },
+  { id: 2, label: "Add Students" },
+  { id: 3, label: "Assign Course(s)" },
+]
+
+const ProgressIndicator = ({ activeStep }) => (
+  <div className="tp-wizard-steps" role="navigation" aria-label="Class setup steps">
+    <ol className="tp-wizard-steps-list">
+      {STEPS.map((step, index) => {
+        const done = step.id < activeStep
+        const active = step.id === activeStep
+        const circleClass = done
+          ? "tp-wizard-steps-circle tp-wizard-steps-circle-done"
+          : active
+            ? "tp-wizard-steps-circle tp-wizard-steps-circle-active"
+            : "tp-wizard-steps-circle tp-wizard-steps-circle-todo"
+        const numClass =
+          done || active ? "tp-wizard-steps-num tp-wizard-steps-num-on" : "tp-wizard-steps-num tp-wizard-steps-num-off"
+        const labelClass =
+          done || active
+            ? "tp-wizard-steps-label tp-wizard-steps-label-active"
+            : "tp-wizard-steps-label tp-wizard-steps-label-todo"
+
+        return (
+          <li key={step.id} className="tp-wizard-steps-segment" aria-current={active ? "step" : undefined}>
+            <div className="tp-wizard-steps-node">
+              <div className={circleClass}>
+                <span className={numClass}>{step.id}</span>
+              </div>
+              <span className={labelClass}>{step.label}</span>
+            </div>
+            {index < STEPS.length - 1 ? (
+              <div
+                className={
+                  activeStep > step.id
+                    ? "tp-wizard-steps-connector tp-wizard-steps-connector-done"
+                    : "tp-wizard-steps-connector"
+                }
+                aria-hidden
+              />
+            ) : null}
+          </li>
+        )
+      })}
+    </ol>
+  </div>
+)
+
+export default ProgressIndicator

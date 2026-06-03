@@ -1,136 +1,119 @@
-import HeaderTop from "../../header";
-import { Header } from "../components/header";
-import ClassManagementForm from "../components/classes/manage-classes";
-import { Container } from "react-bootstrap";
-import { useLocation, useNavigate } from "react-router";
-import { fetchCsrfToken } from "../../cms-csrftoken";
-import { getConfig } from "@edx/frontend-platform";
-import AddTeacher from "../components/classes/add-teacher";
-import { useEffect, useState } from "react";
+import ClassManagementForm from "../components/classes/manage-classes"
+import AddTeacher from "../components/classes/add-teacher"
+import TeacherPortalShell from "../layout/TeacherPortalShell"
+import ManageClassModalFrame from "../modules/manage-classes/components/ManageClassModalFrame"
+import { useLocation, useNavigate } from "react-router"
+import { useCallback, useEffect, useState } from "react"
+import { Plus } from "lucide-react"
+import * as teachersApi from "../modules/manage-classes/services/teachersApi"
+import "../theme/teachers-portal-scope.css"
 
 const ManageClasses = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isNewTeacher = location.pathname.endsWith("/add-teacher");
-  const isNewStudent = location.pathname.endsWith("/add-student");
+  const location = useLocation()
+  const navigate = useNavigate()
+  const isNewTeacher = location.pathname.endsWith("/add-teacher")
+  const isNewStudent = location.pathname.endsWith("/add-student")
+  const [selectedTeachers, setSelectedTeachers] = useState([])
+  const [teachers, setTeachers] = useState([])
 
-  const [selectedTeachers, setSelectedTeachers] = useState([]);
-
-  const [teachers, setTeachers] = useState([]);
-  const fetchTeachers = async () => {
-    const token = await fetchCsrfToken();
-    try {
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/teachers/`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to get: ${response.status} ${errorText}`);
-      }
-      const result = await response.json();
-      setTeachers(result?.teachers);
-    } catch (error) {
-      console.error("Error:", error.message);
+  const closeWizard = useCallback(() => {
+    sessionStorage.removeItem("classId")
+    sessionStorage.removeItem("classData")
+    sessionStorage.removeItem("manageClassMode")
+    if (isNewStudent) {
+      navigate(-1)
+    } else {
+      navigate("/classes")
     }
-  };
+  }, [isNewStudent, navigate])
+
+  const closeAddTeacher = useCallback(() => {
+    navigate(-1)
+  }, [navigate])
 
   useEffect(() => {
-    if (isNewTeacher) {
-      fetchTeachers();
+    if (!isNewTeacher) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await teachersApi.fetchTeachers()
+        if (!cancelled) setTeachers(list)
+      } catch {
+        if (!cancelled) setTeachers([])
+      }
+    })()
+    return () => {
+      cancelled = true
     }
-  }, [isNewTeacher]);
+  }, [isNewTeacher])
 
   const handleNextStep = async (e) => {
-    e.preventDefault();
-
-    const token = await fetchCsrfToken();
-    const classId = sessionStorage.getItem("classId");
-    const teachers = selectedTeachers.map((teacher) => teacher.email);
-
+    e.preventDefault()
+    const classId = sessionStorage.getItem("classId")
+    const emails = selectedTeachers.map((t) => t.email)
     try {
-      const response = await fetch(
-        `${
-          getConfig().STUDIO_BASE_URL
-        }/myplugin/classrooms/${classId}/teachers/`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-          body: JSON.stringify({ emails: teachers }),
-        }
-      );
+      await teachersApi.postClassroomTeachers(classId, emails)
+      navigate(-1)
+    } catch {}
+  }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to add: ${response.status} ${errorText}`);
-      }
-      const result = await response.json();
-      navigate(-1);
-    } catch (error) {
-      console.error("Error:", error.message);
+  const classTitle = (() => {
+    try {
+      const raw = sessionStorage.getItem("classData")
+      if (!raw) return "Class name"
+      return JSON.parse(raw)?.name || "Class name"
+    } catch {
+      return "Class name"
     }
-  };
+  })()
+
+  const addTeachersSlot =
+    !isNewStudent && !isNewTeacher ? (
+      <button
+        type="button"
+        className="tp-btn tp-btn-secondary tp-mc-modal-header-btn"
+        onClick={() => navigate("/manage-classes/add-teacher")}
+      >
+        <Plus size={16} strokeWidth={2} aria-hidden />
+        Add more teachers
+      </button>
+    ) : null
 
   return (
-    <div>
-      <HeaderTop isHiddenMainMenu />
-      <div className="min-vh-100 bg-white">
-        <Header
-          heading="Manage Classes & Students"
-          bg="linear-gradient(90deg, #255A71 0%, #0096D7 100%)"
-          color="white"
-          outline="outline-white-button"
-        />
-        <section className="py-2 px-5">
-          <Container>
-            <div className="d-flex">
-              <div style={{ width: "70%" }}>
-                <div className="py-3 d-flex justify-content-between">
-                  <h3 className="primary-text mb-4">
-                    {sessionStorage.getItem("classData")
-                      ? JSON.parse(sessionStorage.getItem("classData") || "{}")
-                          ?.name
-                      : "Class Name"}
-                  </h3>
-                  {!isNewTeacher && !isNewStudent && (
-                    <button
-                      onClick={() => navigate(`/manage-classes/add-teacher`)}
-                      className="outline-black-button fw-bold px-3"
-                    >
-                      + Add More Teachers
-                    </button>
-                  )}
-                </div>
-                {!isNewTeacher ? (
-                  <ClassManagementForm isNewStudent={isNewStudent} />
-                ) : (
+    <div className="min-vh-100 bg-white d-flex flex-column">
+      <div className="cms-tp-scope flex-grow-1 d-flex flex-column min-vh-0">
+        <TeacherPortalShell headerTitle="Manage Classes & Students" headerSubtitle={classTitle}>
+          <div className="tp-portal-page tp-manage-classes-modal-host">
+            {isNewTeacher ? (
+              <ManageClassModalFrame
+                title="Add more teachers"
+                subtitle="Invite teachers by email."
+                onClose={closeAddTeacher}
+                showProgress={false}
+                headerEnd={null}
+                footer={null}
+              >
+                <div className="tp-mc-add-teacher-inner">
                   <AddTeacher
                     teachers={teachers}
                     selectedTeachers={selectedTeachers}
                     setSelectedTeachers={setSelectedTeachers}
                     nextStep={handleNextStep}
                   />
-                )}
-              </div>
-              <div style={{ width: "30%" }}></div>
-            </div>
-          </Container>
-        </section>
+                </div>
+              </ManageClassModalFrame>
+            ) : (
+              <ClassManagementForm
+                isNewStudent={isNewStudent}
+                modalHeaderEnd={addTeachersSlot}
+                onClose={closeWizard}
+              />
+            )}
+          </div>
+        </TeacherPortalShell>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ManageClasses;
+export default ManageClasses
