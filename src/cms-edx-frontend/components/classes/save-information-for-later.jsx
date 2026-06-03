@@ -1,22 +1,20 @@
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router"
 
 const SaveInformationForLater = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const handleClick = (e) => {
-    e.preventDefault();
-    navigate("/classes");
-  };
+    e.preventDefault()
+    navigate("/classes")
+  }
 
   return (
-    <div className="ms-auto">
-      <a href="#" className="primary-text" onClick={handleClick}>
-        Save Information for Later
+    <div>
+      <a href="/classes" className="tp-muted-link" onClick={handleClick}>
+        Save information for later
       </a>
     </div>
-  );
-};
+  )
+}
 
-export default SaveInformationForLater;
-
-
+export default SaveInformationForLater

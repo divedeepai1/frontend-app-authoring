@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import InstructionStateUpload from "./InstructionStateUpload";
 import QARundiv from "./QARundiv";
 import QAReport from "./QAReport";
+import ToastContainer from "../ui/toast";
 import {
   deleteQaState,
   getLessonQaStates,
@@ -16,8 +17,23 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
   const [loadingByInstruction, setLoadingByInstruction] = useState({});
   const [qaStatesLoading, setQaStatesLoading] = useState(false);
   const [qaRunLoading, setQaRunLoading] = useState(false);
+  const [toasts, setToasts] = useState([]);
 
   const lastLoadedPartIdRef = useRef(null);
+
+  const addToast = ({ title, message, variant = "info", duration = 3500 }) => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, title, message, variant }]);
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, duration);
+    }
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   const activePart =
     lessonParts?.find((p) => String(p.id) === String(partId)) || lessonParts?.[0];
@@ -147,6 +163,7 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
     if (!instruction?.backendItemId || !activePart?.id || !files?.length) return;
 
     const uploadKey = stateType === "correctState" ? "correctUpload" : "wrongUpload";
+    const stateLabel = stateType === "correctState" ? "correct" : "wrong";
     setInstructionLoading(instruction.id, { [uploadKey]: true });
 
     try {
@@ -193,6 +210,30 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
 
       const states = await getLessonQaStates(activePart.id);
       setInstructionStates(groupStatesByInstruction(states));
+
+      const backendMessages = uploadedStates
+        .map((state) => state?.apiMessage)
+        .filter((message) => typeof message === "string" && message.trim());
+      const backendTitles = uploadedStates
+        .map((state) => state?.apiTitle)
+        .filter((title) => typeof title === "string" && title.trim());
+      const fileCount = files.length;
+
+      addToast({
+        title:
+          backendTitles[backendTitles.length - 1] ||
+          "Upload successful",
+        message:
+          backendMessages[backendMessages.length - 1] ||
+          `${fileCount} ${stateLabel} state file${fileCount > 1 ? "s" : ""} uploaded for ${instruction.name}.`,
+        variant: "success",
+      });
+    } catch (error) {
+      addToast({
+        title: error?.title || "Upload failed",
+        message: error?.message || "Could not upload state file.",
+        variant: "error",
+      });
     } finally {
       setInstructionLoading(instruction.id, { [uploadKey]: false });
     }
@@ -369,6 +410,8 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
   };
 
   return open ? (
+    <>
+    <ToastContainer toasts={toasts} removeToast={removeToast} />
     <div className="fixed inset-0 z-[1000]  flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative bg-white rounded-lg shadow-xl w-[95vw] max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -428,6 +471,7 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
                   loading={loadingByInstruction[instruction.id] || {}}
                   courseType={courseType}
                   canUpload={Boolean(instruction.backendItemId)}
+                  addToast={addToast}
                 />
               ))}
             </div>
@@ -435,5 +479,6 @@ export default function LessonQAModal({ open, onClose, lessonParts, partId }) {
         </div>
       </div>
     </div>
+    </>
   ) : null;
 }
