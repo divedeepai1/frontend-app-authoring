@@ -17,13 +17,31 @@ export function fetchRubricStatusDates(rubricId, studentIds) {
   })
 }
 
-export function updateRubricStatusDates(rubricId, startDate, dueDate, studentIds) {
-  return postJson("/api/lms/update_rubric_status_dates", {
+export function updateRubricStatusDates(
+  rubricId,
+  startDate,
+  dueDate,
+  studentIds,
+  { applyAllFields = false, sendStart = false, sendDue = false } = {}
+) {
+  const body = {
     rubric_openedx_based_id: rubricId,
-    start_date: startDate,
-    due_date: dueDate,
     student_ids: studentIds,
-  })
+  }
+
+  if (applyAllFields) {
+    body.start_date = startDate ?? null
+    body.due_date = dueDate ?? null
+  } else {
+    if (sendStart) body.start_date = startDate ?? null
+    if (sendDue) body.due_date = dueDate ?? null
+    if (!sendStart && !sendDue) {
+      if (startDate) body.start_date = startDate
+      if (dueDate) body.due_date = dueDate
+    }
+  }
+
+  return postJson("/api/lms/update_rubric_status_dates", body)
 }
 
 export function fetchRubricTimerState(rubricId, studentIds) {

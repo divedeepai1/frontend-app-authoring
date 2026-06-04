@@ -50,7 +50,7 @@ function BulkScheduleModal({
           </div>
           <div className="tp-lesson-modal-field">
             <label className="tp-label" htmlFor="tp-bulk-due">
-              Due date
+              Due date (optional)
             </label>
             <input
               id="tp-bulk-due"
@@ -70,7 +70,7 @@ function BulkScheduleModal({
               type="button"
               className="tp-btn tp-btn-primary"
               onClick={onSave}
-              disabled={savingAll || !bulkStart || !bulkDue}
+              disabled={savingAll || (!bulkStart && !bulkDue)}
             >
               {savingAll ? "Saving…" : "Save for all"}
             </button>
@@ -94,7 +94,7 @@ export default function LessonScheduleModal({ isOpen, onClose, title, students, 
         icon={Calendar}
         size="lg"
         headerEnd={
-          <button type="button" className="tp-btn tp-btn-secondary" onClick={() => s.setBulkOpen(true)}>
+          <button type="button" className="tp-btn tp-btn-secondary" onClick={s.openBulkModal}>
             Set access for all
           </button>
         }
