@@ -81,8 +81,8 @@ function BulkScheduleModal({
   )
 }
 
-export default function LessonScheduleModal({ isOpen, onClose, title, students, rubricId }) {
-  const s = useLessonSchedule({ isOpen, rubricId, students })
+export default function LessonScheduleModal({ isOpen, onClose, title, students, rubricId, rubricIds }) {
+  const s = useLessonSchedule({ isOpen, rubricId, rubricIds, students })
 
   return (
     <>

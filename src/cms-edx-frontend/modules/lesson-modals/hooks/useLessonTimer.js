@@ -12,6 +12,7 @@ import {
   validateTimerDuration,
   validateTimerMode,
 } from "../utils/timer"
+import { resolveRubricIds } from "../utils/rubricIds"
 
 function mapStudentRows(timerItems, students) {
   const timerByStudent = {}
@@ -64,7 +65,13 @@ function getInitialGlobalTimer(timerItems, mappedRows) {
   return { mode: "display", hours: "00", minutes: "05" }
 }
 
-export function useLessonTimer({ isOpen, rubricId, students }) {
+export function useLessonTimer({ isOpen, rubricId, rubricIds, students }) {
+  const resolvedRubricIds = useMemo(
+    () => resolveRubricIds({ rubricId, rubricIds }),
+    [rubricId, rubricIds]
+  )
+  const rubricKey = resolvedRubricIds.join(",")
+
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState("")
   const [globalTimerMode, setGlobalTimerMode] = useState("display")
@@ -91,12 +98,12 @@ export function useLessonTimer({ isOpen, rubricId, students }) {
   }, [rows, search])
 
   const load = useCallback(async () => {
-    if (!rubricId) return
+    if (!resolvedRubricIds.length) return
     setLoading(true)
     setError("")
     setSuccess("")
     try {
-      const json = await api.fetchRubricTimerState(rubricId, studentIds)
+      const json = await api.fetchRubricTimerState(resolvedRubricIds, studentIds)
       const timerItems = normalizeTimerPayload(json)
       const mappedRows = mapStudentRows(timerItems, students)
       const initial = getInitialGlobalTimer(timerItems, mappedRows)
@@ -109,7 +116,7 @@ export function useLessonTimer({ isOpen, rubricId, students }) {
     } finally {
       setLoading(false)
     }
-  }, [rubricId, studentIds, students])
+  }, [resolvedRubricIds, studentIds, students])
 
   useEffect(() => {
     if (!isOpen) {
@@ -125,30 +132,30 @@ export function useLessonTimer({ isOpen, rubricId, students }) {
       setSuccess("")
       return
     }
-    if (!rubricId) {
+    if (!resolvedRubricIds.length) {
       setError("Missing lesson information.")
       return
     }
     load()
-  }, [isOpen, rubricId, load])
+  }, [isOpen, rubricKey, load, resolvedRubricIds.length])
 
   const setTimerForStudents = useCallback(
     async ({ timerMode, hours, minutes, ids }) => {
       await api.setRubricTimerState(
-        rubricId,
+        resolvedRubricIds,
         hoursMinutesToSeconds(Number(hours), Number(minutes)),
         timerMode,
         ids
       )
     },
-    [rubricId]
+    [resolvedRubricIds]
   )
 
   const removeTimerForStudents = useCallback(
     async (ids) => {
-      await api.setRubricTimerState(rubricId, null, null, ids)
+      await api.setRubricTimerState(resolvedRubricIds, null, null, ids)
     },
-    [rubricId]
+    [resolvedRubricIds]
   )
 
   const handleRowChange = useCallback((studentId, field, value) => {

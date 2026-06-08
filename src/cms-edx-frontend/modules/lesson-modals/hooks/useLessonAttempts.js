@@ -13,8 +13,15 @@ import {
   toDropdownAttemptsValue,
   toStudentAttemptMap,
 } from "../utils/attempts"
+import { resolveRubricIds } from "../utils/rubricIds"
 
-export function useLessonAttempts({ isOpen, rubricId, students }) {
+export function useLessonAttempts({ isOpen, rubricId, rubricIds, students }) {
+  const resolvedRubricIds = useMemo(
+    () => resolveRubricIds({ rubricId, rubricIds }),
+    [rubricId, rubricIds]
+  )
+  const primaryRubricId = resolvedRubricIds[0] || ""
+  const rubricKey = resolvedRubricIds.join(",")
   const [maxAttempts, setMaxAttempts] = useState(MIN_ATTEMPTS)
   const [rows, setRows] = useState([])
   const [search, setSearch] = useState("")
@@ -39,14 +46,14 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
 
   const loadAttempts = useCallback(
     async ({ silent = false } = {}) => {
-      if (!rubricId) return
+      if (!resolvedRubricIds.length) return
       if (!silent) setLoading(true)
       setError("")
       setSuccess("")
       try {
         const [json, rubricJson] = await Promise.all([
-          api.fetchRubricNumAttempts(rubricId, studentIds),
-          fetchRubricForTeacher(rubricId).catch(() => null),
+          api.fetchRubricNumAttempts(resolvedRubricIds, studentIds),
+          primaryRubricId ? fetchRubricForTeacher(primaryRubricId).catch(() => null) : Promise.resolve(null),
         ])
         const data = normalizeAttemptsPayload(json)
         const rubric = unwrapRubric(rubricJson)
@@ -88,7 +95,7 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
         if (!silent) {
           let fallbackMax = MIN_ATTEMPTS
           try {
-            const rubricJson = await fetchRubricForTeacher(rubricId)
+            const rubricJson = primaryRubricId ? await fetchRubricForTeacher(primaryRubricId) : null
             const rubric = unwrapRubric(rubricJson)
             fallbackMax = toDropdownAttemptsValue(
               parseAttemptsLimitValue(rubric?.num_of_attempts),
@@ -119,7 +126,7 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
         if (!silent) setLoading(false)
       }
     },
-    [rubricId, studentIds, students]
+    [resolvedRubricIds, primaryRubricId, studentIds, students]
   )
 
   useEffect(() => {
@@ -135,16 +142,21 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
       return
     }
     loadAttempts()
-  }, [isOpen, loadAttempts])
+  }, [isOpen, rubricKey, loadAttempts])
 
   const saveClassAttempts = useCallback(async () => {
-    if (!rubricId) return
+    if (!resolvedRubricIds.length) return
     setSavingClass(true)
     setError("")
     setSuccess("")
     const classNumOfAttempts = maxAttempts === "unlimited" ? null : maxAttempts
     try {
-      await api.setRubricNumAttempts(rubricId, classNumOfAttempts, classNumOfAttempts, studentIds)
+      await api.setRubricNumAttempts(
+        resolvedRubricIds,
+        classNumOfAttempts,
+        classNumOfAttempts,
+        studentIds
+      )
       await loadAttempts({ silent: true })
       setSuccess("Lesson attempts updated for class.")
       tpToast.success("Lesson attempts updated for class")
@@ -155,11 +167,11 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
     } finally {
       setSavingClass(false)
     }
-  }, [rubricId, maxAttempts, studentIds, loadAttempts])
+  }, [resolvedRubricIds, maxAttempts, studentIds, loadAttempts])
 
   const saveStudentAttempts = useCallback(
     async (studentId, studentAttemptsAllotted, nextNumOfAttempts) => {
-      if (!rubricId) return
+      if (!resolvedRubricIds.length) return
       const boundedAllotted =
         studentAttemptsAllotted === null
           ? null
@@ -170,7 +182,12 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
       setError("")
       setSuccess("")
       try {
-        await api.setRubricNumAttempts(rubricId, boundedAllotted, boundedNumOfAttempts, [studentId])
+        await api.setRubricNumAttempts(
+          resolvedRubricIds,
+          boundedAllotted,
+          boundedNumOfAttempts,
+          [studentId]
+        )
         await loadAttempts({ silent: true })
         setSuccess("Student attempts updated.")
         tpToast.success("Student attempts updated")
@@ -182,7 +199,7 @@ export function useLessonAttempts({ isOpen, rubricId, students }) {
         setSavingStudentId(null)
       }
     },
-    [rubricId, loadAttempts]
+    [resolvedRubricIds, loadAttempts]
   )
 
   return {

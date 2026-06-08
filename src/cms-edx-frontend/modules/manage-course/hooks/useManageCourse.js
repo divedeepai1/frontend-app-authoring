@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import * as curriculumApi from "../services/curriculumApi"
+import { useLessonSelection } from "./useLessonSelection"
 
 function buildExpandedChapters(chapters) {
   const next = {}
@@ -136,6 +137,7 @@ export function useManageCourse() {
 
   const lessonsByChapter = useMemo(() => groupLessonsByChapter(lessons), [lessons])
   const verticalsByLesson = useMemo(() => groupVerticalsByLesson(verticals), [verticals])
+  const selection = useLessonSelection(chapters, lessonsByChapter, verticalsByLesson)
 
   const toggleChapter = useCallback((chapterId) => {
     setExpandedChapters((prev) => ({ ...prev, [chapterId]: !prev[chapterId] }))
@@ -160,44 +162,84 @@ export function useManageCourse() {
     [expandedLessons, selectedCourseId]
   )
 
-  const openSchedule = useCallback((lesson, vertical) => {
-    if (!lesson || !vertical) return
+  const buildModalContext = useCallback((lesson, vertical, rubricIds) => ({
+    lessonTitle: lesson?.title || "",
+    verticalTitle: vertical?.title || "",
+    rubricIds,
+    isBulk: rubricIds.length > 1,
+    lessonCount: rubricIds.length,
+  }), [])
+
+  const openSchedule = useCallback(
+    (lesson, vertical) => {
+      if (!lesson || !vertical?.id) return
+      setScheduleContext(buildModalContext(lesson, vertical, [String(vertical.id)]))
+    },
+    [buildModalContext]
+  )
+
+  const openTimer = useCallback(
+    (lesson, vertical) => {
+      if (!lesson || !vertical?.id) return
+      setTimerContext(buildModalContext(lesson, vertical, [String(vertical.id)]))
+    },
+    [buildModalContext]
+  )
+
+  const openAttempts = useCallback(
+    (lesson, vertical) => {
+      if (!lesson || !vertical?.id) return
+      setAttemptContext(buildModalContext(lesson, vertical, [String(vertical.id)]))
+    },
+    [buildModalContext]
+  )
+
+  const openBulkSchedule = useCallback(() => {
+    const rubricIds = selection.selectedRubricIds
+    if (!rubricIds.length) return
     setScheduleContext({
-      lessonTitle: lesson.title,
-      verticalTitle: vertical.title,
-      rubricId: vertical?.id || "",
+      rubricIds,
+      isBulk: true,
+      lessonCount: rubricIds.length,
     })
-  }, [])
+  }, [selection.selectedRubricIds])
 
-  const openTimer = useCallback((lesson, vertical) => {
-    if (!lesson || !vertical) return
+  const openBulkTimer = useCallback(() => {
+    const rubricIds = selection.selectedRubricIds
+    if (!rubricIds.length) return
     setTimerContext({
-      lessonTitle: lesson.title,
-      verticalTitle: vertical.title,
-      rubricId: vertical?.id || "",
+      rubricIds,
+      isBulk: true,
+      lessonCount: rubricIds.length,
     })
-  }, [])
+  }, [selection.selectedRubricIds])
 
-  const openAttempts = useCallback((lesson, vertical) => {
-    if (!lesson || !vertical) return
+  const openBulkAttempts = useCallback(() => {
+    const rubricIds = selection.selectedRubricIds
+    if (!rubricIds.length) return
     setAttemptContext({
-      lessonTitle: lesson.title,
-      verticalTitle: vertical.title,
-      rubricId: vertical?.id || "",
+      rubricIds,
+      isBulk: true,
+      lessonCount: rubricIds.length,
     })
-  }, [])
+  }, [selection.selectedRubricIds])
 
-  const openPreview = useCallback((lesson, vertical) => {
-    if (!lesson || !vertical) return
-    setPreviewContext({
-      lessonTitle: lesson.title,
-      verticalTitle: vertical.title,
-      rubricId: vertical?.id || "",
-    })
-  }, [])
+  const openPreview = useCallback(
+    (lesson, vertical) => {
+      if (!lesson || !vertical?.id) return
+      setPreviewContext(buildModalContext(lesson, vertical, [String(vertical.id)]))
+    },
+    [buildModalContext]
+  )
 
-  const modalTitle = (ctx) =>
-    ctx ? `${ctx.verticalTitle || ""} • ${ctx.lessonTitle || ""}` : ""
+  const modalTitle = (ctx) => {
+    if (!ctx) return ""
+    if (ctx.isBulk) {
+      const count = ctx.lessonCount || ctx.rubricIds?.length || 0
+      return `${count} lesson${count === 1 ? "" : "s"} selected`
+    }
+    return `${ctx.verticalTitle || ""} • ${ctx.lessonTitle || ""}`
+  }
 
   return {
     classes,
@@ -210,6 +252,7 @@ export function useManageCourse() {
     chapters,
     lessonsByChapter,
     verticalsByLesson,
+    selection,
     expandedChapters,
     expandedLessons,
     classStudents,
@@ -229,6 +272,9 @@ export function useManageCourse() {
     openSchedule,
     openTimer,
     openAttempts,
+    openBulkSchedule,
+    openBulkTimer,
+    openBulkAttempts,
     openPreview,
     modalTitle,
   }

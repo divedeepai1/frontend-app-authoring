@@ -4,8 +4,14 @@ import * as api from "../services/rubricSettingsApi"
 import { normalizeStudentIds } from "../utils/students"
 import { toIsoFromDateOnly, validateDateRange } from "../utils/dates"
 import { buildScheduleRows, deriveBulkDatesFromRows } from "../utils/scheduleMapping"
+import { resolveRubricIds } from "../utils/rubricIds"
 
-export function useLessonSchedule({ isOpen, rubricId, students }) {
+export function useLessonSchedule({ isOpen, rubricId, rubricIds, students }) {
+  const resolvedRubricIds = useMemo(
+    () => resolveRubricIds({ rubricId, rubricIds }),
+    [rubricId, rubricIds]
+  )
+  const rubricKey = resolvedRubricIds.join(",")
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -32,14 +38,14 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
   }, [])
 
   const load = useCallback(async () => {
-    if (!rubricId || !studentIds.length) {
+    if (!resolvedRubricIds.length || !studentIds.length) {
       setRows([])
       return
     }
     setLoading(true)
     setError("")
     try {
-      const scheduleJson = await api.fetchRubricStatusDates(rubricId, studentIds)
+      const scheduleJson = await api.fetchRubricStatusDates(resolvedRubricIds, studentIds)
       const nextRows = buildScheduleRows(students, scheduleJson)
       setRows(nextRows)
 
@@ -52,19 +58,19 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
     } finally {
       setLoading(false)
     }
-  }, [rubricId, studentIds, students])
+  }, [resolvedRubricIds, studentIds, students])
 
   useEffect(() => {
     if (!isOpen) {
       reset()
       return
     }
-    if (!rubricId) {
+    if (!resolvedRubricIds.length) {
       setError("Missing lesson information.")
       return
     }
     load()
-  }, [isOpen, rubricId, load, reset])
+  }, [isOpen, rubricKey, load, reset, resolvedRubricIds.length])
 
   const filteredRows = useMemo(() => {
     if (!search.trim()) return rows
@@ -100,14 +106,14 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
       }
 
       await api.updateRubricStatusDates(
-        rubricId,
+        resolvedRubricIds,
         startIso,
         dueIso,
         targetRows.map((r) => r.id),
         { applyAllFields, sendStart, sendDue }
       )
     },
-    [rubricId]
+    [resolvedRubricIds]
   )
 
   const handleSaveRow = useCallback(
@@ -122,7 +128,7 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
           sendDue: true,
         })
 
-        const scheduleJson = await api.fetchRubricStatusDates(rubricId, studentIds)
+        const scheduleJson = await api.fetchRubricStatusDates(resolvedRubricIds, studentIds)
         const refreshedRows = buildScheduleRows(students, scheduleJson)
         setRows(refreshedRows)
         const { start, due } = deriveBulkDatesFromRows(refreshedRows)
@@ -138,7 +144,7 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
         setSavingId(null)
       }
     },
-    [rubricId, studentIds, students, saveRows]
+    [resolvedRubricIds, studentIds, students, saveRows]
   )
 
   const handleBulkSave = useCallback(async () => {
@@ -152,7 +158,7 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
     try {
       await saveRows(rows, bulkStart, bulkDue, { applyAllFields: true })
 
-      const scheduleJson = await api.fetchRubricStatusDates(rubricId, studentIds)
+      const scheduleJson = await api.fetchRubricStatusDates(resolvedRubricIds, studentIds)
       const refreshedRows = buildScheduleRows(students, scheduleJson)
       setRows(refreshedRows)
       setBulkStart(bulkStart)
@@ -166,7 +172,7 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
     } finally {
       setSavingAll(false)
     }
-  }, [rows, bulkStart, bulkDue, saveRows, rubricId, studentIds, students])
+  }, [rows, bulkStart, bulkDue, saveRows, resolvedRubricIds, studentIds, students])
 
   const openBulkModal = useCallback(() => {
     const { start, due } = deriveBulkDatesFromRows(rows)
