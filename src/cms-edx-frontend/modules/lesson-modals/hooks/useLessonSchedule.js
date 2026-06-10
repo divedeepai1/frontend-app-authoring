@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { tpToast } from "../../../components/common/tpToast"
 import * as api from "../services/rubricSettingsApi"
-import { mapStudentDisplay, normalizeStudentIds } from "../utils/students"
-import { toDateOnly, toIsoFromDateOnly, validateDateRange } from "../utils/dates"
+import { normalizeStudentIds } from "../utils/students"
+import { toIsoFromDateOnly, validateDateRange } from "../utils/dates"
+import { buildScheduleRows, deriveBulkDatesFromRows } from "../utils/scheduleMapping"
+import { resolveRubricIds } from "../utils/rubricIds"
 
-export function useLessonSchedule({ isOpen, rubricId, students }) {
+export function useLessonSchedule({ isOpen, rubricId, rubricIds, students }) {
+  const resolvedRubricIds = useMemo(
+    () => resolveRubricIds({ rubricId, rubricIds }),
+    [rubricId, rubricIds]
+  )
+  const rubricKey = resolvedRubricIds.join(",")
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -31,50 +38,39 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
   }, [])
 
   const load = useCallback(async () => {
-    if (!rubricId || !studentIds.length) {
+    if (!resolvedRubricIds.length || !studentIds.length) {
       setRows([])
       return
     }
     setLoading(true)
     setError("")
     try {
-      const scheduleJson = await api.fetchRubricStatusDates(rubricId, studentIds)
-      const byStudent = {}
-      if (Array.isArray(scheduleJson)) {
-        scheduleJson.forEach((item) => {
-          byStudent[item.student_id] = item
-        })
-      }
-      setRows(
-        (students || []).map((s) => {
-          const base = mapStudentDisplay(s)
-          const existing = byStudent[base.id] || {}
-          return {
-            ...base,
-            start: toDateOnly(existing.start_date),
-            due: toDateOnly(existing.due_date),
-          }
-        })
-      )
+      const scheduleJson = await api.fetchRubricStatusDates(resolvedRubricIds, studentIds)
+      const nextRows = buildScheduleRows(students, scheduleJson)
+      setRows(nextRows)
+
+      const { start, due } = deriveBulkDatesFromRows(nextRows)
+      setBulkStart(start)
+      setBulkDue(due)
     } catch {
       setError("Unable to load student schedules.")
       setRows([])
     } finally {
       setLoading(false)
     }
-  }, [rubricId, studentIds, students])
+  }, [resolvedRubricIds, studentIds, students])
 
   useEffect(() => {
     if (!isOpen) {
       reset()
       return
     }
-    if (!rubricId) {
+    if (!resolvedRubricIds.length) {
       setError("Missing lesson information.")
       return
     }
     load()
-  }, [isOpen, rubricId, load, reset])
+  }, [isOpen, rubricKey, load, reset, resolvedRubricIds.length])
 
   const filteredRows = useMemo(() => {
     if (!search.trim()) return rows
@@ -92,20 +88,32 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
   }, [])
 
   const saveRows = useCallback(
-    async (targetRows, startValue, dueValue) => {
+    async (targetRows, startValue, dueValue, options = {}) => {
+      const { applyAllFields = false, sendStart = false, sendDue = false } = options
       const message = validateDateRange(startValue, dueValue)
       if (message) throw new Error(message)
-      const startIso = toIsoFromDateOnly(startValue)
-      const dueIso = toIsoFromDateOnly(dueValue)
-      if (!startIso || !dueIso) throw new Error("Dates must be valid.")
+
+      const startIso = startValue ? toIsoFromDateOnly(startValue) : null
+      const dueIso = dueValue ? toIsoFromDateOnly(dueValue) : null
+
+      if (startValue && !startIso) throw new Error("Start date must be valid.")
+      if (dueValue && !dueIso) throw new Error("Due date must be valid.")
+      if (!applyAllFields && !startIso && !dueIso) {
+        throw new Error("Enter a start date, due date, or both.")
+      }
+      if (applyAllFields && !startIso && !dueIso) {
+        throw new Error("Enter a start date, due date, or both.")
+      }
+
       await api.updateRubricStatusDates(
-        rubricId,
+        resolvedRubricIds,
         startIso,
         dueIso,
-        targetRows.map((r) => r.id)
+        targetRows.map((r) => r.id),
+        { applyAllFields, sendStart, sendDue }
       )
     },
-    [rubricId]
+    [resolvedRubricIds]
   )
 
   const handleSaveRow = useCallback(
@@ -113,7 +121,20 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
       setSavingId(row.id)
       setError("")
       try {
-        await saveRows([row], row.start, row.due)
+        const startToSave = row.start || ""
+        const dueToSave = row.due || ""
+        await saveRows([row], startToSave, dueToSave, {
+          sendStart: Boolean(startToSave),
+          sendDue: true,
+        })
+
+        const scheduleJson = await api.fetchRubricStatusDates(resolvedRubricIds, studentIds)
+        const refreshedRows = buildScheduleRows(students, scheduleJson)
+        setRows(refreshedRows)
+        const { start, due } = deriveBulkDatesFromRows(refreshedRows)
+        setBulkStart(start)
+        setBulkDue(due)
+
         tpToast.success("Access schedule saved for student")
       } catch (e) {
         const msg = e.message || "Unable to save schedule for this student."
@@ -123,7 +144,7 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
         setSavingId(null)
       }
     },
-    [saveRows]
+    [resolvedRubricIds, studentIds, students, saveRows]
   )
 
   const handleBulkSave = useCallback(async () => {
@@ -135,8 +156,13 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
     setBulkError("")
     setError("")
     try {
-      await saveRows(rows, bulkStart, bulkDue)
-      setRows((prev) => prev.map((r) => ({ ...r, start: bulkStart, due: bulkDue })))
+      await saveRows(rows, bulkStart, bulkDue, { applyAllFields: true })
+
+      const scheduleJson = await api.fetchRubricStatusDates(resolvedRubricIds, studentIds)
+      const refreshedRows = buildScheduleRows(students, scheduleJson)
+      setRows(refreshedRows)
+      setBulkStart(bulkStart)
+      setBulkDue(bulkDue)
       setBulkOpen(false)
       tpToast.success("Access schedule saved for all students")
     } catch (e) {
@@ -146,7 +172,15 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
     } finally {
       setSavingAll(false)
     }
-  }, [rows, bulkStart, bulkDue, saveRows])
+  }, [rows, bulkStart, bulkDue, saveRows, resolvedRubricIds, studentIds, students])
+
+  const openBulkModal = useCallback(() => {
+    const { start, due } = deriveBulkDatesFromRows(rows)
+    setBulkStart(start)
+    setBulkDue(due)
+    setBulkError("")
+    setBulkOpen(true)
+  }, [rows])
 
   return {
     rows,
@@ -167,5 +201,6 @@ export function useLessonSchedule({ isOpen, rubricId, students }) {
     handleRowChange,
     handleSaveRow,
     handleBulkSave,
+    openBulkModal,
   }
 }

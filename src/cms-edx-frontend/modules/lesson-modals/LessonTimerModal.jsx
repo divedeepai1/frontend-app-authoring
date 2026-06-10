@@ -15,8 +15,8 @@ const COLUMNS = [
   { key: "actions", label: "Actions", alignRight: true, width: "18%" },
 ]
 
-export default function LessonTimerModal({ isOpen, onClose, title, rubricId, students }) {
-  const t = useLessonTimer({ isOpen, rubricId, students })
+export default function LessonTimerModal({ isOpen, onClose, title, rubricId, rubricIds, students }) {
+  const t = useLessonTimer({ isOpen, rubricId, rubricIds, students })
 
   return (
     <TpLessonModalFrame

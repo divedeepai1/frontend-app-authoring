@@ -16,10 +16,28 @@ export function toIsoFromDateOnly(value) {
 }
 
 export function validateDateRange(start, due) {
-  if (!start || !due) return "Start date and due date are required."
-  const s = new Date(start)
-  const d = new Date(due)
-  if (Number.isNaN(s.getTime()) || Number.isNaN(d.getTime())) return "Dates must be valid."
-  if (s > d) return "Start date cannot be after due date."
+  const hasStart = Boolean(start)
+  const hasDue = Boolean(due)
+
+  if (!hasStart && !hasDue) {
+    return "Enter a start date, due date, or both."
+  }
+
+  if (hasStart) {
+    const s = new Date(start)
+    if (Number.isNaN(s.getTime())) return "Start date must be valid."
+  }
+
+  if (hasDue) {
+    const d = new Date(due)
+    if (Number.isNaN(d.getTime())) return "Due date must be valid."
+  }
+
+  if (hasStart && hasDue) {
+    const s = new Date(start)
+    const d = new Date(due)
+    if (s > d) return "Start date cannot be after due date."
+  }
+
   return ""
 }
