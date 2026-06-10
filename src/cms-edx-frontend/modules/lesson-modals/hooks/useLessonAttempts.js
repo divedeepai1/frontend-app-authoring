@@ -10,6 +10,7 @@ import {
   normalizeAttemptsPayload,
   parseAttemptsLimitValue,
   resolveClassAttemptsLimit,
+  toApiAttemptsValue,
   toDropdownAttemptsValue,
   toStudentAttemptMap,
 } from "../utils/attempts"
@@ -149,7 +150,7 @@ export function useLessonAttempts({ isOpen, rubricId, rubricIds, students }) {
     setSavingClass(true)
     setError("")
     setSuccess("")
-    const classNumOfAttempts = maxAttempts === "unlimited" ? null : maxAttempts
+    const classNumOfAttempts = toApiAttemptsValue(maxAttempts)
     try {
       await api.setRubricNumAttempts(
         resolvedRubricIds,
@@ -172,12 +173,16 @@ export function useLessonAttempts({ isOpen, rubricId, rubricIds, students }) {
   const saveStudentAttempts = useCallback(
     async (studentId, studentAttemptsAllotted, nextNumOfAttempts) => {
       if (!resolvedRubricIds.length) return
-      const boundedAllotted =
+      const boundedAllotted = toApiAttemptsValue(
         studentAttemptsAllotted === null
           ? null
           : Math.max(MIN_ATTEMPTS, Math.min(MAX_ATTEMPTS, studentAttemptsAllotted))
-      const boundedNumOfAttempts =
-        nextNumOfAttempts === null ? null : Math.max(0, Math.min(MAX_ATTEMPTS, nextNumOfAttempts))
+      )
+      const boundedNumOfAttempts = toApiAttemptsValue(
+        nextNumOfAttempts === null
+          ? null
+          : Math.max(0, Math.min(MAX_ATTEMPTS, nextNumOfAttempts))
+      )
       setSavingStudentId(studentId)
       setError("")
       setSuccess("")
