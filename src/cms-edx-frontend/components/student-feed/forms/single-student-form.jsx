@@ -13,8 +13,10 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
     password: "",
     email: "",
   })
+  const [isAdding, setIsAdding] = useState(false)
 
   const handleChange = (e) => {
+    if (isAdding) return
     const { name, value } = e.target
     if ((name === "firstName" || name === "lastName") && /[^a-zA-Z\s]/.test(value)) {
       return
@@ -28,18 +30,20 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const id = sessionStorage.getItem("classId")
-    const token = await fetchCsrfToken()
-
-    const data = JSON.stringify({
-      username: studentData.username,
-      first_name: studentData.firstName,
-      password: studentData.password,
-      last_name: studentData.lastName,
-      email: studentData.email,
-    })
+    setIsAdding(true)
 
     try {
+      const id = sessionStorage.getItem("classId")
+      const token = await fetchCsrfToken()
+
+      const data = JSON.stringify({
+        username: studentData.username,
+        first_name: studentData.firstName,
+        password: studentData.password,
+        last_name: studentData.lastName,
+        email: studentData.email,
+      })
+
       const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${id}/add-student/`, {
         method: "POST",
         credentials: "include",
@@ -66,10 +70,13 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
       }
     } catch (error) {
       tpToast.error("Unable to add student", error?.message || "Please try again.")
+    } finally {
+      setIsAdding(false)
     }
   }
 
   const handleCancel = () => {
+    if (isAdding) return
     setSelectedOption(null)
     setAddStudents(false)
   }
@@ -92,6 +99,7 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
             required
             className="tp-input"
             autoComplete="off"
+            disabled={isAdding}
           />
         </div>
         <div className="tp-field">
@@ -107,6 +115,7 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
             required
             className="tp-input"
             autoComplete="new-password"
+            disabled={isAdding}
           />
         </div>
         <div className="tp-field">
@@ -121,6 +130,7 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
             required
             className="tp-input"
             autoComplete="given-name"
+            disabled={isAdding}
           />
         </div>
         <div className="tp-field">
@@ -135,6 +145,7 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
             required
             className="tp-input"
             autoComplete="family-name"
+            disabled={isAdding}
           />
         </div>
       </div>
@@ -152,14 +163,15 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
           required
           className="tp-input"
           autoComplete="email"
+          disabled={isAdding}
         />
       </div>
 
       <div className="tp-student-form-actions">
-        <button type="submit" className="tp-btn tp-btn-primary">
-          Add student
+        <button type="submit" className="tp-btn tp-btn-primary" disabled={isAdding} aria-busy={isAdding}>
+          {isAdding ? "Adding student…" : "Add student"}
         </button>
-        <button type="button" className="tp-btn tp-btn-secondary" onClick={handleCancel}>
+        <button type="button" className="tp-btn tp-btn-secondary" onClick={handleCancel} disabled={isAdding}>
           Cancel
         </button>
       </div>

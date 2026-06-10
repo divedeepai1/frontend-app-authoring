@@ -8,6 +8,7 @@ import { tpToast } from "../../common/tpToast"
 const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStudentAdded }) => {
   const [csvFile, setCsvFile] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
   const navigate = useNavigate()
 
   const notify = ({ title, message, variant = "info", duration }) => {
@@ -120,6 +121,8 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
   }
 
   const applyFile = async (file) => {
+    if (isImporting) return
+
     if (!file) {
       setCsvFile(null)
       return
@@ -191,12 +194,14 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
       return
     }
 
-    const token = await fetchCsrfToken()
-    const classId = sessionStorage.getItem("classId")
-    const formData = new FormData()
-    formData.append("file", csvFile)
+    setIsImporting(true)
 
     try {
+      const token = await fetchCsrfToken()
+      const classId = sessionStorage.getItem("classId")
+      const formData = new FormData()
+      formData.append("file", csvFile)
+
       const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/add-students-csv/`, {
         method: "POST",
         credentials: "include",
@@ -271,10 +276,13 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
         message: error.message || "An error occurred while uploading the file. Please try again.",
         variant: "error",
       })
+    } finally {
+      setIsImporting(false)
     }
   }
 
   const handleRemoveFile = () => {
+    if (isImporting) return
     setCsvFile(null)
   }
 
@@ -288,6 +296,7 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
   const onDrop = async (e) => {
     e.preventDefault()
     setIsDragging(false)
+    if (isImporting) return
     const file = e.dataTransfer.files?.[0]
     if (file) await applyFile(file)
   }
@@ -297,7 +306,12 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
       <form onSubmit={handleSubmit} className="tp-csv-import-form">
         <div className="tp-csv-import-head">
           <h3 className="tp-title tp-csv-import-title">Import CSV file</h3>
-          <button type="button" className="tp-btn tp-btn-outline tp-csv-template-btn" onClick={handleDownloadTemplate}>
+          <button
+            type="button"
+            className="tp-btn tp-btn-outline tp-csv-template-btn"
+            onClick={handleDownloadTemplate}
+            disabled={isImporting}
+          >
             <Download size={16} strokeWidth={2} aria-hidden />
             Download CSV template
           </button>
@@ -319,6 +333,7 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
             accept=".csv"
             className="tp-csv-file-input"
             onChange={handleFileChange}
+            disabled={isImporting}
           />
           <div className="tp-csv-dropzone-inner">
             {csvFile ? (
@@ -340,15 +355,20 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
         {csvFile ? (
           <div className="tp-csv-file-row">
             <span className="tp-csv-file-name">{csvFile.name}</span>
-            <button type="button" className="tp-csv-file-remove" onClick={handleRemoveFile}>
+            <button type="button" className="tp-csv-file-remove" onClick={handleRemoveFile} disabled={isImporting}>
               Remove
             </button>
           </div>
         ) : null}
 
         <div className="tp-csv-import-actions">
-          <button type="submit" className="tp-btn tp-btn-primary" disabled={!csvFile}>
-            Add students
+          <button
+            type="submit"
+            className="tp-btn tp-btn-primary"
+            disabled={!csvFile || isImporting}
+            aria-busy={isImporting}
+          >
+            {isImporting ? "Adding students…" : "Add students"}
           </button>
           <button
             type="button"
@@ -357,6 +377,7 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
               setSelectedOption(null)
               setAddStudents(false)
             }}
+            disabled={isImporting}
           >
             Cancel
           </button>

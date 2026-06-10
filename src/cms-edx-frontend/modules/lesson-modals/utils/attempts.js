@@ -1,5 +1,20 @@
 export const MIN_ATTEMPTS = 1
 export const MAX_ATTEMPTS = 20
+export const UNLIMITED_ATTEMPTS_API_VALUE = -1
+
+export function isUnlimitedAttemptsValue(value) {
+  return (
+    value === null ||
+    value === undefined ||
+    value === "unlimited" ||
+    value === UNLIMITED_ATTEMPTS_API_VALUE
+  )
+}
+
+export function toApiAttemptsValue(value) {
+  if (isUnlimitedAttemptsValue(value)) return UNLIMITED_ATTEMPTS_API_VALUE
+  return value
+}
 
 export function buildAttemptOptions() {
   return Array.from({ length: MAX_ATTEMPTS - MIN_ATTEMPTS + 1 }, (_, idx) => MIN_ATTEMPTS + idx)
@@ -41,7 +56,9 @@ export function parseAttemptEntry(entry) {
   const toNullableNumber = (value) => {
     if (value === null || value === undefined) return null
     const parsed = Number(value)
-    return Number.isNaN(parsed) ? null : parsed
+    if (Number.isNaN(parsed)) return null
+    if (parsed === UNLIMITED_ATTEMPTS_API_VALUE) return null
+    return parsed
   }
   if (entry && typeof entry === "object") {
     const allottedRaw =
@@ -114,7 +131,7 @@ export function parseAttemptsLimitValue(raw) {
   if (Number.isInteger(parsed) && parsed >= MIN_ATTEMPTS) {
     return Math.min(parsed, MAX_ATTEMPTS)
   }
-  if (parsed === 0) return null
+  if (parsed === 0 || parsed === UNLIMITED_ATTEMPTS_API_VALUE) return null
   return undefined
 }
 
@@ -138,7 +155,7 @@ function readAttemptsLimitFromObject(source) {
 
   const unlimitedCandidates = [source.num_of_attempts, source.attempts_allotted]
   for (const candidate of unlimitedCandidates) {
-    if (candidate === null) return null
+    if (candidate === null || candidate === UNLIMITED_ATTEMPTS_API_VALUE) return null
     if (typeof candidate === "string") {
       const normalized = candidate.trim().toLowerCase()
       if (normalized === "unlimited" || normalized === "infinity") return null
@@ -207,7 +224,7 @@ export function getRubricAttemptsAllotted(data) {
 }
 
 export function toDropdownAttemptsValue(value, fallback = MIN_ATTEMPTS) {
-  if (value === null) return "unlimited"
+  if (value === null || value === UNLIMITED_ATTEMPTS_API_VALUE) return "unlimited"
   if (value !== undefined && Number.isInteger(value) && value >= MIN_ATTEMPTS) {
     return Math.min(value, MAX_ATTEMPTS)
   }

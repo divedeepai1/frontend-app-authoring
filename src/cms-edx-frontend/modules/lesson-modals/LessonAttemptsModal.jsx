@@ -14,8 +14,8 @@ const COLUMNS = [
   { key: "actions", label: "Actions", alignRight: true, width: "30%" },
 ]
 
-export default function LessonAttemptsModal({ isOpen, onClose, title, rubricId, students }) {
-  const a = useLessonAttempts({ isOpen, rubricId, students })
+export default function LessonAttemptsModal({ isOpen, onClose, title, rubricId, rubricIds, students }) {
+  const a = useLessonAttempts({ isOpen, rubricId, rubricIds, students })
 
   return (
     <TpLessonModalFrame
