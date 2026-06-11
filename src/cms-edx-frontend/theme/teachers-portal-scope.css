@@ -2399,7 +2399,8 @@
 
 .cms-tp-scope .tp-portal-data-table-th--actions {
   text-align: center;
-  width: 1%;
+  width: 10.5rem;
+  min-width: 10.5rem;
 }
 
 .cms-tp-scope .tp-portal-data-table-td {
@@ -2418,6 +2419,8 @@
 .cms-tp-scope .tp-portal-data-table-td--actions {
   text-align: center;
   white-space: nowrap;
+  width: 10.5rem;
+  min-width: 10.5rem;
 }
 
 .cms-tp-scope .tp-portal-data-table-grid tbody tr {

@@ -94,6 +94,28 @@ export async function fetchStudentsList(classId) {
   return res.json()
 }
 
+export async function removeStudentsFromClassroom(classId, studentIds) {
+  const students = (Array.isArray(studentIds) ? studentIds : [studentIds])
+    .map((id) => id)
+    .filter((id) => id !== undefined && id !== null && id !== "")
+
+  if (!students.length) {
+    throw new Error("No students selected for removal.")
+  }
+
+  const res = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students/`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      headers: await jsonHeaders(),
+      body: JSON.stringify({ students }),
+    }
+  )
+  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  return res.json().catch(() => ({}))
+}
+
 export async function fetchClassrooms() {
   const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/`, {
     method: "GET",
