@@ -20,6 +20,7 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent, embedInModal = false
   const [addStudents, setAddStudents] = useState(false)
   const [selectedOption, setSelectedOption] = useState(null)
   const [students, setStudents] = useState([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const pendingDeleteIdsRef = useRef([])
@@ -29,13 +30,17 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent, embedInModal = false
   const loadStudents = useCallback(async () => {
     if (!classId) {
       setStudents([])
+      setLoadingStudents(false)
       return
     }
+    setLoadingStudents(true)
     try {
       const result = await classroomApi.fetchStudentsList(classId)
       setStudents(result?.students || [])
     } catch {
       setStudents([])
+    } finally {
+      setLoadingStudents(false)
     }
   }, [classId])
 
@@ -113,12 +118,13 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent, embedInModal = false
   }
 
   const showTable =
-    students.length > 0 && !addStudents && !isNewStudent && !selectedOption
+    !addStudents && !isNewStudent && !selectedOption && (loadingStudents || students.length > 0)
 
   return (
     <>
       {showTable ? (
         <StudentTable
+          isLoading={loadingStudents}
           students={students}
           setAddStudents={setAddStudents}
           nextStep={nextStep}

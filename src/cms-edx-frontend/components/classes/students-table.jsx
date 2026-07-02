@@ -7,6 +7,8 @@ import SaveInformationForLater from "./save-information-for-later"
 import { tpToast } from "../common/tpToast"
 import { base_url } from "../../../compugrade-constants"
 
+import TpLoadingState from "../common/TpLoadingState"
+
 export default function StudentTable({
   students,
   setAddStudents,
@@ -21,6 +23,8 @@ export default function StudentTable({
   toolbar,
   embedInModal = false,
   showRowActions,
+  isLoading = false,
+  loadingLabel = "Loading students…",
 }) {
   const navigate = useNavigate()
   const [resettingStudentId, setResettingStudentId] = useState(null)
@@ -143,6 +147,9 @@ export default function StudentTable({
         ) : null}
 
         <div className="tp-portal-data-table-scroll">
+          {isLoading ? (
+            <TpLoadingState label={loadingLabel} className="tp-portal-data-table-loading" />
+          ) : (
           <table className="tp-portal-data-table-grid">
             <colgroup>
               {showSelection ? <col style={{ width: "3rem" }} /> : null}
@@ -246,9 +253,10 @@ export default function StudentTable({
               )}
             </tbody>
           </table>
+          )}
         </div>
         <div className="tp-portal-data-table-foot">
-          Showing {studentList.length} student{studentList.length === 1 ? "" : "s"}
+          {isLoading ? "Loading…" : `Showing ${studentList.length} student${studentList.length === 1 ? "" : "s"}`}
         </div>
       </div>
 

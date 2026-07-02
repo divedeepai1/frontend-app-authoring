@@ -2,6 +2,7 @@ import ChapterRow from "./structure/ChapterRow"
 import LessonRow from "./structure/LessonRow"
 import ManageCourseTableHeader from "./structure/ManageCourseTableHeader"
 import UnitRow from "./structure/UnitRow"
+import TpLoadingState from "../../../components/common/TpLoadingState"
 
 export default function ManageCourseStructureTable({
   chapters,
@@ -17,8 +18,14 @@ export default function ManageCourseStructureTable({
   onTimer,
   onAttempts,
   onSchedule,
+  isLoading = false,
+  loadingLabel = "Loading curriculum…",
 }) {
   const hasUnits = selection.units.length > 0
+
+  if (isLoading) {
+    return <TpLoadingState label={loadingLabel} className="tp-curriculum-table-loading" />
+  }
 
   return (
     <div className="tp-curriculum-table-wrap">

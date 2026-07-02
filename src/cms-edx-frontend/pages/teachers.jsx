@@ -24,6 +24,7 @@ const Teachers = () => {
   })
 
   const [teacherSearch, setTeacherSearch] = useState("")
+  const [loadingTeachers, setLoadingTeachers] = useState(true)
 
   const [studentState, setStudentState] = useState({
     list: [],
@@ -32,6 +33,7 @@ const Teachers = () => {
   })
 
   const [studentSearch, setStudentSearch] = useState("")
+  const [loadingStudents, setLoadingStudents] = useState(true)
 
   const pendingTeacherDeleteRef = useRef([])
   const pendingStudentDeleteRef = useRef([])
@@ -64,6 +66,7 @@ const Teachers = () => {
   }, [classId, classMeta, navigate])
 
   const fetchTeachers = async () => {
+    setLoadingTeachers(true)
     const token = await fetchCsrfToken()
     try {
       const response = await fetch(
@@ -86,10 +89,13 @@ const Teachers = () => {
       setTeacherState((prev) => ({ ...prev, list: result?.all_teachers || [] }))
     } catch {
       setTeacherState((prev) => ({ ...prev, list: [] }))
+    } finally {
+      setLoadingTeachers(false)
     }
   }
 
   const fetchStudents = async () => {
+    setLoadingStudents(true)
     const token = await fetchCsrfToken()
     try {
       const response = await fetch(
@@ -112,6 +118,8 @@ const Teachers = () => {
       setStudentState((prev) => ({ ...prev, list: result?.students || [] }))
     } catch {
       setStudentState((prev) => ({ ...prev, list: [] }))
+    } finally {
+      setLoadingStudents(false)
     }
   }
 
@@ -344,6 +352,7 @@ const Teachers = () => {
             >
               <div className="tp-class-detail-modal-body">
                 <TeachersTable
+                  isLoading={loadingTeachers}
                   toolbar={teacherToolbar}
                   teachers={filteredTeachers}
                   selectedEmails={teacherState.selectedEmails}
@@ -352,6 +361,7 @@ const Teachers = () => {
                   handleSelectTeachers={handleSelectTeachers}
                 />
                 <StudentTable
+                  isLoading={loadingStudents}
                   toolbar={studentToolbar}
                   students={filteredStudents}
                   fromTeachers

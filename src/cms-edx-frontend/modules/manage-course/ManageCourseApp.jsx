@@ -98,6 +98,8 @@ export default function ManageCourseApp() {
 
         <ManageCourseStructureTable
 
+          isLoading={c.loadingCurriculum}
+
           chapters={c.chapters}
 
           lessonsByChapter={c.lessonsByChapter}

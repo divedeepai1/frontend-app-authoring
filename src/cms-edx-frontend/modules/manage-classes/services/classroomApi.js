@@ -1,11 +1,20 @@
 import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../../../cms-csrftoken"
+import { classroom_archive_password } from "../../../../compugrade-constants"
 
 async function jsonHeaders() {
   const token = await fetchCsrfToken()
   return {
     "Content-Type": "application/json",
     "X-CSRFToken": token,
+  }
+}
+
+async function archiveActionHeaders() {
+  const headers = await jsonHeaders()
+  return {
+    ...headers,
+    password: classroom_archive_password,
   }
 }
 
@@ -133,4 +142,30 @@ export async function deleteClassroom(classId) {
     headers: await jsonHeaders(),
   })
   if (!res.ok) throw new Error(await res.text() || String(res.status))
+}
+
+export async function archiveClassroom(classId) {
+  const res = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/archive/`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: await archiveActionHeaders(),
+    }
+  )
+  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  return res.json().catch(() => ({}))
+}
+
+export async function unarchiveClassroom(classId) {
+  const res = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/archive/`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      headers: await archiveActionHeaders(),
+    }
+  )
+  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  return res.json().catch(() => ({}))
 }

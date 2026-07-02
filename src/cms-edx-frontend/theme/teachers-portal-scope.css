@@ -343,6 +343,142 @@
   color: #c2410c;
 }
 
+.cms-tp-scope .tp-pill-archived {
+  background: rgba(107, 114, 128, 0.15);
+  color: #4b5563;
+}
+
+.cms-tp-scope .tp-loading-state,
+.cms-tp-scope .tp-resources-loading,
+.cms-tp-scope .tp-resources-empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.cms-tp-scope .tp-loading-spinner,
+.cms-tp-scope .tp-resources-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #27aae1;
+  border-radius: 50%;
+  margin: 0 auto 0.75rem;
+  animation: tp-resources-spin 0.8s linear infinite;
+}
+
+.cms-tp-scope .tp-loading-text,
+.cms-tp-scope .tp-resources-loading-text {
+  font-size: 0.875rem;
+  color: #6a7282;
+}
+
+@keyframes tp-resources-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cms-tp-scope .tp-myclasses-loading {
+  min-height: 12rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.cms-tp-scope .tp-portal-data-table-loading,
+.cms-tp-scope .tp-lesson-modal-table-loading,
+.cms-tp-scope .tp-curriculum-table-loading,
+.cms-tp-scope .tp-gradebook-loading,
+.cms-tp-scope .tp-student-detail-loading {
+  min-height: 8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.cms-tp-scope .tp-myclasses-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cms-tp-scope .tp-myclasses-filter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.cms-tp-scope .tp-segmented-control {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.cms-tp-scope .tp-segmented-control button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0.45rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cms-tp-scope .tp-segmented-control button + button {
+  border-left: 1px solid #d1d5db;
+}
+
+.cms-tp-scope .tp-segmented-control button:hover:not(.is-active) {
+  background: #f9fafb;
+}
+
+.cms-tp-scope .tp-segmented-control button.is-active {
+  background: #27aae1;
+  color: #ffffff;
+}
+
+.cms-tp-scope .tp-myclasses-card--archived .tp-myclasses-head {
+  background: #f3f4f6;
+}
+
+.cms-tp-scope .tp-myclasses-card--archived .tp-myclasses-heading {
+  color: #4b5563;
+}
+
+.cms-tp-scope .tp-myclasses-row--archived {
+  color: #6b7280;
+  background: #f9fafb;
+}
+
+.cms-tp-scope .tp-myclasses-row--archived:hover {
+  background: #f3f4f6;
+}
+
+.cms-tp-scope .tp-myclasses-row--archived .tp-cell-strong {
+  color: #6b7280;
+}
+
+.cms-tp-scope .tp-myclasses-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #6a7282;
+}
+
+.cms-tp-scope .tp-myclasses-add-btn {
+  padding: 0.65rem 1.1rem;
+}
+
 .cms-tp-scope .tp-page-inner {
   max-width: 960px;
   margin: 0 auto;
@@ -1438,33 +1574,6 @@
 .cms-tp-scope .tp-resources-action-danger:hover {
   background: #fee2e2;
   color: #dc2626;
-}
-
-.cms-tp-scope .tp-resources-loading,
-.cms-tp-scope .tp-resources-empty {
-  padding: 3rem 1.5rem;
-  text-align: center;
-}
-
-.cms-tp-scope .tp-resources-spinner {
-  width: 2rem;
-  height: 2rem;
-  border: 3px solid #e5e7eb;
-  border-top-color: #27aae1;
-  border-radius: 50%;
-  margin: 0 auto 0.75rem;
-  animation: tp-resources-spin 0.8s linear infinite;
-}
-
-@keyframes tp-resources-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.cms-tp-scope .tp-resources-loading-text {
-  font-size: 0.875rem;
-  color: #6a7282;
 }
 
 .cms-tp-scope .tp-resources-empty-icon {
@@ -3536,7 +3645,6 @@
   gap: 0.5rem;
 }
 
-.cms-tp-scope .tp-gradebook-loading,
 .cms-tp-scope .tp-gradebook-empty {
   text-align: center;
   color: #6a7282;
@@ -4174,8 +4282,7 @@
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
 }
 
-.cms-tp-scope .tp-student-detail-empty,
-.cms-tp-scope .tp-student-detail-loading {
+.cms-tp-scope .tp-student-detail-empty {
   padding: 2rem 1.5rem;
   margin: 0;
   text-align: center;

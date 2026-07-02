@@ -1,4 +1,20 @@
-export default function TpStudentTableShell({ columns, children }) {
+import TpLoadingState from "../../../components/common/TpLoadingState"
+
+export default function TpStudentTableShell({
+  columns,
+  children,
+  isLoading = false,
+  loadingLabel = "Loading…",
+}) {
+  if (isLoading) {
+    return (
+      <TpLoadingState
+        label={loadingLabel}
+        className="tp-lesson-modal-table-loading"
+      />
+    )
+  }
+
   return (
     <div className="tp-lesson-modal-table-wrap">
       <div className="tp-lesson-modal-table-scroll">

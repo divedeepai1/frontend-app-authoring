@@ -35,19 +35,16 @@ export default function GradebookApp() {
 
           <TpModalFeedback error={g.error} success={g.success} />
 
-          {g.loading ? (
-            <p className="tp-gradebook-loading">Loading gradebook...</p>
-          ) : (
-            <GradebookDataTable
-              lessons={g.courseRubrics}
-              students={g.filteredStudents}
-              gradesByStudent={g.gradebookRows}
-              editedLessonIds={g.editedLessonIds}
-              onEditCell={(student, lesson, value) => {
-                g.setOverrideContext({ student, lesson, value })
-              }}
-            />
-          )}
+          <GradebookDataTable
+            isLoading={g.loading}
+            lessons={g.courseRubrics}
+            students={g.filteredStudents}
+            gradesByStudent={g.gradebookRows}
+            editedLessonIds={g.editedLessonIds}
+            onEditCell={(student, lesson, value) => {
+              g.setOverrideContext({ student, lesson, value })
+            }}
+          />
 
           <footer className="tp-gradebook-footer">
             <p className="tp-gradebook-footer-text">
