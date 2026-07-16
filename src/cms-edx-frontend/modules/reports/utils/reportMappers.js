@@ -122,13 +122,18 @@ export function normalizeLessonActivityReport(payload) {
     return {
       id: String(
         row.id ??
-          `${row.user_id || "s"}-${row.rubric_id || "l"}-${row.attempt_number || row.attempt || index}`
+          `${row.user_id || "s"}-${row.rubric_id || "l"}-${row.attempt_number || row.attempt_no || index}`
       ),
       studentId: String(row.user_id ?? row.student_id ?? ""),
       studentName: resolveStudentName(row),
       lessonName: row.lesson_name || row.rubric_title || row.title || row.name || "Lesson",
       type: row.type || row.content_type || row.item_type || "Lesson",
-      attemptNumber: Number(row.attempt_number ?? row.attempt ?? row.attempt_no ?? index + 1),
+      attemptNumber:
+        row.attempt_number === null || row.attempt_number === undefined || row.attempt_number === ""
+          ? null
+          : Number.isFinite(Number(row.attempt_number))
+            ? Number(row.attempt_number)
+            : null,
       score: row.score ?? row.grade ?? null,
       timerDuration: formatDurationMinutes(timerRaw, { emptyAs: "N/A" }),
       timeToComplete: formatDurationMinutes(timeToCompleteRaw, { emptyAs: "—" }),
