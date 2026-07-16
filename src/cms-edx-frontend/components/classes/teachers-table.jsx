@@ -58,6 +58,8 @@ import TpCheckbox from "../common/TpCheckbox"
 //   })
 // }
 
+import TpLoadingState from "../common/TpLoadingState"
+
 export default function TeachersTable({
   teachers,
   selectedEmails,
@@ -65,6 +67,8 @@ export default function TeachersTable({
   handleSelectAllTeachers,
   handleSelectTeachers,
   toolbar,
+  isLoading = false,
+  loadingLabel = "Loading teachers…",
 }) {
   const tList = teachers || []
   const allTeachersSelected = tList.length > 0 && selectedEmails.length === tList.length
@@ -83,6 +87,9 @@ export default function TeachersTable({
       </div>
       {toolbar ? <div className="tp-portal-data-table-toolbar">{toolbar}</div> : null}
       <div className="tp-portal-data-table-scroll">
+        {isLoading ? (
+          <TpLoadingState label={loadingLabel} className="tp-portal-data-table-loading" />
+        ) : (
         <table className="tp-portal-data-table-grid">
           <colgroup>
             <col style={{ width: "3rem" }} />
@@ -194,9 +201,10 @@ export default function TeachersTable({
             )}
           </tbody>
         </table>
+        )}
       </div>
       <div className="tp-portal-data-table-foot">
-        Showing {tList.length} teacher{tList.length === 1 ? "" : "s"}
+        {isLoading ? "Loading…" : `Showing ${tList.length} teacher${tList.length === 1 ? "" : "s"}`}
       </div>
     </div>
   )

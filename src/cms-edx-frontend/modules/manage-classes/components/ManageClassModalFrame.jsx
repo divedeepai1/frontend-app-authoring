@@ -11,6 +11,7 @@ export default function ManageClassModalFrame({
   children,
   footer,
   wide = false,
+  compactBody = false,
 }) {
   useEffect(() => {
     const onKey = (e) => {
@@ -23,7 +24,7 @@ export default function ManageClassModalFrame({
   return (
     <div className="tp-mc-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className={`tp-mc-modal-panel${wide ? " tp-mc-modal-panel--wide" : ""}`}
+        className={`tp-mc-modal-panel${wide ? " tp-mc-modal-panel--wide" : ""}${compactBody ? " tp-mc-modal-panel--compact" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="tp-mc-modal-title"
@@ -49,7 +50,7 @@ export default function ManageClassModalFrame({
           </div>
         </header>
         {showProgress && progress ? <div className="tp-mc-modal-progress">{progress}</div> : null}
-        <div className="tp-mc-modal-body">{children}</div>
+        <div className={`tp-mc-modal-body${compactBody ? " tp-mc-modal-body--compact" : ""}`}>{children}</div>
         {footer ? <footer className="tp-mc-modal-footer">{footer}</footer> : null}
       </div>
     </div>

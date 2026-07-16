@@ -15,6 +15,7 @@ const ManageClasses = () => {
   const isNewStudent = location.pathname.endsWith("/add-student")
   const [selectedTeachers, setSelectedTeachers] = useState([])
   const [teachers, setTeachers] = useState([])
+  const [loadingTeachers, setLoadingTeachers] = useState(false)
 
   const closeWizard = useCallback(() => {
     sessionStorage.removeItem("classId")
@@ -35,11 +36,14 @@ const ManageClasses = () => {
     if (!isNewTeacher) return
     let cancelled = false
     ;(async () => {
+      setLoadingTeachers(true)
       try {
-        const list = await teachersApi.fetchTeachers()
+        const list = await teachersApi.fetchSchoolTeachers()
         if (!cancelled) setTeachers(list)
       } catch {
         if (!cancelled) setTeachers([])
+      } finally {
+        if (!cancelled) setLoadingTeachers(false)
       }
     })()
     return () => {
@@ -87,15 +91,17 @@ const ManageClasses = () => {
             {isNewTeacher ? (
               <ManageClassModalFrame
                 title="Add more teachers"
-                subtitle="Invite teachers by email."
+                subtitle="Select teachers from your school list or search by email."
                 onClose={closeAddTeacher}
                 showProgress={false}
                 headerEnd={null}
                 footer={null}
+                compactBody
               >
                 <div className="tp-mc-add-teacher-inner">
                   <AddTeacher
                     teachers={teachers}
+                    loadingTeachers={loadingTeachers}
                     selectedTeachers={selectedTeachers}
                     setSelectedTeachers={setSelectedTeachers}
                     nextStep={handleNextStep}

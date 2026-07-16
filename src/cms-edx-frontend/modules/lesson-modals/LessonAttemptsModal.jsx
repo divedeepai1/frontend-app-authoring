@@ -73,23 +73,19 @@ export default function LessonAttemptsModal({ isOpen, onClose, title, rubricId, 
         disabled={a.loading || a.savingClass || !!a.savingStudentId}
       />
 
-      <TpStudentTableShell columns={COLUMNS}>
-        {a.loading ? (
-          <tr>
-            <td colSpan={5} className="tp-lesson-modal-empty">
-              Loading attempts…
-            </td>
-          </tr>
-        ) : null}
-        {!a.loading && a.filteredRows.length === 0 ? (
+      <TpStudentTableShell
+        columns={COLUMNS}
+        isLoading={a.loading}
+        loadingLabel="Loading attempts…"
+      >
+        {a.filteredRows.length === 0 ? (
           <tr>
             <td colSpan={5} className="tp-lesson-modal-empty">
               No students found.
             </td>
           </tr>
         ) : null}
-        {!a.loading &&
-          a.filteredRows.map((row) => (
+        {a.filteredRows.map((row) => (
             <tr key={row.id}>
               <td className="tp-lesson-modal-td--wrap">{row.name || "—"}</td>
               <td className="tp-lesson-modal-td--wrap">{row.email || "—"}</td>

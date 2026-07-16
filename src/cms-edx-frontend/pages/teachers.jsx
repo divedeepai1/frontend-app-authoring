@@ -10,6 +10,7 @@ import { Pencil } from "lucide-react"
 import TeachersTable from "../components/classes/teachers-table"
 import StudentTable from "../components/classes/students-table"
 import { tpToast } from "../components/common/tpToast"
+import * as classroomApi from "../modules/manage-classes/services/classroomApi"
 import "../theme/teachers-portal-scope.css"
 
 const Teachers = () => {
@@ -23,6 +24,7 @@ const Teachers = () => {
   })
 
   const [teacherSearch, setTeacherSearch] = useState("")
+  const [loadingTeachers, setLoadingTeachers] = useState(true)
 
   const [studentState, setStudentState] = useState({
     list: [],
@@ -31,6 +33,7 @@ const Teachers = () => {
   })
 
   const [studentSearch, setStudentSearch] = useState("")
+  const [loadingStudents, setLoadingStudents] = useState(true)
 
   const pendingTeacherDeleteRef = useRef([])
   const pendingStudentDeleteRef = useRef([])
@@ -63,6 +66,7 @@ const Teachers = () => {
   }, [classId, classMeta, navigate])
 
   const fetchTeachers = async () => {
+    setLoadingTeachers(true)
     const token = await fetchCsrfToken()
     try {
       const response = await fetch(
@@ -85,10 +89,13 @@ const Teachers = () => {
       setTeacherState((prev) => ({ ...prev, list: result?.all_teachers || [] }))
     } catch {
       setTeacherState((prev) => ({ ...prev, list: [] }))
+    } finally {
+      setLoadingTeachers(false)
     }
   }
 
   const fetchStudents = async () => {
+    setLoadingStudents(true)
     const token = await fetchCsrfToken()
     try {
       const response = await fetch(
@@ -111,6 +118,8 @@ const Teachers = () => {
       setStudentState((prev) => ({ ...prev, list: result?.students || [] }))
     } catch {
       setStudentState((prev) => ({ ...prev, list: [] }))
+    } finally {
+      setLoadingStudents(false)
     }
   }
 
@@ -169,12 +178,15 @@ const Teachers = () => {
   }, [])
 
   const handleSelectStudents = (id) => {
-    setStudentState((prev) => ({
-      ...prev,
-      selectedIds: prev.selectedIds.includes(id)
-        ? prev.selectedIds.filter((i) => i !== id)
-        : [...prev.selectedIds, id],
-    }))
+    setStudentState((prev) => {
+      const isSelected = prev.selectedIds.some((value) => String(value) === String(id))
+      return {
+        ...prev,
+        selectedIds: isSelected
+          ? prev.selectedIds.filter((value) => String(value) !== String(id))
+          : [...prev.selectedIds, id],
+      }
+    })
   }
 
   const handleSelectAllStudents = () => {
@@ -187,7 +199,7 @@ const Teachers = () => {
 
   const openStudentDeleteConfirm = useCallback((id) => {
     setStudentState((prev) => {
-      const isSingle = typeof id === "number" || typeof id === "string"
+      const isSingle = id !== undefined && id !== null && id !== ""
       const ids = isSingle ? [id] : [...prev.selectedIds]
       if (!ids.length) return prev
       pendingStudentDeleteRef.current = ids
@@ -228,25 +240,7 @@ const Teachers = () => {
 
   const deleteAllStudent = useCallback(async () => {
     const students = pendingStudentDeleteRef.current
-    if (!students.length) {
-      throw new Error("No students selected for removal.")
-    }
-    const token = await fetchCsrfToken()
-    const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students/`, {
-      method: "DELETE",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": token,
-      },
-      body: JSON.stringify({ students }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(errorText || `Failed to delete: ${response.status}`)
-    }
-
+    await classroomApi.removeStudentsFromClassroom(classId, students)
     await fetchStudents()
     pendingStudentDeleteRef.current = []
     setStudentState((prev) => ({
@@ -358,6 +352,7 @@ const Teachers = () => {
             >
               <div className="tp-class-detail-modal-body">
                 <TeachersTable
+                  isLoading={loadingTeachers}
                   toolbar={teacherToolbar}
                   teachers={filteredTeachers}
                   selectedEmails={teacherState.selectedEmails}
@@ -366,6 +361,7 @@ const Teachers = () => {
                   handleSelectTeachers={handleSelectTeachers}
                 />
                 <StudentTable
+                  isLoading={loadingStudents}
                   toolbar={studentToolbar}
                   students={filteredStudents}
                   fromTeachers

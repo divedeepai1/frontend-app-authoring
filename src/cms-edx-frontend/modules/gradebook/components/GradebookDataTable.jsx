@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { Pencil } from "lucide-react"
+import TpLoadingState from "../../../components/common/TpLoadingState"
 
 function renderCellValue(cell) {
   if (!cell || typeof cell !== "object") return { text: "Not graded", isMuted: true }
@@ -20,11 +21,17 @@ export default function GradebookDataTable({
   gradesByStudent,
   editedLessonIds,
   onEditCell,
+  isLoading = false,
+  loadingLabel = "Loading gradebook…",
 }) {
   const colWidths = useMemo(() => {
     const lessonCols = lessons.map(() => "10rem")
     return ["14rem", ...lessonCols, "9rem"]
   }, [lessons])
+
+  if (isLoading) {
+    return <TpLoadingState label={loadingLabel} className="tp-gradebook-loading" />
+  }
 
   if (!students.length) {
     return <p className="tp-gradebook-empty">No students found for this class.</p>

@@ -57,6 +57,7 @@ import StudentsGrades from "./cms-edx-frontend/pages/students-grades";
 import Resources from "./cms-edx-frontend/pages/resources";
 import Chat from "./cms-edx-frontend/pages/Chat";
 import Gradebook from "./cms-edx-frontend/pages/gradebook";
+import AccountSettings from "./cms-edx-frontend/pages/account-settings";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +127,7 @@ const App = () => {
         <Route path="/curriculum" element={<Courses />} />
         <Route path="/curriculum/gradebook" element={<Gradebook />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/account-settings" element={<AccountSettings />} />
 
         <Route path="/manage-classes/:step" element={<ManageClasses />} />
       </>
