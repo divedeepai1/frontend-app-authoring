@@ -59,6 +59,7 @@ export function useManageCourse() {
   const [timerContext, setTimerContext] = useState(null)
   const [attemptContext, setAttemptContext] = useState(null)
   const [previewContext, setPreviewContext] = useState(null)
+  const [loadingCurriculum, setLoadingCurriculum] = useState(false)
 
   const loadClasses = useCallback(async () => {
     try {
@@ -81,7 +82,15 @@ export function useManageCourse() {
   }, [])
 
   const loadCourseIntegration = useCallback(async (courseKey) => {
-    if (!courseKey) return
+    if (!courseKey) {
+      setChapters([])
+      setLessons([])
+      setVerticals([])
+      setExpandedChapters({})
+      setExpandedLessons({})
+      return
+    }
+    setLoadingCurriculum(true)
     try {
       const data = await curriculumApi.fetchCourseIntegration(courseKey)
       setCourseTitle(data?.course?.name || "")
@@ -94,6 +103,8 @@ export function useManageCourse() {
       setChapters([])
       setLessons([])
       setVerticals([])
+    } finally {
+      setLoadingCurriculum(false)
     }
   }, [])
 
@@ -277,5 +288,6 @@ export function useManageCourse() {
     openBulkAttempts,
     openPreview,
     modalTitle,
+    loadingCurriculum,
   }
 }

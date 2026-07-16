@@ -35,17 +35,14 @@ export default function StudentDetailApp({ classData, studentName }) {
             loadingProgress={s.loadingProgress}
           />
 
-          {s.loading ? (
-            <p className="tp-student-detail-loading">Loading progress…</p>
-          ) : (
-            <StudentProgressTable
-              lessons={s.lessons}
-              expandedSections={s.expandedSections}
-              onToggleSection={s.toggleSection}
-              loadingProgress={s.loadingProgress}
-              onViewReport={s.openReport}
-            />
-          )}
+          <StudentProgressTable
+            isLoading={s.loading}
+            lessons={s.lessons}
+            expandedSections={s.expandedSections}
+            onToggleSection={s.toggleSection}
+            loadingProgress={s.loadingProgress}
+            onViewReport={s.openReport}
+          />
         </>
       ) : null}
 

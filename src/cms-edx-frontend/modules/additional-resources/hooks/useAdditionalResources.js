@@ -17,7 +17,7 @@ export function useAdditionalResources() {
   const [courses, setCourses] = useState([])
   const [selectedCourseId, setSelectedCourseId] = useState("")
   const [resources, setResources] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [resourceToDelete, setResourceToDelete] = useState(null)
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = useState(false)

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Bell, ChevronDown, LogOut } from "lucide-react"
+import { Bell, ChevronDown, LogOut, Settings } from "lucide-react"
+import { useNavigate } from "react-router"
 import { appendNextToLogoutUrl, getLogoutNextDestination } from "./buildLogoutNextUrl"
 import { getEdxUserInitials, parseEdxUserInfoCookie } from "./parseEdxUserInfoCookie"
 
 export default function TeacherPortalHeader({ title, subtitle }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
   const [user, setUser] = useState(() => parseEdxUserInfoCookie())
@@ -30,6 +32,11 @@ export default function TeacherPortalHeader({ title, subtitle }) {
 
   const go = (href) => {
     if (href) window.location.assign(href)
+    close()
+  }
+
+  const goAccountSettings = () => {
+    navigate("/account-settings")
     close()
   }
 
@@ -78,18 +85,15 @@ export default function TeacherPortalHeader({ title, subtitle }) {
 
           {open ? (
             <div className="tp-portal-header-dropdown" role="menu">
-              {/* {urls.account_settings ? (
-                <button type="button" className="tp-portal-header-dropdown-item" role="menuitem" onClick={() => go(urls.account_settings)}>
-                  <Settings size={18} strokeWidth={1.75} aria-hidden />
-                  Account settings
-                </button>
-              ) : null}
-              {urls.learner_profile ? (
-                <button type="button" className="tp-portal-header-dropdown-item" role="menuitem" onClick={() => go(urls.learner_profile)}>
-                  <User size={18} strokeWidth={1.75} aria-hidden />
-                  Profile
-                </button>
-              ) : null} */}
+              <button
+                type="button"
+                className="tp-portal-header-dropdown-item"
+                role="menuitem"
+                onClick={goAccountSettings}
+              >
+                <Settings size={18} strokeWidth={1.75} aria-hidden />
+                Account settings
+              </button>
               {urls.logout ? (
                 <button type="button" className="tp-portal-header-dropdown-item tp-portal-header-dropdown-danger" role="menuitem" onClick={goLogout}>
                   <LogOut size={18} strokeWidth={1.75} aria-hidden />
