@@ -12,6 +12,8 @@ export default function TpDeleteConfirmationModal({
   itemName,
   confirmLabel = "Delete",
   cancelLabel = "Cancel",
+  confirmButtonClassName = "tp-btn tp-btn-danger",
+  iconColor = "#dc2626",
 }) {
   const [pending, setPending] = useState(false)
 
@@ -55,7 +57,7 @@ export default function TpDeleteConfirmationModal({
         <div className="tp-modal-body">
           <div className="tp-modal-warn-row">
             <div className="tp-modal-warn-icon" aria-hidden>
-              <AlertTriangle size={22} color="#dc2626" strokeWidth={2} />
+              <AlertTriangle size={22} color={iconColor} strokeWidth={2} />
             </div>
             <div>
               <p className="tp-modal-text">{message}</p>
@@ -67,7 +69,7 @@ export default function TpDeleteConfirmationModal({
           <button type="button" className="tp-btn tp-btn-secondary" onClick={onClose} disabled={pending}>
             {cancelLabel}
           </button>
-          <button type="button" className="tp-btn tp-btn-danger" onClick={handleConfirm} disabled={pending}>
+          <button type="button" className={confirmButtonClassName} onClick={handleConfirm} disabled={pending}>
             {pending ? "Please wait…" : confirmLabel}
           </button>
         </div>

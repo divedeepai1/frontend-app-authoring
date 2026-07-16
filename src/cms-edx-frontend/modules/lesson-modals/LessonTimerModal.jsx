@@ -112,23 +112,19 @@ export default function LessonTimerModal({ isOpen, onClose, title, rubricId, rub
         disabled={t.loading}
       />
 
-      <TpStudentTableShell columns={COLUMNS}>
-        {t.loading ? (
-          <tr>
-            <td colSpan={6} className="tp-lesson-modal-empty">
-              Loading timer settings…
-            </td>
-          </tr>
-        ) : null}
-        {!t.loading && t.filteredRows.length === 0 ? (
+      <TpStudentTableShell
+        columns={COLUMNS}
+        isLoading={t.loading}
+        loadingLabel="Loading timer settings…"
+      >
+        {t.filteredRows.length === 0 ? (
           <tr>
             <td colSpan={6} className="tp-lesson-modal-empty">
               No students found.
             </td>
           </tr>
         ) : null}
-        {!t.loading &&
-          t.filteredRows.map((row) => (
+        {t.filteredRows.map((row) => (
             <tr key={row.id}>
               <td className="tp-lesson-modal-td--wrap">{row.name}</td>
               <td className="tp-lesson-modal-td--wrap">{row.email || "—"}</td>

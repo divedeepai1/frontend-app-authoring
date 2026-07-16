@@ -6,14 +6,11 @@ function fileIconForTitle(title) {
   return "file"
 }
 
+import TpLoadingState from "../../../components/common/TpLoadingState"
+
 export default function ResourcesDataTable({ isLoading, resources, onDownload, onDelete }) {
   if (isLoading) {
-    return (
-      <div className="tp-resources-loading">
-        <div className="tp-resources-spinner" role="status" aria-label="Loading" />
-        <span className="tp-resources-loading-text">Loading resources…</span>
-      </div>
-    )
+    return <TpLoadingState label="Loading resources…" className="tp-resources-loading" />
   }
 
   if (!resources.length) {

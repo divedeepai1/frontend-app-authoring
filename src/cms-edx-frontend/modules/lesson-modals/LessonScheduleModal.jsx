@@ -106,17 +106,19 @@ export default function LessonScheduleModal({ isOpen, onClose, title, students, 
           placeholder="Search by email"
           disabled={s.loading}
         />
-        {s.loading ? <p className="tp-lesson-modal-loading">Loading schedules…</p> : null}
-        <TpStudentTableShell columns={COLUMNS}>
-          {!s.loading && s.filteredRows.length === 0 ? (
+        <TpStudentTableShell
+          columns={COLUMNS}
+          isLoading={s.loading}
+          loadingLabel="Loading schedules…"
+        >
+          {s.filteredRows.length === 0 ? (
             <tr>
               <td colSpan={3} className="tp-lesson-modal-empty">
                 No students found.
               </td>
             </tr>
           ) : null}
-          {!s.loading &&
-            s.filteredRows.map((row) => (
+          {s.filteredRows.map((row) => (
               <tr key={row.id}>
                 <td className="tp-lesson-modal-td--wrap">{row.email}</td>
                 <td>

@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link2, Upload, UserPlus, Users } from "lucide-react"
 import SingleStudentForm from "../student-feed/forms/single-student-form"
 import BulkStudentForm from "../student-feed/forms/bulk-student-form"
 import CsvImportForm from "../student-feed/forms/import-student-list-form"
 import SelfJoinLinkForm from "../student-feed/forms/self-joining-students"
 import StudentTable from "./students-table"
+import TpDeleteConfirmationModal from "../common/TpDeleteConfirmationModal"
+import { tpToast } from "../common/tpToast"
 import * as classroomApi from "../../modules/manage-classes/services/classroomApi"
 
 const CHOICE_OPTIONS = [
@@ -18,39 +20,61 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent, embedInModal = false
   const [addStudents, setAddStudents] = useState(false)
   const [selectedOption, setSelectedOption] = useState(null)
   const [students, setStudents] = useState([])
+  const [loadingStudents, setLoadingStudents] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState(null)
+  const pendingDeleteIdsRef = useRef([])
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const classId = sessionStorage.getItem("classId")
-      if (!classId) {
-        if (!cancelled) setStudents([])
-        return
-      }
-      try {
-        const result = await classroomApi.fetchStudentsList(classId)
-        if (!cancelled) setStudents(result?.students || [])
-      } catch {
-        if (!cancelled) setStudents([])
-      }
-    })()
-    return () => {
-      cancelled = true
+  const classId = sessionStorage.getItem("classId")
+
+  const loadStudents = useCallback(async () => {
+    if (!classId) {
+      setStudents([])
+      setLoadingStudents(false)
+      return
     }
-  }, [addStudents])
-
-  const handleStudentAdded = async () => {
-    setSelectedOption(null)
-    setAddStudents(false)
-    const classId = sessionStorage.getItem("classId")
-    if (!classId) return
+    setLoadingStudents(true)
     try {
       const result = await classroomApi.fetchStudentsList(classId)
       setStudents(result?.students || [])
     } catch {
       setStudents([])
+    } finally {
+      setLoadingStudents(false)
     }
+  }, [classId])
+
+  useEffect(() => {
+    loadStudents()
+  }, [loadStudents, addStudents])
+
+  const handleStudentAdded = async () => {
+    setSelectedOption(null)
+    setAddStudents(false)
+    await loadStudents()
   }
+
+  const openDeleteConfirm = useCallback((studentId) => {
+    if (!studentId) return
+    pendingDeleteIdsRef.current = [studentId]
+    setPendingDeleteId(studentId)
+    setShowDeleteModal(true)
+  }, [])
+
+  const deleteLabel = useMemo(() => {
+    const student = students.find((s) => String(s.id) === String(pendingDeleteId))
+    return student?.username || student?.email || ""
+  }, [students, pendingDeleteId])
+
+  const confirmRemoveStudent = useCallback(async () => {
+    if (!classId) throw new Error("Missing class information.")
+    await classroomApi.removeStudentsFromClassroom(classId, pendingDeleteIdsRef.current)
+    pendingDeleteIdsRef.current = []
+    setPendingDeleteId(null)
+    setShowDeleteModal(false)
+    await loadStudents()
+    tpToast.success("Student removed from class")
+  }, [classId, loadStudents])
 
   const renderForm = () => {
     switch (selectedOption) {
@@ -94,17 +118,21 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent, embedInModal = false
   }
 
   const showTable =
-    students.length > 0 && !addStudents && !isNewStudent && !selectedOption
+    !addStudents && !isNewStudent && !selectedOption && (loadingStudents || students.length > 0)
 
   return (
     <>
       {showTable ? (
         <StudentTable
+          isLoading={loadingStudents}
           students={students}
           setAddStudents={setAddStudents}
           nextStep={nextStep}
           prevStep={prevStep}
           embedInModal={embedInModal}
+          classId={classId}
+          handleDeleteStudents={openDeleteConfirm}
+          showRowActions
         />
       ) : (
         <div className="tp-add-students">
@@ -141,6 +169,21 @@ const StudentDetails = ({ nextStep, prevStep, isNewStudent, embedInModal = false
           )}
         </div>
       )}
+
+      <TpDeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          pendingDeleteIdsRef.current = []
+          setPendingDeleteId(null)
+          setShowDeleteModal(false)
+        }}
+        onConfirm={confirmRemoveStudent}
+        title="Remove student"
+        message="This student will be removed from this class. This action cannot be undone."
+        itemName={deleteLabel}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+      />
     </>
   )
 }

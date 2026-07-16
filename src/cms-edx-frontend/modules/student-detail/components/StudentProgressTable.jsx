@@ -3,13 +3,21 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import { getProgressColor } from "../hooks/useStudentDetail"
 import ProgressRing from "./ProgressRing"
 
+import TpLoadingState from "../../../components/common/TpLoadingState"
+
 export default function StudentProgressTable({
   lessons,
   expandedSections,
   onToggleSection,
   loadingProgress,
   onViewReport,
+  isLoading = false,
+  loadingLabel = "Loading progress…",
 }) {
+  if (isLoading) {
+    return <TpLoadingState label={loadingLabel} className="tp-student-detail-loading" />
+  }
+
   return (
     <div className="tp-student-detail-table-wrap">
       <table className="tp-student-detail-table">

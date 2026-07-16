@@ -1,11 +1,20 @@
 import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../../../cms-csrftoken"
+import { classroom_archive_password } from "../../../../compugrade-constants"
 
 async function jsonHeaders() {
   const token = await fetchCsrfToken()
   return {
     "Content-Type": "application/json",
     "X-CSRFToken": token,
+  }
+}
+
+async function archiveActionHeaders() {
+  const headers = await jsonHeaders()
+  return {
+    ...headers,
+    password: classroom_archive_password,
   }
 }
 
@@ -94,6 +103,28 @@ export async function fetchStudentsList(classId) {
   return res.json()
 }
 
+export async function removeStudentsFromClassroom(classId, studentIds) {
+  const students = (Array.isArray(studentIds) ? studentIds : [studentIds])
+    .map((id) => id)
+    .filter((id) => id !== undefined && id !== null && id !== "")
+
+  if (!students.length) {
+    throw new Error("No students selected for removal.")
+  }
+
+  const res = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students/`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      headers: await jsonHeaders(),
+      body: JSON.stringify({ students }),
+    }
+  )
+  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  return res.json().catch(() => ({}))
+}
+
 export async function fetchClassrooms() {
   const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/`, {
     method: "GET",
@@ -111,4 +142,30 @@ export async function deleteClassroom(classId) {
     headers: await jsonHeaders(),
   })
   if (!res.ok) throw new Error(await res.text() || String(res.status))
+}
+
+export async function archiveClassroom(classId) {
+  const res = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/archive/`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: await archiveActionHeaders(),
+    }
+  )
+  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  return res.json().catch(() => ({}))
+}
+
+export async function unarchiveClassroom(classId) {
+  const res = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/archive/`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      headers: await archiveActionHeaders(),
+    }
+  )
+  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  return res.json().catch(() => ({}))
 }
