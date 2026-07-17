@@ -1,4 +1,5 @@
-import { FileText, Image as ImageIcon, Download, Trash2 } from "lucide-react"
+import { FileText, Image as ImageIcon, Download, Eye } from "lucide-react"
+import TpLoadingState from "../../../components/common/TpLoadingState"
 
 function fileIconForTitle(title) {
   const t = (title || "").toLowerCase()
@@ -6,9 +7,7 @@ function fileIconForTitle(title) {
   return "file"
 }
 
-import TpLoadingState from "../../../components/common/TpLoadingState"
-
-export default function ResourcesDataTable({ isLoading, resources, onDownload, onDelete }) {
+export default function ResourcesDataTable({ isLoading, resources, onView, onDownload }) {
   if (isLoading) {
     return <TpLoadingState label="Loading resources…" className="tp-resources-loading" />
   }
@@ -27,11 +26,13 @@ export default function ResourcesDataTable({ isLoading, resources, onDownload, o
       <table className="tp-resources-table">
         <colgroup>
           <col />
+          <col style={{ width: "10rem" }} />
           <col style={{ width: "8.5rem" }} />
         </colgroup>
         <thead>
           <tr>
             <th className="tp-resources-th-name">File name</th>
+            <th>Category</th>
             <th className="tp-resources-th-actions">Actions</th>
           </tr>
         </thead>
@@ -50,8 +51,20 @@ export default function ResourcesDataTable({ isLoading, resources, onDownload, o
                     <span className="tp-resources-file-name">{resource.title || "—"}</span>
                   </div>
                 </td>
+                <td>
+                  <span className="tp-resources-category-pill">{resource.category || "—"}</span>
+                </td>
                 <td className="tp-resources-td-actions">
                   <div className="tp-resources-actions">
+                    <button
+                      type="button"
+                      className="tp-resources-action-btn"
+                      title="View"
+                      aria-label="View"
+                      onClick={() => onView(resource)}
+                    >
+                      <Eye size={16} strokeWidth={2} />
+                    </button>
                     <button
                       type="button"
                       className="tp-resources-action-btn"
@@ -60,15 +73,6 @@ export default function ResourcesDataTable({ isLoading, resources, onDownload, o
                       onClick={() => onDownload(resource)}
                     >
                       <Download size={16} strokeWidth={2} />
-                    </button>
-                    <button
-                      type="button"
-                      className="tp-resources-action-btn tp-resources-action-danger"
-                      title="Delete"
-                      aria-label="Delete"
-                      onClick={() => onDelete(resource)}
-                    >
-                      <Trash2 size={16} strokeWidth={2} />
                     </button>
                   </div>
                 </td>
