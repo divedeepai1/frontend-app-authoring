@@ -1074,18 +1074,22 @@
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
 }
 
 .cms-tp-scope .tp-sidebar-logo {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  background: #27aae1;
+  width: 12rem;
+  height: 3rem;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-shrink: 0;
+}
+
+.cms-tp-scope .tp-sidebar-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .cms-tp-scope .tp-sidebar-title {
@@ -1422,12 +1426,70 @@
 .cms-tp-scope .tp-resources-category-pill {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.55rem;
+  justify-content: center;
+  max-width: 100%;
+  padding: 0.24rem 0.6rem;
   border-radius: 999px;
   background: #e8f4f8;
   color: #27576b;
   font-size: 0.75rem;
   font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cms-tp-scope .tp-resources-td-category {
+  vertical-align: middle;
+}
+
+.cms-tp-scope .tp-resource-preview-wrap {
+  min-height: 22rem;
+  max-height: min(72vh, 44rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.cms-tp-scope .tp-resource-preview-image {
+  max-width: 100%;
+  max-height: min(68vh, 40rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.cms-tp-scope .tp-resource-preview-frame {
+  width: 100%;
+  height: min(68vh, 40rem);
+  border: none;
+  display: block;
+  background: #ffffff;
+}
+
+.cms-tp-scope .tp-resource-preview-empty {
+  max-width: 28rem;
+  text-align: center;
+  padding: 1.25rem;
+}
+
+.cms-tp-scope .tp-resource-preview-empty-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.cms-tp-scope .tp-resource-preview-empty-subtitle {
+  margin: 0.45rem 0 0;
+  font-size: 0.875rem;
+  color: #6a7282;
 }
 
 .cms-tp-scope .tp-resources-toolbar {
@@ -1550,6 +1612,16 @@
   height: 1.25rem;
   color: #6a7282;
   flex-shrink: 0;
+}
+
+.cms-tp-scope .tp-resources-row-thumb {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
 }
 
 .cms-tp-scope .tp-resources-file-name {

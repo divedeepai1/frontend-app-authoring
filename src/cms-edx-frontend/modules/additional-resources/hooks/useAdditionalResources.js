@@ -8,6 +8,7 @@ export function useAdditionalResources() {
   const [resources, setResources] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [previewResource, setPreviewResource] = useState(null)
 
   const loadResources = useCallback(async () => {
     setIsLoading(true)
@@ -40,8 +41,7 @@ export function useAdditionalResources() {
       tpToast.error("This resource has no file available.")
       return
     }
-    window.open(resource.file_path, "_blank", "noopener,noreferrer")
-    tpToast.info(`Opening ${resource.title || "resource"}`)
+    setPreviewResource(resource)
   }, [])
 
   const handleDownload = useCallback(async (resource) => {
@@ -77,6 +77,8 @@ export function useAdditionalResources() {
     error,
     handleView,
     handleDownload,
+    previewResource,
+    setPreviewResource,
     loadResources,
   }
 }

@@ -2,6 +2,7 @@ import TpModalFeedback from "../lesson-modals/components/TpModalFeedback"
 import { useAdditionalResources } from "./hooks/useAdditionalResources"
 import ResourcesFiltersBar from "./components/ResourcesFiltersBar"
 import ResourcesDataTable from "./components/ResourcesDataTable"
+import ResourcePreviewModal from "./components/ResourcePreviewModal"
 import "../../theme/teachers-portal-scope.css"
 
 export default function AdditionalResourcesApp() {
@@ -27,6 +28,13 @@ export default function AdditionalResourcesApp() {
           />
         </div>
       </div>
+
+      <ResourcePreviewModal
+        resource={r.previewResource}
+        isOpen={Boolean(r.previewResource)}
+        onClose={() => r.setPreviewResource(null)}
+        onDownload={r.handleDownload}
+      />
     </div>
   )
 }

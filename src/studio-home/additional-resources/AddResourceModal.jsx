@@ -222,7 +222,7 @@ export default function AddResourceModal({ isOpen, onClose }) {
                       {!categories.length ? <option value="">No categories yet</option> : null}
                       {categories.map((cat) => (
                         <option key={cat.name} value={cat.name}>
-                          {cat.name} ({cat.resource_count})
+                          {cat.name}
                         </option>
                       ))}
                     </Form.Control>
@@ -326,7 +326,7 @@ export default function AddResourceModal({ isOpen, onClose }) {
                         variant="light"
                         className="border d-inline-flex align-items-center"
                       >
-                        <span className="mr-2">{cat.name} · {cat.resource_count}</span>
+                        <span className="mr-2">{cat.name}</span>
                         <IconButton
                           src={DeleteOutline}
                           iconAs={Icon}

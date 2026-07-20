@@ -1,6 +1,7 @@
 import { Home, Users, BookOpen, FileText, FolderOpen } from "lucide-react"
 import { useNavigate, useLocation } from "react-router"
 import { getTeacherPortalTabId } from "./getTeacherPortalTabId"
+import compugradeLogo from "../assests/Logo.png"
 
 const NAV = [
   { id: "home", label: "Home", icon: Home, path: "/home" },
@@ -19,9 +20,8 @@ export default function TeacherPortalSidebar() {
     <aside className="tp-sidebar" aria-label="Teacher portal navigation">
       <div className="tp-sidebar-brand">
         <div className="tp-sidebar-logo">
-          <Users size={20} strokeWidth={2} color="#fff" aria-hidden />
+          <img src={compugradeLogo} alt="Compugrade logo" className="tp-sidebar-logo-image" />
         </div>
-        <span className="tp-sidebar-title">Compugrade</span>
       </div>
       <nav className="tp-sidebar-nav">
         {NAV.map((item) => {

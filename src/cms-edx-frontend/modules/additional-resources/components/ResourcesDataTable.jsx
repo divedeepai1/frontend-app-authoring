@@ -1,9 +1,9 @@
 import { FileText, Image as ImageIcon, Download, Eye } from "lucide-react"
 import TpLoadingState from "../../../components/common/TpLoadingState"
 
-function fileIconForTitle(title) {
-  const t = (title || "").toLowerCase()
-  if (/\.(png|jpe?g|gif|webp|svg|bmp|ico)$/.test(t)) return "image"
+function fileIconForResource(resource) {
+  const source = `${resource?.title || ""} ${resource?.file_path || ""}`.toLowerCase()
+  if (/\.(png|jpe?g|gif|webp|svg|bmp|ico)(?:[\?#].*)?$/.test(source)) return "image"
   return "file"
 }
 
@@ -38,12 +38,18 @@ export default function ResourcesDataTable({ isLoading, resources, onView, onDow
         </thead>
         <tbody>
           {resources.map((resource) => {
-            const kind = fileIconForTitle(resource?.title)
+            const kind = fileIconForResource(resource)
             return (
               <tr key={resource.id || resource.s3_key}>
                 <td className="tp-resources-td-name">
                   <div className="tp-resources-file-cell">
-                    {kind === "image" ? (
+                    {kind === "image" && resource?.file_path ? (
+                      <img
+                        src={resource.file_path}
+                        alt={resource.title || "Resource"}
+                        className="tp-resources-row-thumb"
+                      />
+                    ) : kind === "image" ? (
                       <ImageIcon className="tp-resources-row-icon" strokeWidth={2} aria-hidden />
                     ) : (
                       <FileText className="tp-resources-row-icon" strokeWidth={2} aria-hidden />
@@ -51,7 +57,7 @@ export default function ResourcesDataTable({ isLoading, resources, onView, onDow
                     <span className="tp-resources-file-name">{resource.title || "—"}</span>
                   </div>
                 </td>
-                <td>
+                <td className="tp-resources-td-category">
                   <span className="tp-resources-category-pill">{resource.category || "—"}</span>
                 </td>
                 <td className="tp-resources-td-actions">
