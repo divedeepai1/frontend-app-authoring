@@ -18,10 +18,44 @@ import {
   FolderOpen,
 } from '@openedx/paragon/icons';
 import * as resourcesApi from './resourcesApi';
+import './AddResourceModal.css';
 
-function openResource(resource) {
+function getFileName(resource) {
+  const pathName = String(resource?.file_path || '');
+  const fromPath = pathName.split('?')[0].split('#')[0].split('/').pop();
+  if (fromPath) return decodeURIComponent(fromPath);
+  const title = String(resource?.title || '').trim();
+  return title || 'resource';
+}
+
+function triggerDownloadFromBlob(blob, fileName) {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(objectUrl);
+}
+
+async function downloadResource(resource) {
   if (!resource?.file_path) return;
-  window.open(resource.file_path, '_blank', 'noopener,noreferrer');
+  const fileName = getFileName(resource);
+  try {
+    const response = await fetch(resource.file_path, { credentials: 'include' });
+    if (!response.ok) throw new Error('download-failed');
+    const blob = await response.blob();
+    triggerDownloadFromBlob(blob, fileName);
+  } catch {
+    const link = document.createElement('a');
+    link.href = resource.file_path;
+    link.download = fileName;
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }
 
 export default function AddResourceModal({ isOpen, onClose }) {
@@ -90,6 +124,14 @@ export default function AddResourceModal({ isOpen, onClose }) {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!success) return undefined;
+    const timer = window.setTimeout(() => {
+      setSuccess('');
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [success]);
 
   const filteredResources = useMemo(() => {
     if (filterCategory === 'all') return resources;
@@ -359,15 +401,15 @@ export default function AddResourceModal({ isOpen, onClose }) {
                           <tr key={resource.id || resource.s3_key}>
                             <td className="align-middle">{resource.title || '—'}</td>
                             <td className="align-middle">
-                              <Badge variant="info">{resource.category || '—'}</Badge>
+                              <Badge variant="info" className="cb-category-chip pt-2">{resource.category || '—'}</Badge>
                             </td>
                             <td className="align-middle text-right text-nowrap">
                               <IconButton
                                 src={Download}
                                 iconAs={Icon}
-                                alt="View or download"
+                                alt="Download"
                                 size="inline"
-                                onClick={() => openResource(resource)}
+                                onClick={() => downloadResource(resource)}
                                 disabled={!resource.file_path}
                               />
                               <IconButton
