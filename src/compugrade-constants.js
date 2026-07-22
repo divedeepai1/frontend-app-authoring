@@ -1,4 +1,4 @@
-export const base_url = "https://west1.wordaddin.compugrade.com"
+export const base_url = "https://east1.wordaddin.compugrade.com"
 // export const base_url = "https://dassadas.fsdfafs.ai"
 
 // export const base_url = "https://37cf448022a4.ngrok-free.app"
