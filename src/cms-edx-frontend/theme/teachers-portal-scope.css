@@ -3265,6 +3265,11 @@
   z-index: 1060;
 }
 
+/* Stack above Manage Class / View Class modal (z-index 2000) */
+.tp-lesson-modal-overlay--stack {
+  z-index: 2100;
+}
+
 .tp-lesson-modal-panel {
   background: #ffffff;
   border-radius: 0.75rem;
@@ -5666,3 +5671,95 @@
 .cms-tp-scope .tp-account-card-actions {
   padding-top: 0.25rem;
 }
+
+/* —— Move Student modal —— */
+.cms-tp-scope .tp-move-student {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cms-tp-scope .tp-move-student-summary {
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+  background: #f9fafb;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #364153;
+}
+
+.cms-tp-scope .tp-move-student-summary strong {
+  color: #101828;
+  font-weight: 600;
+}
+
+.cms-tp-scope .tp-move-student-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.cms-tp-scope .tp-move-student-select {
+  background: #fff;
+  appearance: auto;
+  cursor: pointer;
+}
+
+.cms-tp-scope .tp-move-student-select:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cms-tp-scope .tp-move-student-loading {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #6a7282;
+}
+
+.cms-tp-scope .tp-move-student-carry {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+  background: #fff;
+}
+
+.cms-tp-scope .tp-move-student-carry--disabled {
+  background: #f9fafb;
+}
+
+.cms-tp-scope .tp-move-student-carry-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.cms-tp-scope .tp-move-student-carry-label {
+  display: block;
+  margin: 0 0 0.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #101828;
+  cursor: pointer;
+}
+
+.cms-tp-scope .tp-move-student-carry--disabled .tp-move-student-carry-label {
+  color: #6a7282;
+  cursor: default;
+}
+
+.cms-tp-scope .tp-move-student-carry-help {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #6a7282;
+}
+
+@media (max-width: 640px) {
+  .cms-tp-scope .tp-move-student-carry {
+    padding: 0.65rem 0.75rem;
+  }
+}
+

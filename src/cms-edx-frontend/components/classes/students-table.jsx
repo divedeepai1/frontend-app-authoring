@@ -1,11 +1,11 @@
 
-import { Eye, RotateCcw, Trash2, Users } from "lucide-react"
+import { ArrowLeftRight, Eye, RotateCcw, Trash2, Users } from "lucide-react"
 import TpCheckbox from "../common/TpCheckbox"
 import { useNavigate } from "react-router"
 import { useState } from "react"
 import SaveInformationForLater from "./save-information-for-later"
 import { tpToast } from "../common/tpToast"
-import { base_url } from "../../../compugrade-constants"
+import { resetStudentProgress } from "../../modules/manage-classes/services/studentProgressApi"
 
 import TpLoadingState from "../common/TpLoadingState"
 
@@ -19,6 +19,7 @@ export default function StudentTable({
   handleDeleteStudents,
   handleSelectAllStudents,
   handleSelectStudents,
+  handleMoveStudent,
   classId,
   toolbar,
   embedInModal = false,
@@ -33,19 +34,7 @@ export default function StudentTable({
     if (!studentId) return
     setResettingStudentId(studentId)
     try {
-      const response = await fetch(`${base_url}/api/openedx/user/reset_student_progress`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: studentId,
-        }),
-      })
-      if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || "Failed to reset student progress.")
-      }
+      await resetStudentProgress(studentId)
       tpToast.success("Student progress reset", "Progress has been reset successfully.")
     } catch {
       tpToast.error("Reset failed", "Unable to reset student progress right now.")
@@ -61,6 +50,7 @@ export default function StudentTable({
   const showSelection = Boolean(fromTeachers && handleSelectStudents)
   const showActions = showRowActions ?? Boolean(fromTeachers && handleDeleteStudents)
   const canRemove = typeof handleDeleteStudents === "function"
+  const canMove = typeof handleMoveStudent === "function"
 
   const isStudentSelected = (studentId) =>
     selectedIdList.some((id) => String(id) === String(studentId))
@@ -80,6 +70,20 @@ export default function StudentTable({
           }}
         >
           <Eye size={20} strokeWidth={1.5} />
+        </button>
+      ) : null}
+      {canMove ? (
+        <button
+          type="button"
+          className="tp-portal-data-table-action"
+          title="Move student to another class"
+          aria-label={`Move ${student.username || "student"} to another class`}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleMoveStudent(student)
+          }}
+        >
+          <ArrowLeftRight size={18} strokeWidth={2} />
         </button>
       ) : null}
       {canRemove ? (
@@ -157,7 +161,7 @@ export default function StudentTable({
               <col />
               <col />
               <col />
-              {showActions ? <col style={{ width: "10.5rem" }} /> : null}
+              {showActions ? <col style={{ width: canMove ? "12.5rem" : "10.5rem" }} /> : null}
             </colgroup>
             <thead>
               <tr>
