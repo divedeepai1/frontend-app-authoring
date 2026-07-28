@@ -2,9 +2,41 @@ import { useEffect, useMemo, useState } from "react"
 import { base_url } from "../../compugrade-constants"
 import { clampWeight, parseWeight, sanitizeWeightInput } from "./weightSettingsUtils"
 
+const DEFAULTS = {
+  lesson: "50",
+  quiz: "25",
+  test: "25",
+}
+
+function readWeights(source) {
+  const lesson = parseWeight(
+    source?.lessonWeight ?? source?.lesson_weight ?? source?.["lesson-weight"]
+  )
+  const quiz = parseWeight(source?.quizWeight ?? source?.quiz_weight)
+  const test = parseWeight(source?.testWeight ?? source?.test_weight)
+
+  // Legacy fallback: assessment_weight → quiz_weight
+  const legacyAssessment = parseWeight(source?.assessmentWeight ?? source?.assessment_weight)
+
+  const normalizedQuiz = quiz ?? (legacyAssessment !== null ? legacyAssessment : 0)
+  const normalizedTest = test ?? 0
+  let normalizedLesson = lesson
+
+  if (normalizedLesson === null) {
+    normalizedLesson = clampWeight(100 - normalizedQuiz - normalizedTest)
+  }
+
+  return {
+    lesson: clampWeight(normalizedLesson),
+    quiz: clampWeight(normalizedQuiz),
+    test: clampWeight(normalizedTest),
+  }
+}
+
 export function useCourseWeightSettings({ isOpen, courseId, onFetch, onSave, onSaveSuccess, onClose }) {
-  const [assessmentWeight, setAssessmentWeight] = useState("")
   const [lessonWeight, setLessonWeight] = useState("")
+  const [quizWeight, setQuizWeight] = useState("")
+  const [testWeight, setTestWeight] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [hasTouched, setHasTouched] = useState(false)
@@ -20,13 +52,10 @@ export function useCourseWeightSettings({ isOpen, courseId, onFetch, onSave, onS
       setHasTouched(false)
       setError("")
       try {
-        let fetchedAssessment = null
-        let fetchedLesson = null
+        let source = null
 
         if (onFetch) {
-          const fetchedData = await onFetch({ courseId })
-          fetchedAssessment = parseWeight(fetchedData?.assessmentWeight)
-          fetchedLesson = parseWeight(fetchedData?.lessonWeight)
+          source = await onFetch({ courseId })
         } else {
           const params = new URLSearchParams({ course_id: courseId })
           const response = await fetch(
@@ -41,20 +70,17 @@ export function useCourseWeightSettings({ isOpen, courseId, onFetch, onSave, onS
             throw new Error("Failed to fetch weight settings")
           }
 
-          const data = await response.json()
-          fetchedAssessment = parseWeight(data?.assessment_weight)
-          fetchedLesson = parseWeight(data?.lesson_weight)
+          source = await response.json()
         }
 
-        const normalizedAssessment = clampWeight(fetchedAssessment ?? 0)
-        const normalizedLesson =
-          fetchedLesson !== null ? clampWeight(fetchedLesson) : 100 - normalizedAssessment
-
-        setAssessmentWeight(normalizedAssessment.toString())
-        setLessonWeight(normalizedLesson.toString())
+        const weights = readWeights(source)
+        setLessonWeight(weights.lesson.toString())
+        setQuizWeight(weights.quiz.toString())
+        setTestWeight(weights.test.toString())
       } catch {
-        setAssessmentWeight("50")
-        setLessonWeight("50")
+        setLessonWeight(DEFAULTS.lesson)
+        setQuizWeight(DEFAULTS.quiz)
+        setTestWeight(DEFAULTS.test)
       } finally {
         setIsLoading(false)
       }
@@ -63,50 +89,40 @@ export function useCourseWeightSettings({ isOpen, courseId, onFetch, onSave, onS
     fetchWeightSettings()
   }, [isOpen, courseId, onFetch])
 
-  const parsedAssessment = parseWeight(assessmentWeight)
   const parsedLesson = parseWeight(lessonWeight)
+  const parsedQuiz = parseWeight(quizWeight)
+  const parsedTest = parseWeight(testWeight)
 
-  const isAssessmentValid =
-    parsedAssessment !== null && parsedAssessment >= 0 && parsedAssessment <= 100
   const isLessonValid = parsedLesson !== null && parsedLesson >= 0 && parsedLesson <= 100
-  const canSave = isAssessmentValid && isLessonValid && !isLoading && !isSaving
+  const isQuizValid = parsedQuiz !== null && parsedQuiz >= 0 && parsedQuiz <= 100
+  const isTestValid = parsedTest !== null && parsedTest >= 0 && parsedTest <= 100
+  const canSave = isLessonValid && isQuizValid && isTestValid && !isLoading && !isSaving
 
-  const showAssessmentError = hasTouched && !isAssessmentValid
   const showLessonError = hasTouched && !isLessonValid
+  const showQuizError = hasTouched && !isQuizValid
+  const showTestError = hasTouched && !isTestValid
 
-  const isDirty = useMemo(() => {
-    if (parsedAssessment === null || parsedLesson === null) {
-      return false
+  const weightTotal = useMemo(() => {
+    if (parsedLesson === null || parsedQuiz === null || parsedTest === null) {
+      return null
     }
-    return parsedAssessment + parsedLesson === 100
-  }, [parsedAssessment, parsedLesson])
+    return parsedLesson + parsedQuiz + parsedTest
+  }, [parsedLesson, parsedQuiz, parsedTest])
 
-  const handleAssessmentChange = (event) => {
-    const nextValue = sanitizeWeightInput(event.target.value)
-    setAssessmentWeight(nextValue)
-
-    const parsed = parseWeight(nextValue)
-    if (parsed === null) {
-      setLessonWeight("")
-      return
-    }
-
-    const clamped = clampWeight(parsed)
-    setLessonWeight(String(100 - clamped))
-  }
+  // Keep previous naming: isDirty means weights are ready to save (sum to 100).
+  const isDirty = weightTotal !== null && Math.abs(weightTotal - 100) < 0.0001
+  const showTotalError = hasTouched && weightTotal !== null && !isDirty
 
   const handleLessonChange = (event) => {
-    const nextValue = sanitizeWeightInput(event.target.value)
-    setLessonWeight(nextValue)
+    setLessonWeight(sanitizeWeightInput(event.target.value))
+  }
 
-    const parsed = parseWeight(nextValue)
-    if (parsed === null) {
-      setAssessmentWeight("")
-      return
-    }
+  const handleQuizChange = (event) => {
+    setQuizWeight(sanitizeWeightInput(event.target.value))
+  }
 
-    const clamped = clampWeight(parsed)
-    setAssessmentWeight(String(100 - clamped))
+  const handleTestChange = (event) => {
+    setTestWeight(sanitizeWeightInput(event.target.value))
   }
 
   const handleSave = async () => {
@@ -121,7 +137,9 @@ export function useCourseWeightSettings({ isOpen, courseId, onFetch, onSave, onS
       if (onSave) {
         await onSave({
           courseId,
-          assessmentWeight: parsedAssessment,
+          lessonWeight: parsedLesson,
+          quizWeight: parsedQuiz,
+          testWeight: parsedTest,
         })
       } else {
         const response = await fetch(`${base_url}/api/grading/save_course_default_weight_settings`, {
@@ -129,7 +147,9 @@ export function useCourseWeightSettings({ isOpen, courseId, onFetch, onSave, onS
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             course_id: courseId,
-            assessment_weight: parsedAssessment,
+            lesson_weight: parsedLesson,
+            quiz_weight: parsedQuiz,
+            test_weight: parsedTest,
           }),
         })
 
@@ -149,17 +169,22 @@ export function useCourseWeightSettings({ isOpen, courseId, onFetch, onSave, onS
   }
 
   return {
-    assessmentWeight,
     lessonWeight,
+    quizWeight,
+    testWeight,
+    weightTotal,
     isLoading,
     isSaving,
     canSave,
     isDirty,
-    showAssessmentError,
     showLessonError,
+    showQuizError,
+    showTestError,
+    showTotalError,
     error,
-    handleAssessmentChange,
     handleLessonChange,
+    handleQuizChange,
+    handleTestChange,
     handleSave,
   }
 }

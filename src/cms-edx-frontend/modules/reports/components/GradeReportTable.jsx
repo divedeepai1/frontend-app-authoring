@@ -28,7 +28,7 @@ export default function GradeReportTable({ report, isLoading }) {
                   className={`tp-reports-th tp-report-data-th${
                     column.isAssessment ? " tp-report-data-th--assessment" : ""
                   }`}
-                  title={column.isAssessment ? "Assessment" : "Lesson"}
+                  title={column.contentType || (column.isAssessment ? "Quiz / Test" : "Lesson")}
                 >
                   <span className="tp-reports-th-label">{column.title}</span>
                 </th>

@@ -3931,6 +3931,14 @@
   background: #e8f4f8;
 }
 
+.cms-tp-scope .tp-gradebook-th--assessment {
+  background: #fff7ed;
+}
+
+.cms-tp-scope .tp-gradebook-th--assessment .tp-gradebook-th-label {
+  color: #9a3412;
+}
+
 .cms-tp-scope .tp-gradebook-th-label {
   display: block;
   font-size: 0.6875rem;
@@ -4687,7 +4695,9 @@
   min-width: 6rem;
 }
 
-.cms-tp-scope .tp-report-data-th--assessment {
+.cms-tp-scope .tp-report-data-th--assessment,
+.cms-tp-scope .tp-report-data-th--quiz,
+.cms-tp-scope .tp-report-data-th--test {
   background: #1a84b3;
 }
 
@@ -4725,7 +4735,9 @@
   color: #6a7282;
 }
 
-.cms-tp-scope .tp-report-data-td--type-assessment {
+.cms-tp-scope .tp-report-data-td--type-assessment,
+.cms-tp-scope .tp-report-data-td--type-quiz,
+.cms-tp-scope .tp-report-data-td--type-test {
   background: #fff7ed;
   color: #9a3412;
   font-weight: 600;

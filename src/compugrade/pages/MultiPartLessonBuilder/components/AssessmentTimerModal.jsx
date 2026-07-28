@@ -192,8 +192,8 @@ export default function AssessmentTimerModal({
               <Clock3 className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <div className="text-base font-semibold">Assessment timer setup</div>
-              <p className="text-xs text-gray-500">Configure assessment timer settings</p>
+              <div className="text-base font-semibold">Timer and attempts setup</div>
+              <p className="text-xs text-gray-500">Configure timer and attempt settings for quiz or test</p>
             </div>
           </div>
           <div className="p-1 rounded hover:bg-gray-100 border-none cursor-pointer" onClick={onClose}>
