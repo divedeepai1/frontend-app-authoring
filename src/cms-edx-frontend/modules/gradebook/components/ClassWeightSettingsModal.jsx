@@ -63,27 +63,6 @@ export default function ClassWeightSettingsModal({
           ) : (
             <>
               <div className="tp-weight-settings-field">
-                <label className="tp-weight-settings-label" htmlFor="tp-class-assessment-weight">
-                  {messages.assessmentWeightLabel.defaultMessage}
-                </label>
-                <input
-                  id="tp-class-assessment-weight"
-                  type="text"
-                  inputMode="decimal"
-                  className={`tp-weight-settings-input${w.showAssessmentError ? " tp-weight-settings-input--error" : ""}`}
-                  value={w.assessmentWeight}
-                  onChange={w.handleAssessmentChange}
-                  onKeyDown={(event) => {
-                    if (["-", "e", "E", "+"].includes(event.key)) event.preventDefault()
-                  }}
-                  disabled={w.isSaving}
-                />
-                {w.showAssessmentError ? (
-                  <p className="tp-weight-settings-error">{messages.validationMessage.defaultMessage}</p>
-                ) : null}
-              </div>
-
-              <div className="tp-weight-settings-field">
                 <label className="tp-weight-settings-label" htmlFor="tp-class-lesson-weight">
                   {messages.lessonWeightLabel.defaultMessage}
                 </label>
@@ -104,7 +83,52 @@ export default function ClassWeightSettingsModal({
                 ) : null}
               </div>
 
-              <p className="tp-weight-settings-hint">Assessment and lesson weights must total 100.</p>
+              <div className="tp-weight-settings-field">
+                <label className="tp-weight-settings-label" htmlFor="tp-class-quiz-weight">
+                  {messages.quizWeightLabel.defaultMessage}
+                </label>
+                <input
+                  id="tp-class-quiz-weight"
+                  type="text"
+                  inputMode="decimal"
+                  className={`tp-weight-settings-input${w.showQuizError ? " tp-weight-settings-input--error" : ""}`}
+                  value={w.quizWeight}
+                  onChange={w.handleQuizChange}
+                  onKeyDown={(event) => {
+                    if (["-", "e", "E", "+"].includes(event.key)) event.preventDefault()
+                  }}
+                  disabled={w.isSaving}
+                />
+                {w.showQuizError ? (
+                  <p className="tp-weight-settings-error">{messages.validationMessage.defaultMessage}</p>
+                ) : null}
+              </div>
+
+              <div className="tp-weight-settings-field">
+                <label className="tp-weight-settings-label" htmlFor="tp-class-test-weight">
+                  {messages.testWeightLabel.defaultMessage}
+                </label>
+                <input
+                  id="tp-class-test-weight"
+                  type="text"
+                  inputMode="decimal"
+                  className={`tp-weight-settings-input${w.showTestError ? " tp-weight-settings-input--error" : ""}`}
+                  value={w.testWeight}
+                  onChange={w.handleTestChange}
+                  onKeyDown={(event) => {
+                    if (["-", "e", "E", "+"].includes(event.key)) event.preventDefault()
+                  }}
+                  disabled={w.isSaving}
+                />
+                {w.showTestError ? (
+                  <p className="tp-weight-settings-error">{messages.validationMessage.defaultMessage}</p>
+                ) : null}
+              </div>
+
+              <p className={`tp-weight-settings-hint${w.showTotalError ? " tp-weight-settings-error" : ""}`}>
+                {messages.totalValidationMessage.defaultMessage}
+                {w.weightTotal !== null ? ` (current total: ${w.weightTotal})` : ""}
+              </p>
             </>
           )}
         </div>

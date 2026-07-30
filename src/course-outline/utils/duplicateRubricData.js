@@ -44,7 +44,9 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
       skills: originalRubric.skills || [],
       time_allowed: originalRubric.time_allowed || null,
       timer_mode: originalRubric.timer_mode || null,
-      is_assessment: originalRubric.is_assessment || false,
+      content_type:
+        originalRubric.content_type ||
+        (originalRubric.is_assessment ? "quiz" : "lesson"),
       lesson_files: originalRubric.lesson_files || [],
       num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
       app_name: originalRubric.app_name || getAppName(),
