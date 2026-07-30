@@ -4,14 +4,20 @@ import TpLessonModalFrame from "../../lesson-modals/components/TpLessonModalFram
 import * as resourcesApi from "../services/resourcesApi"
 import { tpToast } from "../../../components/common/tpToast"
 
-export default function AddResourcesModal({ isOpen, onClose, classId, courseId, onSuccess }) {
+export default function AddResourcesModal({ isOpen, onClose, onSuccess }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadType, setUploadType] = useState("general")
+  const [categories, setCategories] = useState([])
+  const [categoryMode, setCategoryMode] = useState("existing")
+  const [selectedCategory, setSelectedCategory] = useState("")
+  const [newCategory, setNewCategory] = useState("")
+  const [title, setTitle] = useState("")
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState("")
   const fileInputRef = useRef(null)
+
+  const categoryName = categoryMode === "new" ? newCategory.trim() : selectedCategory
 
   useEffect(() => {
     if (!isOpen) {
@@ -20,12 +26,33 @@ export default function AddResourcesModal({ isOpen, onClose, classId, courseId, 
       setIsUploading(false)
       setIsDragging(false)
       setError("")
-      setUploadType("general")
+      setTitle("")
+      setCategoryMode("existing")
+      setNewCategory("")
       if (fileInputRef.current) fileInputRef.current.value = ""
       return
     }
-    if (!classId) setUploadType("general")
-  }, [isOpen, classId])
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await resourcesApi.fetchCategories()
+        if (cancelled) return
+        const names = (list || []).map((item) => item?.name).filter(Boolean)
+        setCategories(names)
+        setSelectedCategory((prev) => (prev && names.includes(prev) ? prev : names[0] || ""))
+      } catch {
+        if (!cancelled) {
+          setCategories([])
+          setSelectedCategory("")
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen])
 
   const clearSelectedFile = () => {
     setSelectedFile(null)
@@ -42,14 +69,8 @@ export default function AddResourcesModal({ isOpen, onClose, classId, courseId, 
 
   const handleUpload = async () => {
     if (!selectedFile) return
-    if (uploadType === "class" && !classId) {
-      const msg = "Select a class in the filters before uploading by class."
-      setError(msg)
-      tpToast.error(msg)
-      return
-    }
-    if (uploadType === "course" && !courseId) {
-      const msg = "Select a course in the filters before uploading by course."
+    if (!categoryName) {
+      const msg = "Select or create a category before uploading."
       setError(msg)
       tpToast.error(msg)
       return
@@ -61,17 +82,16 @@ export default function AddResourcesModal({ isOpen, onClose, classId, courseId, 
     try {
       await resourcesApi.uploadResource({
         file: selectedFile,
-        uploadType,
-        classId,
-        courseId,
+        category: categoryName,
+        title,
         onProgress: setUploadProgress,
       })
       clearSelectedFile()
-      tpToast.success(`"${selectedFile.name}" uploaded successfully`)
+      tpToast.success(`"${title.trim() || selectedFile.name}" uploaded successfully`)
       onSuccess?.()
       onClose()
-    } catch {
-      const msg = "Unable to upload resource. Please try again."
+    } catch (err) {
+      const msg = err?.message || "Unable to upload resource. Please try again."
       setError(msg)
       tpToast.error(msg)
       setUploadProgress(0)
@@ -114,7 +134,7 @@ export default function AddResourcesModal({ isOpen, onClose, classId, courseId, 
         type="button"
         className="tp-btn tp-btn-primary"
         onClick={handleUpload}
-        disabled={!selectedFile || isUploading}
+        disabled={!selectedFile || !categoryName || isUploading}
       >
         {isUploading ? "Uploading…" : "Upload"}
       </button>
@@ -133,23 +153,75 @@ export default function AddResourcesModal({ isOpen, onClose, classId, courseId, 
       {error ? <div className="tp-lesson-modal-alert tp-lesson-modal-alert--error">{error}</div> : null}
 
       <div className="tp-res-add-section">
-        <label htmlFor="tp-res-upload-type" className="tp-res-add-label">
-          Upload Type:
+        <label className="tp-res-add-label" htmlFor="tp-res-category-mode">
+          Category
         </label>
         <div className="tp-res-add-select-wrap">
           <select
-            id="tp-res-upload-type"
+            id="tp-res-category-mode"
             className="tp-res-add-select"
-            value={uploadType}
-            onChange={(e) => setUploadType(e.target.value)}
+            value={categoryMode}
+            onChange={(e) => setCategoryMode(e.target.value)}
             disabled={isUploading}
           >
-            <option value="general">General Resource</option>
-            {classId ? <option value="class">Upload resource by class</option> : null}
-            {courseId ? <option value="course">Upload resource by course</option> : null}
+            <option value="existing">Existing category</option>
+            <option value="new">New category</option>
           </select>
           <ChevronDown className="tp-res-add-select-chevron" size={16} strokeWidth={2} aria-hidden />
         </div>
+      </div>
+
+      {categoryMode === "existing" ? (
+        <div className="tp-res-add-section">
+          <label className="tp-res-add-label" htmlFor="tp-res-category">
+            Select category
+          </label>
+          <div className="tp-res-add-select-wrap">
+            <select
+              id="tp-res-category"
+              className="tp-res-add-select"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              disabled={isUploading || !categories.length}
+            >
+              {!categories.length ? <option value="">No categories yet</option> : null}
+              {categories.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="tp-res-add-select-chevron" size={16} strokeWidth={2} aria-hidden />
+          </div>
+        </div>
+      ) : (
+        <div className="tp-res-add-section">
+          <label className="tp-res-add-label" htmlFor="tp-res-new-category">
+            New category name
+          </label>
+          <input
+            id="tp-res-new-category"
+            className="tp-res-add-select"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            placeholder="e.g. Posters"
+            disabled={isUploading}
+          />
+        </div>
+      )}
+
+      <div className="tp-res-add-section">
+        <label className="tp-res-add-label" htmlFor="tp-res-title">
+          Title (optional)
+        </label>
+        <input
+          id="tp-res-title"
+          className="tp-res-add-select"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Defaults to file name"
+          disabled={isUploading}
+        />
       </div>
 
       <div className="tp-res-add-section">

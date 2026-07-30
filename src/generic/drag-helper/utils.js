@@ -211,7 +211,7 @@ export const possibleSubsectionMoves = (sections, sectionIndex, section, subsect
 
 function extractParts(titleValue) {
   const match = titleValue.match(
-    /^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
+    /^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
   );
 
   const typePart = match ? match[1] : "";

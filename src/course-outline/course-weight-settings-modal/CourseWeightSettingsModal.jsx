@@ -11,6 +11,12 @@ import {
 import messages from './messages';
 import { useCourseWeightSettings } from './useCourseWeightSettings';
 
+const blockInvalidKeys = (event) => {
+  if (event.key === '-' || event.key === 'e' || event.key === 'E' || event.key === '+') {
+    event.preventDefault();
+  }
+};
+
 const CourseWeightSettingsModal = ({
   isOpen,
   courseId,
@@ -51,18 +57,33 @@ const CourseWeightSettingsModal = ({
             min={0}
             max={100}
             step="0.01"
-            value={w.assessmentWeight}
-            onChange={w.handleAssessmentChange}
-            onKeyDown={(event) => {
-              if (event.key === '-' || event.key === 'e' || event.key === 'E' || event.key === '+') {
-                event.preventDefault();
-              }
-            }}
-            floatingLabel={intl.formatMessage(messages.assessmentWeightLabel)}
-            isInvalid={w.showAssessmentError}
+            value={w.lessonWeight}
+            onChange={w.handleLessonChange}
+            onKeyDown={blockInvalidKeys}
+            floatingLabel={intl.formatMessage(messages.lessonWeightLabel)}
+            isInvalid={w.showLessonError}
             disabled={w.isLoading || w.isSaving}
           />
-          {w.showAssessmentError && (
+          {w.showLessonError && (
+            <Form.Control.Feedback type="invalid">
+              {intl.formatMessage(messages.validationMessage)}
+            </Form.Control.Feedback>
+          )}
+        </Form.Group>
+        <Form.Group className="mb-3">
+          <Form.Control
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            value={w.quizWeight}
+            onChange={w.handleQuizChange}
+            onKeyDown={blockInvalidKeys}
+            floatingLabel={intl.formatMessage(messages.quizWeightLabel)}
+            isInvalid={w.showQuizError}
+            disabled={w.isLoading || w.isSaving}
+          />
+          {w.showQuizError && (
             <Form.Control.Feedback type="invalid">
               {intl.formatMessage(messages.validationMessage)}
             </Form.Control.Feedback>
@@ -74,23 +95,25 @@ const CourseWeightSettingsModal = ({
             min={0}
             max={100}
             step="0.01"
-            value={w.lessonWeight}
-            onChange={w.handleLessonChange}
-            onKeyDown={(event) => {
-              if (event.key === '-' || event.key === 'e' || event.key === 'E' || event.key === '+') {
-                event.preventDefault();
-              }
-            }}
-            floatingLabel={intl.formatMessage(messages.lessonWeightLabel)}
-            isInvalid={w.showLessonError}
+            value={w.testWeight}
+            onChange={w.handleTestChange}
+            onKeyDown={blockInvalidKeys}
+            floatingLabel={intl.formatMessage(messages.testWeightLabel)}
+            isInvalid={w.showTestError}
             disabled={w.isLoading || w.isSaving}
           />
-          {w.showLessonError && (
+          {w.showTestError && (
             <Form.Control.Feedback type="invalid">
               {intl.formatMessage(messages.validationMessage)}
             </Form.Control.Feedback>
           )}
         </Form.Group>
+        {w.showTotalError && (
+          <p className="small text-danger mt-2 mb-0">
+            {intl.formatMessage(messages.totalValidationMessage)}
+            {w.weightTotal !== null ? ` (current total: ${w.weightTotal})` : ''}
+          </p>
+        )}
       </ModalDialog.Body>
       <ModalDialog.Footer className="pt-1">
         <ActionRow>

@@ -12,6 +12,7 @@ export default function TpLessonModalFrame({
   footer,
   children,
   size = "lg",
+  overlayClassName = "",
 }) {
   useEffect(() => {
     if (!isOpen) return undefined
@@ -25,7 +26,11 @@ export default function TpLessonModalFrame({
   if (!isOpen) return null
 
   return (
-    <div className="tp-lesson-modal-overlay cms-tp-scope" role="presentation" onClick={onClose}>
+    <div
+      className={`tp-lesson-modal-overlay cms-tp-scope${overlayClassName ? ` ${overlayClassName}` : ""}`}
+      role="presentation"
+      onClick={onClose}
+    >
       <div
         className={`tp-lesson-modal-panel tp-lesson-modal-panel--${size}`}
         role="dialog"
