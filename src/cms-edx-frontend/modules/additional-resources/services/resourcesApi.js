@@ -1,77 +1,110 @@
 import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../../../cms-csrftoken"
 
-async function jsonHeaders() {
+async function csrfHeaderOnly() {
   const token = await fetchCsrfToken()
-  return {
-    "Content-Type": "application/json",
-    "X-CSRFToken": token,
-  }
+  return { "X-CSRFToken": token }
 }
 
-export async function fetchResourcesList() {
-  const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/resources/list/`, {
-    method: "POST",
+async function errorMessage(res, fallback) {
+  const contentType = res.headers.get("content-type") || ""
+  if (contentType.includes("application/json")) {
+    const data = await res.json().catch(() => null)
+    return data?.detail || data?.error || data?.message || fallback
+  }
+
+  const text = await res.text().catch(() => "")
+  const looksLikeHtml = /<!doctype html|<html|<body|<div/i.test(text)
+  if (looksLikeHtml) return fallback
+  return text || fallback
+}
+
+export async function browseResources() {
+  const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/resources/browse/`, {
+    method: "GET",
     credentials: "include",
-    headers: await jsonHeaders(),
+    headers: {
+      Accept: "application/json",
+      ...(await csrfHeaderOnly()),
+    },
   })
-  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  if (!res.ok) throw new Error(await errorMessage(res, "Failed to browse resources."))
   return res.json()
 }
 
-export async function deleteResourceById(id) {
-  const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/resources/delete/`, {
-    method: "DELETE",
+export async function fetchCategories() {
+  const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/resources/categories/`, {
+    method: "GET",
     credentials: "include",
-    headers: await jsonHeaders(),
-    body: JSON.stringify({ id }),
+    headers: {
+      Accept: "application/json",
+      ...(await csrfHeaderOnly()),
+    },
   })
-  if (!res.ok) throw new Error(await res.text() || String(res.status))
+  if (!res.ok) throw new Error(await errorMessage(res, "Failed to load categories."))
+  const data = await res.json()
+  return Array.isArray(data) ? data : data?.categories || []
 }
 
-export async function uploadResource({ file, uploadType, classId, courseId, onProgress }) {
-  const headers = await jsonHeaders()
-  const requestBody = { filename: file.name }
+/**
+ * Category-scoped multipart upload (course/classroom fields are not allowed).
+ */
+export async function uploadResource({ file, category, title, onProgress }) {
+  if (!file) throw new Error("File is required.")
+  if (!String(category || "").trim()) throw new Error("Category is required.")
 
-  if (uploadType === "class" && classId) {
-    requestBody.classroom = classId
-  } else if (uploadType === "course" && courseId) {
-    requestBody.course = courseId
-  }
+  const headers = await csrfHeaderOnly()
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("category", String(category).trim())
+  if (title?.trim()) formData.append("title", title.trim())
 
-  const urlRes = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/resources/generate-upload-url/`, {
+  onProgress?.(20)
+
+  const res = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/resources/`, {
     method: "POST",
     credentials: "include",
-    headers,
-    body: JSON.stringify(requestBody),
+    headers: {
+      Accept: "application/json",
+      ...headers,
+    },
+    body: formData,
   })
-  if (!urlRes.ok) {
-    throw new Error((await urlRes.text()) || "Failed to get upload URL.")
-  }
-
-  const { upload_url, s3_key } = await urlRes.json()
-
-  const uploadRes = await fetch(upload_url, {
-    method: "PUT",
-    body: file,
-    headers: { "Content-Type": file.type || "application/octet-stream" },
-  })
-  if (!uploadRes.ok) {
-    throw new Error(`Failed to upload file: ${uploadRes.status}`)
-  }
-
-  onProgress?.(50)
-
-  const saveRes = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/resources/`, {
-    method: "POST",
-    credentials: "include",
-    headers,
-    body: JSON.stringify({ s3_key }),
-  })
-  if (!saveRes.ok) {
-    throw new Error((await saveRes.text()) || "Failed to save resource.")
-  }
+  if (!res.ok) throw new Error(await errorMessage(res, "Failed to upload resource."))
 
   onProgress?.(100)
-  return saveRes.json()
+  return res.json().catch(() => ({}))
+}
+
+export function flattenBrowsePayload(payload) {
+  const categories = Array.isArray(payload?.categories) ? payload.categories : []
+  const legacy = Array.isArray(payload?.legacy_resources) ? payload.legacy_resources : []
+  const rows = []
+
+  categories.forEach((group) => {
+    const name = group?.name || "Uncategorized"
+    ;(group?.resources || []).forEach((resource) => {
+      rows.push({
+        ...resource,
+        category: resource.category || name,
+      })
+    })
+  })
+
+  legacy.forEach((resource) => {
+    rows.push({
+      ...resource,
+      category: resource.category || "Legacy",
+    })
+  })
+
+  return rows
+}
+
+export function extractCategoryNames(payload) {
+  const categories = Array.isArray(payload?.categories) ? payload.categories : []
+  const names = categories.map((item) => item?.name).filter(Boolean)
+  const legacy = Array.isArray(payload?.legacy_resources) ? payload.legacy_resources : []
+  if (legacy.length) names.push("Legacy")
+  return [...new Set(names)]
 }

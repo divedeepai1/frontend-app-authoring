@@ -7,19 +7,27 @@ const messages = defineMessages({
   },
   description: {
     id: 'course-authoring.course-outline.course-weight-settings-modal.description',
-    defaultMessage: 'Set default assessment and lesson weights for this course. Total is always 100.',
-  },
-  assessmentWeightLabel: {
-    id: 'course-authoring.course-outline.course-weight-settings-modal.assessment-weight.label',
-    defaultMessage: 'Assessment weight',
+    defaultMessage: 'Set default lesson, quiz, and test weights for this course. Total must equal 100.',
   },
   lessonWeightLabel: {
     id: 'course-authoring.course-outline.course-weight-settings-modal.lesson-weight.label',
     defaultMessage: 'Lesson weight',
   },
+  quizWeightLabel: {
+    id: 'course-authoring.course-outline.course-weight-settings-modal.quiz-weight.label',
+    defaultMessage: 'Quiz weight',
+  },
+  testWeightLabel: {
+    id: 'course-authoring.course-outline.course-weight-settings-modal.test-weight.label',
+    defaultMessage: 'Test weight',
+  },
   validationMessage: {
     id: 'course-authoring.course-outline.course-weight-settings-modal.validation',
     defaultMessage: 'Please enter a value between 0 and 100.',
+  },
+  totalValidationMessage: {
+    id: 'course-authoring.course-outline.course-weight-settings-modal.total-validation',
+    defaultMessage: 'Lesson, quiz, and test weights must total 100.',
   },
   cancelButton: {
     id: 'course-authoring.course-outline.course-weight-settings-modal.button.cancel',

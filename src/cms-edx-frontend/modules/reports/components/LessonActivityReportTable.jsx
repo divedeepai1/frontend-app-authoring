@@ -39,8 +39,7 @@ export default function LessonActivityReportTable({ rows, isLoading }) {
             {rows.map((row) => {
               const isNewStudentGroup = row.studentName !== lastStudent
               lastStudent = row.studentName
-              const typeLower = String(row.type || "").toLowerCase()
-              const isAssessment = typeLower.includes("assessment")
+              const isAssessmentStyle = Boolean(row.isAssessmentStyle)
               return (
                 <tr
                   key={row.id}
@@ -56,7 +55,7 @@ export default function LessonActivityReportTable({ rows, isLoading }) {
                   </td>
                   <td
                     className={`tp-reports-td tp-report-data-td${
-                      isAssessment ? " tp-report-data-td--type-assessment" : ""
+                      isAssessmentStyle ? " tp-report-data-td--type-assessment" : ""
                     }`}
                   >
                     {row.type}

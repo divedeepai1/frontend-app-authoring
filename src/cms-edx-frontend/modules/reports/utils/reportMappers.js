@@ -1,4 +1,8 @@
 import { formatDurationMinutes, formatReportDate } from "./formatDisplay"
+import {
+  formatContentTypeLabel,
+  usesAssessmentStyle,
+} from "../../common/contentType"
 
 function asArray(value) {
   return Array.isArray(value) ? value : []
@@ -22,13 +26,6 @@ function resolveStudentName(item = {}) {
     item.email ||
     (item.user_id != null ? `Student ${item.user_id}` : "Student")
   )
-}
-
-function isAssessmentColumn(column = {}) {
-  const type = String(column.type || column.content_type || column.item_type || "").toLowerCase()
-  if (type.includes("assessment") || type === "assessment") return true
-  if (column.is_assessment === true || column.assessment === true) return true
-  return false
 }
 
 function pickScore(value) {
@@ -67,16 +64,19 @@ export function normalizeGradeReport(payload, fallbackStudents = [], fallbackRub
     columnsFromApi.length > 0
       ? columnsFromApi.map((column, index) => {
           const id = column.rubric_id ?? column.id ?? column.lesson_id ?? `col-${index}`
+          const isAssessmentStyle = usesAssessmentStyle(column)
           return {
             id: String(id),
             title: column.title || column.name || `Item ${index + 1}`,
-            isAssessment: isAssessmentColumn(column),
+            contentType: formatContentTypeLabel(column),
+            isAssessment: isAssessmentStyle,
           }
         })
       : fallbackRubrics.map((rubric, index) => ({
           id: String(rubric.id),
           title: rubric.title || `Item ${index + 1}`,
-          isAssessment: false,
+          contentType: formatContentTypeLabel(rubric),
+          isAssessment: usesAssessmentStyle(rubric),
         }))
 
   const rowsFromApi = asArray(body.rows || body.students || body.grade_report || body.results)
@@ -118,6 +118,7 @@ export function normalizeLessonActivityReport(payload) {
     const timerRaw = row.timer_duration ?? row.timer ?? row.time_allowed
     const timeToCompleteRaw = row.time_to_complete ?? row.completion_time ?? row.duration
     const submittedRaw = row.submitted_date ?? row.submitted_at ?? row.submission_date ?? row.completed_at
+    const typeLabel = formatContentTypeLabel(row)
 
     return {
       id: String(
@@ -127,7 +128,8 @@ export function normalizeLessonActivityReport(payload) {
       studentId: String(row.user_id ?? row.student_id ?? ""),
       studentName: resolveStudentName(row),
       lessonName: row.lesson_name || row.rubric_title || row.title || row.name || "Lesson",
-      type: row.type || row.content_type || row.item_type || "Lesson",
+      type: typeLabel,
+      isAssessmentStyle: usesAssessmentStyle(row),
       attemptNumber:
         row.attempt_number === null || row.attempt_number === undefined || row.attempt_number === ""
           ? null
@@ -159,7 +161,8 @@ export function normalizeOverdueLessonsReport(payload) {
     studentId: String(row.user_id ?? row.student_id ?? ""),
     studentName: resolveStudentName(row),
     lessonName: row.lesson_name || row.rubric_title || row.title || row.name || "Lesson",
-    type: row.type || row.content_type || row.item_type || "Lesson",
+    type: formatContentTypeLabel(row),
+    isAssessmentStyle: usesAssessmentStyle(row),
     dueDate: formatReportDate(row.due_date ?? row.due_at, { includeTime: false }),
     daysOverdue: row.days_overdue ?? row.overdue_days ?? row.days ?? "—",
   }))

@@ -77,7 +77,7 @@ export default function GradebookApp() {
         onSave={g.handleClassOverrideWeightSave}
         onSaveSuccess={() => g.setSuccess("Class override weightage saved")}
         modalTitle="Configure class weight settings"
-        modalDescription={`Set assessment and lesson weights for ${g.selectedClassName} in ${g.selectedCourseName}. Total is always 100.`}
+        modalDescription={`Set lesson, quiz, and test weights for ${g.selectedClassName} in ${g.selectedCourseName}. Total must equal 100.`}
       />
     </div>
   )

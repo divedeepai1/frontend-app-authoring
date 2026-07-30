@@ -2,7 +2,13 @@ function readCookie(name) {
   if (typeof document === "undefined") return null
   const escaped = name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1")
   const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`))
-  return match ? decodeURIComponent(match[1].replace(/\+/g, " ")) : null
+  if (!match) return null
+  try {
+    // Keep literal "+" (valid in emails). Do not treat "+" as a space.
+    return decodeURIComponent(match[1])
+  } catch {
+    return match[1]
+  }
 }
 
 function normalizeEdxUserInfoString(raw) {

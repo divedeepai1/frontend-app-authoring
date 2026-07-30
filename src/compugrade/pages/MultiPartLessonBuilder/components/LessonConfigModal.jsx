@@ -4,6 +4,11 @@ import { base_url } from "../../../../compugrade-constants";
 import RichTextEditorModal from "./RichTextEditorModal";
 import LessonFilesModal from "./LessonFilesModal";
 import HeaderActionButton from "./ui/HeaderActionButton";
+import {
+  CONTENT_TYPE_OPTIONS,
+  isTimedContentType,
+  normalizeContentType,
+} from "../utils/contentType";
 
 export default function LessonConfigModal({
   open,
@@ -22,6 +27,10 @@ export default function LessonConfigModal({
   const lessonFiles = Array.isArray(lessonConfig?.lesson_files)
     ? lessonConfig.lesson_files
     : [];
+  const contentType = normalizeContentType(lessonConfig?.content_type, {
+    isAssessment: !!lessonConfig?.is_assessment,
+  });
+  const isTimedType = isTimedContentType(contentType);
 
   const cleanHtml = (html = "") =>
     (html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -283,52 +292,51 @@ export default function LessonConfigModal({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 rounded-lg bg-amber-50">
                   <Clock3 className="w-5 h-5 text-amber-600" />
                 </div>
-                <div>
-                  <label className="text-sm font-semibold text-gray-900">Assessment Mode</label>
-                  <p className="text-xs text-gray-500">Enable rubric-level assessment timer setup</p>
+                <div className="min-w-0">
+                  <label className="text-sm font-semibold text-gray-900" htmlFor="lesson-content-type">
+                    Lesson Type
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Quiz and Test enable timer and attempts setup
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">
-                  {lessonConfig?.is_assessment ? "Enabled" : "Disabled"}
-                </span>
-                <div
-                  onClick={() =>
-                    setLessonConfig((current) => {
-                      const nextEnabled = !current?.is_assessment;
-                      return {
-                        ...current,
-                        is_assessment: nextEnabled,
-                        ...(nextEnabled
-                          ? {}
-                          : {
-                              timer_mode: null,
-                              time_allowed: null,
-                            }),
-                      };
-                    })
-                  }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    lessonConfig?.is_assessment ? "bg-blue-600" : "bg-gray-200"
-                  }`}
+              <div className="flex items-center gap-3 shrink-0">
+                <select
+                  id="lesson-content-type"
+                  value={contentType}
+                  onChange={(e) => {
+                    const nextType = normalizeContentType(e.target.value);
+                    setLessonConfig((current) => ({
+                      ...current,
+                      content_type: nextType,
+                      ...(isTimedContentType(nextType)
+                        ? {}
+                        : {
+                            timer_mode: null,
+                            time_allowed: null,
+                          }),
+                    }));
+                  }}
+                  className="block w-32 rounded-md border border-gray-300 py-1.5 pl-2 pr-8 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm sm:leading-6"
                 >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      lessonConfig?.is_assessment ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </div>
+                  {CONTENT_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
-                  onClick={() => lessonConfig?.is_assessment && onOpenTimerSetup && onOpenTimerSetup()}
-                  disabled={!lessonConfig?.is_assessment}
+                  onClick={() => isTimedType && onOpenTimerSetup && onOpenTimerSetup()}
+                  disabled={!isTimedType}
                   className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors border ${
-                    lessonConfig?.is_assessment
+                    isTimedType
                       ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
                       : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                   }`}

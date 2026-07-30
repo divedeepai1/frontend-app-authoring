@@ -7,7 +7,7 @@ import {
   MailtoLink,
   Row,
 } from '@openedx/paragon';
-import { Add as AddIcon, Error ,Edit} from '@openedx/paragon/icons';
+import { Add as AddIcon, Error, Edit, FolderOpen } from '@openedx/paragon/icons';
 import { useIntl } from '@edx/frontend-platform/i18n';
 import { StudioFooter } from '@edx/frontend-component-footer';
 import { getConfig } from '@edx/frontend-platform';
@@ -26,6 +26,7 @@ import messages from './messages';
 import { useStudioHome } from './hooks';
 import AlertMessage from '../generic/alert-message';
 import RichTextEditorModal from '../compugrade/pages/MultiPartLessonBuilder/components/RichTextEditorModal';
+import AddResourceModal from './additional-resources/AddResourceModal';
 import { base_url } from '../compugrade-constants';
 
 const StudioHome = () => {
@@ -33,6 +34,7 @@ const StudioHome = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [welcomeText, setWelcomeText] = useState('');
   const [isSavingWelcome, setIsSavingWelcome] = useState(false);
 
@@ -108,6 +110,17 @@ const StudioHome = () => {
         onClick={() => setIsWelcomeModalOpen(true)}
       >
         Welcome Text
+      </Button>,
+    );
+
+    headerButtons.push(
+      <Button
+        variant="outline-primary"
+        iconBefore={FolderOpen}
+        size="sm"
+        onClick={() => setIsResourceModalOpen(true)}
+      >
+        Add resource
       </Button>,
     );
 
@@ -255,6 +268,10 @@ const StudioHome = () => {
         saveLabel="Save"
         editorId="welcome-text-editor"
         isSaving={isSavingWelcome}
+      />
+      <AddResourceModal
+        isOpen={isResourceModalOpen}
+        onClose={() => setIsResourceModalOpen(false)}
       />
     </>
   );
