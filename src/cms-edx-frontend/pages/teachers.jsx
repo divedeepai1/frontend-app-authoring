@@ -2,6 +2,8 @@ import TpDeleteConfirmationModal from "../components/common/TpDeleteConfirmation
 import TpPortalSearchField from "../components/common/TpPortalSearchField"
 import TeacherPortalShell from "../layout/TeacherPortalShell"
 import ManageClassModalFrame from "../modules/manage-classes/components/ManageClassModalFrame"
+import MoveStudentModal from "../modules/manage-classes/components/MoveStudentModal"
+import { useMoveStudent } from "../modules/manage-classes/hooks/useMoveStudent"
 import { useNavigate, useParams } from "react-router"
 import { fetchCsrfToken } from "../../cms-csrftoken"
 import { getConfig } from "@edx/frontend-platform"
@@ -11,6 +13,7 @@ import TeachersTable from "../components/classes/teachers-table"
 import StudentTable from "../components/classes/students-table"
 import { tpToast } from "../components/common/tpToast"
 import * as classroomApi from "../modules/manage-classes/services/classroomApi"
+import { formatClassCreatedDate } from "../modules/manage-classes/utils/formatClassDate"
 import "../theme/teachers-portal-scope.css"
 
 const Teachers = () => {
@@ -50,7 +53,12 @@ const Teachers = () => {
   }, [classId])
 
   const modalTitle = classMeta?.name?.trim() || `Class ${classId}`
-  const modalSubtitle = "View teachers and students assigned to this class."
+  const createdLabel = formatClassCreatedDate(
+    classMeta?.created_at || classMeta?.created || classMeta?.date_created
+  )
+  const modalSubtitle = createdLabel
+    ? `Created ${createdLabel}. View teachers and students assigned to this class.`
+    : "View teachers and students assigned to this class."
 
   const closeClassView = useCallback(() => {
     navigate("/classes")
@@ -94,7 +102,7 @@ const Teachers = () => {
     }
   }
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     setLoadingStudents(true)
     const token = await fetchCsrfToken()
     try {
@@ -121,7 +129,13 @@ const Teachers = () => {
     } finally {
       setLoadingStudents(false)
     }
-  }
+  }, [classId])
+
+  const moveStudent = useMoveStudent({
+    sourceClassId: classId,
+    sourceClass: classMeta,
+    onMoved: fetchStudents,
+  })
 
   useEffect(() => {
     sessionStorage.setItem("classId", classId)
@@ -249,7 +263,7 @@ const Teachers = () => {
       showDeleteModal: false,
     }))
     tpToast.success("Student(s) removed successfully")
-  }, [classId])
+  }, [classId, fetchStudents])
 
   const closeTeacherModal = () =>
     setTeacherState((prev) => ({
@@ -370,12 +384,31 @@ const Teachers = () => {
                   handleDeleteStudents={openStudentDeleteConfirm}
                   handleSelectAllStudents={handleSelectAllStudents}
                   handleSelectStudents={handleSelectStudents}
+                  handleMoveStudent={moveStudent.openMove}
                 />
               </div>
             </ManageClassModalFrame>
           </div>
         </TeacherPortalShell>
       </div>
+
+      <MoveStudentModal
+        isOpen={moveStudent.isOpen}
+        onClose={moveStudent.closeMove}
+        student={moveStudent.student}
+        sourceClassName={modalTitle}
+        targetClassId={moveStudent.targetClassId}
+        onTargetClassChange={moveStudent.setTargetClassId}
+        eligibleTargets={moveStudent.eligibleTargets}
+        loadingTargets={moveStudent.loadingTargets}
+        includeGrades={moveStudent.includeGrades}
+        canCarryOver={moveStudent.canCarryOver}
+        carryOverHelperText={moveStudent.carryOverHelperText}
+        onIncludeGradesChange={moveStudent.setIncludeGrades}
+        onConfirm={moveStudent.submitMove}
+        submitting={moveStudent.submitting}
+        error={moveStudent.error}
+      />
 
       <TpDeleteConfirmationModal
         isOpen={teacherState.showDeleteModal}

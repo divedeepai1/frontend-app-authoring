@@ -2,6 +2,10 @@ import { getConfig } from "@edx/frontend-platform"
 import { base_url } from "../../../../compugrade-constants"
 import * as classroomApi from "../../manage-classes/services/classroomApi"
 import { fetchCourseIntegration } from "../../manage-course/services/curriculumApi"
+import {
+  formatContentTypeLabel,
+  usesAssessmentStyle,
+} from "../../common/contentType"
 
 const toCellMap = (grades) => {
   if (!grades) return {}
@@ -26,9 +30,16 @@ export function normalizeGradebookResponse(payload, fallbackStudents, fallbackLe
         return {
           id: lessonId,
           title: lesson.title ?? lesson.name ?? `Lesson ${index + 1}`,
+          contentType: formatContentTypeLabel(lesson),
+          isAssessmentStyle: usesAssessmentStyle(lesson),
         }
       })
-    : fallbackLessons
+    : (fallbackLessons || []).map((lesson) => ({
+        ...lesson,
+        contentType: lesson.contentType || formatContentTypeLabel(lesson),
+        isAssessmentStyle:
+          lesson.isAssessmentStyle ?? usesAssessmentStyle(lesson),
+      }))
   const fallbackById = new Map(
     (fallbackStudents || []).map((student) => [String(student.id), student])
   )
@@ -192,14 +203,22 @@ export async function postOverrideGradebook({ courseId, rubricId, userId, overri
   return response.json()
 }
 
-export async function postSaveClassOverrideWeight({ courseId, studentIds, assessmentWeight }) {
+export async function postSaveClassOverrideWeight({
+  courseId,
+  studentIds,
+  lessonWeight,
+  quizWeight,
+  testWeight,
+}) {
   const response = await fetch(`${base_url}/api/grading/save_class_override_weight_settings`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       course_id: courseId,
       student_ids: studentIds,
-      assessment_weight: assessmentWeight,
+      lesson_weight: lessonWeight,
+      quiz_weight: quizWeight,
+      test_weight: testWeight,
     }),
   })
   if (!response.ok) {
@@ -223,15 +242,24 @@ export async function postGetClassOverrideWeight({ courseId, studentIds }) {
   return response.json()
 }
 
+function hasWeightFields(payload) {
+  if (!payload || typeof payload !== "object") return false
+  return (
+    payload.lesson_weight !== undefined ||
+    payload.quiz_weight !== undefined ||
+    payload.test_weight !== undefined ||
+    payload.assessment_weight !== undefined
+  )
+}
+
 export function parseClassOverrideWeightResponse(data) {
   const studentPayload = data?.students
   let firstStudentWeight = null
 
   if (Array.isArray(studentPayload)) {
-    firstStudentWeight =
-      studentPayload.find((student) => student && student.assessment_weight !== undefined) || null
+    firstStudentWeight = studentPayload.find((student) => student && hasWeightFields(student)) || null
   } else if (studentPayload && typeof studentPayload === "object") {
-    if (studentPayload.assessment_weight !== undefined || studentPayload.lesson_weight !== undefined) {
+    if (hasWeightFields(studentPayload)) {
       firstStudentWeight = studentPayload
     } else {
       const firstValue = Object.values(studentPayload)[0]
@@ -239,10 +267,15 @@ export function parseClassOverrideWeightResponse(data) {
         firstStudentWeight = firstValue
       }
     }
+  } else if (hasWeightFields(data)) {
+    firstStudentWeight = data
   }
 
   return {
-    assessmentWeight: firstStudentWeight?.assessment_weight,
     lessonWeight: firstStudentWeight?.lesson_weight,
+    quizWeight: firstStudentWeight?.quiz_weight,
+    testWeight: firstStudentWeight?.test_weight,
+    // Legacy fallback for older responses
+    assessmentWeight: firstStudentWeight?.assessment_weight,
   }
 }

@@ -24,6 +24,11 @@ import LessonStateModal from "../components/LessonStateModal";
 import { fetchCsrfToken } from "../../../../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
 import { useUniqueId } from "@dnd-kit/utilities";
+import {
+  CONTENT_TYPES,
+  isTimedContentType,
+  normalizeContentType,
+} from "../utils/contentType";
 
 
 export default function LessonBuilder() {
@@ -70,7 +75,7 @@ export default function LessonBuilder() {
     video_transcript: "",
     lesson_overview: "",
     num_of_attempts: 3,
-    is_assessment: false,
+    content_type: CONTENT_TYPES.LESSON,
     time_allowed: null,
     timer_mode: null,
   });
@@ -347,7 +352,9 @@ export default function LessonBuilder() {
       lesson_overview: backendData.lesson_overview || "",
       lessonParts: lessons || [],
       num_of_attempts: backendData.num_of_attempts === null ? null : (backendData.num_of_attempts || 3),
-      is_assessment: !!backendData.is_assessment,
+      content_type: normalizeContentType(backendData.content_type, {
+        isAssessment: !!backendData.is_assessment,
+      }),
       time_allowed: backendData.time_allowed ?? null,
       timer_mode:
         backendData.timer_mode === "display" || backendData.timer_mode === "lock"
@@ -472,10 +479,10 @@ export default function LessonBuilder() {
   }, [lessonParts]);
 
   useEffect(() => {
-    if (!lessonConfig?.is_assessment) {
+    if (!isTimedContentType(lessonConfig?.content_type)) {
       setAssessmentTimerOpen(false);
     }
-  }, [lessonConfig?.is_assessment]);
+  }, [lessonConfig?.content_type]);
 
   const [images, setImages] = useState([]);
   const [nextImageId, setNextImageId] = useState(1);
@@ -980,7 +987,7 @@ export default function LessonBuilder() {
       lesson_overview: currentLessonConfig.lesson_overview || "",
       lessons: lesson_parts,
       num_of_attempts: currentLessonConfig.num_of_attempts === null ? null : (currentLessonConfig.num_of_attempts || 3),
-      is_assessment: !!currentLessonConfig.is_assessment,
+      content_type: normalizeContentType(currentLessonConfig.content_type),
       time_allowed: currentLessonConfig.time_allowed ?? null,
       timer_mode: currentLessonConfig.timer_mode ?? null,
     };
@@ -1003,7 +1010,9 @@ export default function LessonBuilder() {
       payload?.num_of_attempts === null
         ? null
         : payload?.num_of_attempts || 3,
-    is_assessment: !!payload?.is_assessment,
+    content_type: normalizeContentType(payload?.content_type, {
+      isAssessment: !!payload?.is_assessment,
+    }),
     time_allowed: payload?.time_allowed ?? null,
     timer_mode:
       payload?.timer_mode === "display" || payload?.timer_mode === "lock"
@@ -2318,7 +2327,7 @@ export default function LessonBuilder() {
           videoObjectUrlRef={videoObjectUrlRef}
         />
         <AssessmentTimerModal
-          open={lessonConfigOpen && !!lessonConfig?.is_assessment && assessmentTimerOpen}
+          open={lessonConfigOpen && isTimedContentType(lessonConfig?.content_type) && assessmentTimerOpen}
           onClose={() => setAssessmentTimerOpen(false)}
           initialTimerMode={lessonConfig?.timer_mode}
           initialTimeAllowed={lessonConfig?.time_allowed}
