@@ -1,6 +1,7 @@
 import { getConfig } from "@edx/frontend-platform"
 import { fetchCsrfToken } from "../../../../cms-csrftoken"
 import { classroom_archive_password } from "../../../../compugrade-constants"
+import { readApiError } from "../../account-settings/utils/apiError"
 
 async function jsonHeaders() {
   const token = await fetchCsrfToken()
@@ -167,5 +168,33 @@ export async function unarchiveClassroom(classId) {
     }
   )
   if (!res.ok) throw new Error(await res.text() || String(res.status))
+  return res.json().catch(() => ({}))
+}
+
+/**
+ * Move a student from one classroom to another.
+ * @param {{ email: string, sourceClassroomId: number|string, destinationClassroomId: number|string }} params
+ */
+export async function changeStudentClass({
+  email,
+  sourceClassroomId,
+  destinationClassroomId,
+}) {
+  const res = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/change-student-class/`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: await jsonHeaders(),
+      body: JSON.stringify({
+        email,
+        source_classroom_id: Number(sourceClassroomId),
+        destination_classroom_id: Number(destinationClassroomId),
+      }),
+    }
+  )
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Failed to move student. Please try again."))
+  }
   return res.json().catch(() => ({}))
 }

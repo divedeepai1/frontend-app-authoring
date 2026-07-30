@@ -18,7 +18,7 @@ export const REPORT_TYPE_OPTIONS = [
   {
     id: REPORT_TYPES.OVERDUE,
     label: "Overdue Lessons Report",
-    description: "Students with past-due lessons or assessments",
+    description: "Students with past-due lessons, quizzes, or tests",
   },
 ]
 

@@ -55,7 +55,13 @@ export default function GradebookDataTable({
               <span className="tp-gradebook-th-label">Student</span>
             </th>
             {lessons.map((lesson) => (
-              <th key={lesson.id} className="tp-gradebook-th">
+              <th
+                key={lesson.id}
+                className={`tp-gradebook-th${
+                  lesson.isAssessmentStyle ? " tp-gradebook-th--assessment" : ""
+                }`}
+                title={lesson.contentType || undefined}
+              >
                 <span className="tp-gradebook-th-label" title={String(lesson.id)}>
                   {lesson.title}
                 </span>

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Bell, ChevronDown, LogOut, Settings } from "lucide-react"
+import { Bell, ChevronDown, LogOut, MessageSquare, Settings } from "lucide-react"
 import { useNavigate } from "react-router"
 import { appendNextToLogoutUrl, getLogoutNextDestination } from "./buildLogoutNextUrl"
 import { getEdxUserInitials, parseEdxUserInfoCookie } from "./parseEdxUserInfoCookie"
+import SendFeedbackModal from "../modules/feedback/components/SendFeedbackModal"
 
 export default function TeacherPortalHeader({ title, subtitle }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const wrapRef = useRef(null)
   const [user, setUser] = useState(() => parseEdxUserInfoCookie())
 
@@ -37,6 +39,11 @@ export default function TeacherPortalHeader({ title, subtitle }) {
 
   const goAccountSettings = () => {
     navigate("/account-settings")
+    close()
+  }
+
+  const openFeedback = () => {
+    setIsFeedbackOpen(true)
     close()
   }
 
@@ -94,6 +101,15 @@ export default function TeacherPortalHeader({ title, subtitle }) {
                 <Settings size={18} strokeWidth={1.75} aria-hidden />
                 Account settings
               </button>
+              <button
+                type="button"
+                className="tp-portal-header-dropdown-item"
+                role="menuitem"
+                onClick={openFeedback}
+              >
+                <MessageSquare size={18} strokeWidth={1.75} aria-hidden />
+                Send Feedback
+              </button>
               {urls.logout ? (
                 <button type="button" className="tp-portal-header-dropdown-item tp-portal-header-dropdown-danger" role="menuitem" onClick={goLogout}>
                   <LogOut size={18} strokeWidth={1.75} aria-hidden />
@@ -107,6 +123,13 @@ export default function TeacherPortalHeader({ title, subtitle }) {
           ) : null}
         </div>
       </div>
+
+      <SendFeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        userName={user?.name || user?.full_name || user?.username || displayName}
+        userEmail={displayEmail}
+      />
     </header>
   )
 }

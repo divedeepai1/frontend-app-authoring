@@ -432,7 +432,7 @@ const CourseOutline = ({ courseId }) => {
     const [sectionsCopy, newSubsections] = fn(...args);
     if (newSubsections && sectionId) {
       const extractParts = (titleValue) => {
-        const match = titleValue.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+        const match = titleValue.match(/^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
         const typePart = match ? match[1] : '';
         const numberPart = match ? match[2] : '';
         const stringPart = match ? match[3] : titleValue;
@@ -508,7 +508,7 @@ const CourseOutline = ({ courseId }) => {
       // After drag-and-drop, also update unit display names to reflect new order
       // so views relying on displayName (e.g., Table View) stay consistent.
       const extractParts = (titleValue) => {
-        const match = titleValue.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+        const match = titleValue.match(/^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
         const typePart = match ? match[1] : '';
         const numberPart = match ? match[2] : '';
         const stringPart = match ? match[3] : titleValue;
@@ -568,7 +568,7 @@ const CourseOutline = ({ courseId }) => {
     restoreList,
   ) => {
     const extractParts = (titleValue) => {
-      const match = titleValue.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+      const match = titleValue.match(/^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
       const typePart = match ? match[1] : '';
       const numberPart = match ? match[2] : '';
       const stringPart = match ? match[3] : titleValue;
@@ -634,7 +634,7 @@ const CourseOutline = ({ courseId }) => {
     restoreList,
   ) => {
     const extractParts = (titleValue) => {
-      const match = titleValue.match(/^(Unit|Chapter|Lesson)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+      const match = titleValue.match(/^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
       const typePart = match ? match[1] : '';
       const numberPart = match ? match[2] : '';
       const stringPart = match ? match[3] : titleValue;

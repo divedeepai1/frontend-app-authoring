@@ -228,7 +228,12 @@ export function useGradebook() {
     }
   }
 
-  const handleClassOverrideWeightSave = async ({ courseId, assessmentWeight }) => {
+  const handleClassOverrideWeightSave = async ({
+    courseId,
+    lessonWeight,
+    quizWeight,
+    testWeight,
+  }) => {
     const normalizedStudentIds = classStudents
       .map((student) => Number(student?.id))
       .filter((id) => Number.isInteger(id))
@@ -237,7 +242,9 @@ export function useGradebook() {
     await gradebookApi.postSaveClassOverrideWeight({
       courseId,
       studentIds: normalizedStudentIds,
-      assessmentWeight,
+      lessonWeight,
+      quizWeight,
+      testWeight,
     })
   }
 

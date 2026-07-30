@@ -31,8 +31,7 @@ export default function OverdueLessonsReportTable({ rows, isLoading }) {
           </thead>
           <tbody>
             {rows.map((row) => {
-              const typeLower = String(row.type || "").toLowerCase()
-              const isAssessment = typeLower.includes("assessment")
+              const isAssessmentStyle = Boolean(row.isAssessmentStyle)
               return (
                 <tr key={row.id} className="tp-reports-row tp-report-data-row">
                   <td className="tp-reports-td tp-report-data-td tp-report-data-td--student">
@@ -43,7 +42,7 @@ export default function OverdueLessonsReportTable({ rows, isLoading }) {
                   </td>
                   <td
                     className={`tp-reports-td tp-report-data-td${
-                      isAssessment ? " tp-report-data-td--type-assessment" : ""
+                      isAssessmentStyle ? " tp-report-data-td--type-assessment" : ""
                     }`}
                   >
                     {row.type}
