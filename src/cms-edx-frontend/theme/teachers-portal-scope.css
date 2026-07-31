@@ -840,12 +840,14 @@
 }
 
 .cms-tp-scope .tp-portal-header {
-  height: 4rem;
+  min-height: 4rem;
+  height: auto;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -853,6 +855,14 @@
 .cms-tp-scope .tp-portal-header-left {
   min-width: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cms-tp-scope .tp-portal-header-page-title {
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .cms-tp-scope .tp-portal-header-title {
@@ -867,6 +877,79 @@
   margin: 0.15rem 0 0;
   font-size: 0.875rem;
   color: #6a7282;
+}
+
+.cms-tp-scope .tp-portal-org-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.cms-tp-scope .tp-portal-org-meta-loading {
+  font-size: 0.8125rem;
+  color: #6a7282;
+}
+
+.cms-tp-scope .tp-portal-org-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.cms-tp-scope .tp-portal-org-icon {
+  flex-shrink: 0;
+  color: #27aae1;
+}
+
+.cms-tp-scope .tp-portal-org-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.cms-tp-scope .tp-portal-org-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  line-height: 1.2;
+}
+
+.cms-tp-scope .tp-portal-org-value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #101828;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(22rem, 40vw);
+}
+
+.cms-tp-scope .tp-portal-org-divider {
+  width: 1px;
+  height: 2rem;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .cms-tp-scope .tp-portal-org-meta {
+    gap: 0.75rem;
+  }
+
+  .cms-tp-scope .tp-portal-org-divider {
+    display: none;
+  }
+
+  .cms-tp-scope .tp-portal-org-value {
+    max-width: 11rem;
+  }
 }
 
 .cms-tp-scope .tp-portal-header-right {

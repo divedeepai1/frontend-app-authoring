@@ -4,6 +4,7 @@ import { useNavigate } from "react-router"
 import { appendNextToLogoutUrl, getLogoutNextDestination } from "./buildLogoutNextUrl"
 import { getEdxUserInitials, parseEdxUserInfoCookie } from "./parseEdxUserInfoCookie"
 import SendFeedbackModal from "../modules/feedback/components/SendFeedbackModal"
+import DistrictSchoolHeaderMeta from "../modules/district-school/components/DistrictSchoolHeaderMeta"
 
 export default function TeacherPortalHeader({ title, subtitle }) {
   const navigate = useNavigate()
@@ -19,7 +20,7 @@ export default function TeacherPortalHeader({ title, subtitle }) {
   const close = useCallback(() => setOpen(false), [])
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return undefined
     const onDoc = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) close()
     }
@@ -59,11 +60,12 @@ export default function TeacherPortalHeader({ title, subtitle }) {
     <header className="tp-portal-header">
       <div className="tp-portal-header-left">
         {title ? (
-          <div>
+          <div className="tp-portal-header-page-title">
             <h1 className="tp-portal-header-title">{title}</h1>
             {subtitle ? <p className="tp-portal-header-subtitle">{subtitle}</p> : null}
           </div>
         ) : null}
+        <DistrictSchoolHeaderMeta />
       </div>
 
       <div className="tp-portal-header-right">
@@ -111,7 +113,12 @@ export default function TeacherPortalHeader({ title, subtitle }) {
                 Send Feedback
               </button>
               {urls.logout ? (
-                <button type="button" className="tp-portal-header-dropdown-item tp-portal-header-dropdown-danger" role="menuitem" onClick={goLogout}>
+                <button
+                  type="button"
+                  className="tp-portal-header-dropdown-item tp-portal-header-dropdown-danger"
+                  role="menuitem"
+                  onClick={goLogout}
+                >
                   <LogOut size={18} strokeWidth={1.75} aria-hidden />
                   Log out
                 </button>
