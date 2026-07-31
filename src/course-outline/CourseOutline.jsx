@@ -205,18 +205,27 @@ const CourseOutline = ({ courseId }) => {
     const fetchCourseDashboardText = async () => {
       if (!courseId) return;
       try {
-        const response = await fetch(`${base_url}/api/course/course_intro_text`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const token = await fetchCsrfToken();
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/intro-text/`,
+          {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': token,
+            },
           },
-          body: JSON.stringify({ }),
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setCourseDashboardText(data?.course_intro_text || '');
-        }
+        );
+
+        if (!response.ok) return;
+        const data = await response.json();
+        setCourseDashboardText(
+          data?.course_intro_text
+          || data?.intro_text
+          || data?.courseIntroText
+          || '',
+        );
       } catch (error) {
         // Silently handle error
       }
@@ -705,15 +714,24 @@ const CourseOutline = ({ courseId }) => {
   }, [sectionsList]);
 
   const handleCourseDashboardSave = async (content) => {
+    if (!courseId) return;
     setIsSavingCourseDashboard(true);
     try {
-      await fetch(`${base_url}/api/course/course_intro_text`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const token = await fetchCsrfToken();
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/update-intro-text/`,
+        {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token,
+          },
+          body: JSON.stringify({ course_intro_text: content }),
         },
-        body: JSON.stringify({ course_intro_text: content }),
-      });
+      );
+
+      if (!response.ok) return;
       setCourseDashboardText(content);
       setIsCourseDashboardModalOpen(false);
     } catch (error) {
