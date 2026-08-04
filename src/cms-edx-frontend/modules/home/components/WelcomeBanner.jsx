@@ -1,22 +1,16 @@
-import { useEffect, useState } from "react"
-import { parseEdxUserInfoCookie } from "../../../layout/parseEdxUserInfoCookie"
+import { useEffect } from "react"
+import { useUserProfile } from "../../user-profile/context/UserProfileContext"
 import { ONBOARDING_STEPS } from "../data/mockHomeData"
 
-function formatDisplayName(username) {
-  if (!username || typeof username !== "string") return "Teacher"
-  return username.charAt(0).toUpperCase() + username.slice(1)
-}
-
 export default function WelcomeBanner() {
-  const [displayName, setDisplayName] = useState("Teacher")
+  const { firstName, email } = useUserProfile()
+  const displayName = firstName || "Teacher"
 
   useEffect(() => {
-    const user = parseEdxUserInfoCookie()
-    if (user?.username) {
-      sessionStorage.setItem("email", user.email || "")
-      setDisplayName(formatDisplayName(user.username))
+    if (email) {
+      sessionStorage.setItem("email", email)
     }
-  }, [])
+  }, [email])
 
   return (
     <section className="tp-home-welcome" aria-labelledby="tp-home-welcome-title">
