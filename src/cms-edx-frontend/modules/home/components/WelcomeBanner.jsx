@@ -1,6 +1,5 @@
 import { useEffect } from "react"
 import { useUserProfile } from "../../user-profile/context/UserProfileContext"
-import { ONBOARDING_STEPS } from "../data/mockHomeData"
 
 export default function WelcomeBanner() {
   const { firstName, email } = useUserProfile()
@@ -19,24 +18,8 @@ export default function WelcomeBanner() {
           Welcome, {displayName} – Let&apos;s get you started!
         </h2>
         <p className="tp-home-welcome-desc">
-          Follow these steps to set up your account and tools for success. We&apos;ve tailored this checklist
-          based on your purchases.
+          Manage your classes, track student progress, and access curriculum tools from one place.
         </p>
-        <div className="tp-home-onboarding-grid">
-          {ONBOARDING_STEPS.map((step) => (
-            <article key={step.id} className="tp-home-onboarding-card">
-              <div className="tp-home-onboarding-step-row">
-                <span className="tp-home-onboarding-badge">{step.id}</span>
-                <span className="tp-home-onboarding-line" aria-hidden />
-              </div>
-              <h3 className="tp-home-onboarding-title">{step.title}</h3>
-              <p className="tp-home-onboarding-desc">{step.description}</p>
-              <button type="button" className="tp-home-onboarding-btn">
-                {step.buttonLabel}
-              </button>
-            </article>
-          ))}
-        </div>
       </div>
     </section>
   )

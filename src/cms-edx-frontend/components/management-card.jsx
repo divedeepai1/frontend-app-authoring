@@ -6,10 +6,14 @@ export function ManagementCard({ title }) {
   const location = useLocation();
 
   const routeMap = {
+    "Manage Classes, Students, and Assign Courses": "/classes",
     "Manage Classes & Students": "/classes",
+    "Manage Courses & Set Preferences": "/curriculum",
     "Manage Courses & Curriculum": "/curriculum",
-    "Reports": "/reports",
-    "Additional Resources": "/resources", 
+    Gradebook: "/curriculum/gradebook",
+    Reports: "/reports",
+    "Teacher Materials": "/resources",
+    "Additional Resources": "/resources",
   };
 
   const route = routeMap[title];
