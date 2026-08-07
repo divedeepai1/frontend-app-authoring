@@ -210,7 +210,7 @@ const Chat = () => {
       <HeaderTop isHiddenMainMenu />
       <div className="min-vh-100 bg-white">
         <Header
-          heading="Manage Classes & Students"
+          heading="Manage Classes, Students, and Assign Courses"
           bg="linear-gradient(90deg, #255A71 0%, #0096D7 100%)"
           color="white"
           outline="outline-white-button"
