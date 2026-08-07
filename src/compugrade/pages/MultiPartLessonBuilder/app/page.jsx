@@ -411,6 +411,34 @@ export default function LessonBuilder() {
     }
   };
 
+  const getCreateLessonErrorMessage = async (response, fallback) => {
+    try {
+      const data = await response.json();
+      if (typeof data?.detail === "string" && data.detail.trim()) {
+        return data.detail.trim();
+      }
+      if (Array.isArray(data?.detail)) {
+        const detailMessage = data.detail
+          .map((item) => {
+            if (typeof item === "string") return item;
+            return item?.msg || item?.message || item?.detail || "";
+          })
+          .filter(Boolean)
+          .join(", ");
+        if (detailMessage) return detailMessage;
+      }
+      if (typeof data?.message === "string" && data.message.trim()) {
+        return data.message.trim();
+      }
+      if (typeof data?.error === "string" && data.error.trim()) {
+        return data.error.trim();
+      }
+    } catch {
+      // ignore JSON parse errors; use fallback
+    }
+    return fallback || `Request failed (${response.status})`;
+  };
+
   const handleSubmitDraft = async () => {
 
     
@@ -427,9 +455,11 @@ export default function LessonBuilder() {
       );
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to create base items: ${response.status} ${response.statusText}`
+        const message = await getCreateLessonErrorMessage(
+          response,
+          `Failed to save draft: ${response.status} ${response.statusText}`
         );
+        throw new Error(message);
       }
 
       const result = await response.json();
@@ -442,7 +472,12 @@ export default function LessonBuilder() {
       addToast({ title: "Draft Saved", message: "Lesson draft saved.", variant: "success" });
     } catch (error) {
       console.error("Error during saving draft:", error);
-      addToast({ title: "Save Draft Error", message: error.message || "Request failed.", variant: "error" });
+      addToast({
+        title: "Save Draft Error",
+        message: error.message || "Request failed.",
+        variant: "error",
+        duration: 6000,
+      });
     } finally {
       setSaveDraftLoading(false);
     }
@@ -1146,9 +1181,11 @@ export default function LessonBuilder() {
       );
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to create base items: ${response.status} ${response.statusText}`
+        const message = await getCreateLessonErrorMessage(
+          response,
+          `Failed to publish: ${response.status} ${response.statusText}`
         );
+        throw new Error(message);
       }
 
       const result = await response.json();
@@ -1160,6 +1197,12 @@ export default function LessonBuilder() {
       navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
     } catch (error) {
       console.error("Error during saving:", error);
+      addToast({
+        title: "Publish Error",
+        message: error.message || "Request failed.",
+        variant: "error",
+        duration: 6000,
+      });
     } finally {
       setLoading(false);
     }
