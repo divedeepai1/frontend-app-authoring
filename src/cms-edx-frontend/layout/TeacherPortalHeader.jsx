@@ -1,20 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Bell, ChevronDown, LogOut, MessageSquare, Settings } from "lucide-react"
 import { useNavigate } from "react-router"
 import { appendNextToLogoutUrl, getLogoutNextDestination } from "./buildLogoutNextUrl"
 import { getEdxUserInitials, parseEdxUserInfoCookie } from "./parseEdxUserInfoCookie"
 import SendFeedbackModal from "../modules/feedback/components/SendFeedbackModal"
 import DistrictSchoolHeaderMeta from "../modules/district-school/components/DistrictSchoolHeaderMeta"
+import { useUserProfile } from "../modules/user-profile/context/UserProfileContext"
 
 export default function TeacherPortalHeader({ title, subtitle }) {
   const navigate = useNavigate()
+  const profile = useUserProfile()
   const [open, setOpen] = useState(false)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const wrapRef = useRef(null)
-  const [user, setUser] = useState(() => parseEdxUserInfoCookie())
+  const [cookieUser, setCookieUser] = useState(() => parseEdxUserInfoCookie())
 
   useEffect(() => {
-    setUser(parseEdxUserInfoCookie())
+    setCookieUser(parseEdxUserInfoCookie())
   }, [])
 
   const close = useCallback(() => setOpen(false), [])
@@ -28,10 +30,20 @@ export default function TeacherPortalHeader({ title, subtitle }) {
     return () => document.removeEventListener("mousedown", onDoc)
   }, [open, close])
 
-  const urls = user?.header_urls || {}
-  const initials = getEdxUserInitials(user)
-  const displayName = user?.username || "User"
-  const displayEmail = user?.email || ""
+  const urls = cookieUser?.header_urls || {}
+  const displayName = profile.firstName || cookieUser?.username || "User"
+  const displayEmail = profile.email || cookieUser?.email || ""
+  const initials = useMemo(
+    () =>
+      getEdxUserInitials({
+        ...(cookieUser || {}),
+        name: profile.fullName || cookieUser?.name,
+        first_name: profile.firstName,
+        username: profile.username || cookieUser?.username,
+        email: displayEmail,
+      }),
+    [cookieUser, profile.firstName, profile.fullName, profile.username, displayEmail]
+  )
 
   const go = (href) => {
     if (href) window.location.assign(href)
@@ -134,7 +146,7 @@ export default function TeacherPortalHeader({ title, subtitle }) {
       <SendFeedbackModal
         isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}
-        userName={user?.name || user?.full_name || user?.username || displayName}
+        userName={displayName}
         userEmail={displayEmail}
       />
     </header>
