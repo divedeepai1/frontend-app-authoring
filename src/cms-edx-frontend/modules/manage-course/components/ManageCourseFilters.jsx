@@ -15,7 +15,7 @@ export default function ManageCourseFilters({
           <BookOpen size={20} color="#fff" strokeWidth={2} />
         </div>
         <div>
-          <h3 className="tp-curriculum-filters-title">Manage Course &amp; Curriculum</h3>
+          <h3 className="tp-curriculum-filters-title">Manage Courses &amp; Set Preferences</h3>
           <p className="tp-curriculum-filters-desc">Configure course content and curriculum structure</p>
         </div>
       </div>

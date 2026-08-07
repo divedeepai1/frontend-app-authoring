@@ -6,17 +6,20 @@ export function ManagementSection() {
     <section className="py-4 px-5">
       <Container>
         <Row className="g-4">
-          <Col md={3}>
-            <ManagementCard title="Manage Classes & Students" />
+          <Col md={4} lg={2}>
+            <ManagementCard title="Manage Classes, Students, and Assign Courses" />
           </Col>
-          <Col md={3}>
-            <ManagementCard  title="Manage Courses & Curriculum" />
+          <Col md={4} lg={2}>
+            <ManagementCard title="Manage Courses & Set Preferences" />
           </Col>
-          <Col md={3}>
+          <Col md={4} lg={2}>
+            <ManagementCard title="Gradebook" />
+          </Col>
+          <Col md={4} lg={2}>
             <ManagementCard title="Reports" />
           </Col>
-          <Col md={3}>
-            <ManagementCard title="Additional Resources" />
+          <Col md={4} lg={2}>
+            <ManagementCard title="Teacher Materials" />
           </Col>
         </Row>
       </Container>
