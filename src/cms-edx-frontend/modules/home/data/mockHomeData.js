@@ -22,15 +22,21 @@ export const ONBOARDING_STEPS = [
 export const QUICK_ACCESS_CARDS = [
   {
     id: "manage-class-students",
-    title: "Manage Classes & Students",
+    title: "Manage Classes, Students, and Assign Courses",
     path: "/classes",
     icon: "users",
   },
   {
     id: "manage-course-curriculum",
-    title: "Manage Courses & Curriculum",
+    title: "Manage Courses & Set Preferences",
     path: "/curriculum",
     icon: "book",
+  },
+  {
+    id: "gradebook",
+    title: "Gradebook",
+    path: "/curriculum/gradebook",
+    icon: "clipboard",
   },
   {
     id: "reports",
@@ -40,7 +46,7 @@ export const QUICK_ACCESS_CARDS = [
   },
   {
     id: "additional-resources",
-    title: "Additional Resources",
+    title: "Teacher Materials",
     path: "/resources",
     icon: "folder",
   },

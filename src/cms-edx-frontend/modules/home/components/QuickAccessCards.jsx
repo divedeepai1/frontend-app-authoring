@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom"
-import { BookOpen, FileText, FolderOpen, Users } from "lucide-react"
+import { BookOpen, ClipboardList, FileText, FolderOpen, Users } from "lucide-react"
 import { QUICK_ACCESS_CARDS } from "../data/mockHomeData"
 
 const ICON_MAP = {
   users: Users,
   book: BookOpen,
+  clipboard: ClipboardList,
   file: FileText,
   folder: FolderOpen,
 }
