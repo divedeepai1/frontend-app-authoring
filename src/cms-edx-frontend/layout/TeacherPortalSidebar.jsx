@@ -1,14 +1,26 @@
-import { Home, Users, BookOpen, FileText, FolderOpen } from "lucide-react"
+import { BookOpen, ClipboardList, FileText, FolderOpen, Home, Users } from "lucide-react"
 import { useNavigate, useLocation } from "react-router"
 import { getTeacherPortalTabId } from "./getTeacherPortalTabId"
 import compugradeLogo from "../assests/Logo.png"
 
 const NAV = [
   { id: "home", label: "Home", icon: Home, path: "/home" },
-  { id: "manage-class-students", label: "Manage Class & Students", icon: Users, path: "/classes" },
-  { id: "manage-course-curriculum", label: "Manage Course & Curriculum", icon: BookOpen, path: "/curriculum" },
+  {
+    id: "manage-class-students",
+    label: "Manage Classes, Students, and Assign Courses",
+    labelLines: ["Manage Classes, Students, and", "Assign Courses"],
+    icon: Users,
+    path: "/classes",
+  },
+  {
+    id: "manage-course-curriculum",
+    label: "Manage Courses & Set Preferences",
+    icon: BookOpen,
+    path: "/curriculum",
+  },
+  { id: "gradebook", label: "Gradebook", icon: ClipboardList, path: "/curriculum/gradebook" },
   { id: "reports", label: "Reports", icon: FileText, path: "/reports" },
-  { id: "additional-resources", label: "Additional Resources", icon: FolderOpen, path: "/resources" },
+  { id: "additional-resources", label: "Teacher Materials", icon: FolderOpen, path: "/resources" },
 ]
 
 export default function TeacherPortalSidebar() {
@@ -27,6 +39,9 @@ export default function TeacherPortalSidebar() {
         {NAV.map((item) => {
           const Icon = item.icon
           const isActive = activeTab === item.id
+          const lines = Array.isArray(item.labelLines) && item.labelLines.length
+            ? item.labelLines
+            : [item.label]
           return (
             <button
               key={item.id}
@@ -35,7 +50,13 @@ export default function TeacherPortalSidebar() {
               onClick={() => navigate(item.path)}
             >
               <Icon className="tp-sidebar-icon" strokeWidth={1.67} aria-hidden />
-              <span>{item.label}</span>
+              <span className="tp-sidebar-label">
+                {lines.map((line) => (
+                  <span key={line} className="tp-sidebar-label-line">
+                    {line}
+                  </span>
+                ))}
+              </span>
             </button>
           )
         })}

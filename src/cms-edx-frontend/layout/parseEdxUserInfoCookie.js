@@ -36,6 +36,30 @@ export function parseEdxUserInfoCookie() {
   return null
 }
 
+/**
+ * Prefer first_name from edx-user-info cookie; fall back to given_name / name / username.
+ */
+export function getEdxUserFirstName(user, fallback = "User") {
+  if (!user || typeof user !== "object") return fallback
+
+  const firstName = user.first_name || user.firstName || user.given_name || user.givenName
+  if (typeof firstName === "string" && firstName.trim()) {
+    return firstName.trim()
+  }
+
+  const full = user.name || user.full_name || user.fullName
+  if (typeof full === "string" && full.trim()) {
+    const firstToken = full.trim().split(/\s+/).filter(Boolean)[0]
+    if (firstToken) return firstToken
+  }
+
+  if (typeof user.username === "string" && user.username.trim()) {
+    return user.username.trim()
+  }
+
+  return fallback
+}
+
 function splitNameLikeTokens(value) {
   if (!value || typeof value !== "string") return []
   return value
