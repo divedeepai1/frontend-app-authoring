@@ -1,4 +1,10 @@
 import { base_url } from "../../compugrade-constants";
+import {
+  ensureInstructionItemNums,
+  exportQaStates,
+  getAppNameFromSession,
+  importQaStates,
+} from "../../compugrade/utils/rubricQaTransfer";
 
 /**
  * Fetches rubric data from the original rubric and copies it to the new rubric
@@ -32,14 +38,10 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
 
     // Step 2: Transform the data to match the save format
     // The get_rubric returns data that needs to be converted to the format expected by create_base_lesson_from_scratch
-    const getAppName = () => {
-      const courseType = sessionStorage.getItem('courseType');
-      if (courseType === 'ms-word') return "word";
-      if (courseType === "powerpoint") return "powerpoint";
-      return "excel";
-    };
+    const appName = originalRubric.app_name || getAppNameFromSession();
+    const qaStates = await exportQaStates(originalRubricId, appName);
 
-    const savePayload = {
+    const savePayload = ensureInstructionItemNums({
       rubric_id: newRubricId,
       skills: originalRubric.skills || [],
       time_allowed: originalRubric.time_allowed || null,
@@ -49,7 +51,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
         (originalRubric.is_assessment ? "quiz" : "lesson"),
       lesson_files: originalRubric.lesson_files || [],
       num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
-      app_name: originalRubric.app_name || getAppName(),
+      app_name: appName,
       text_before_video: originalRubric.text_before_video || "",
       lesson_overview: originalRubric.lesson_overview || "",
       text_after_video: originalRubric.text_after_video || "",
@@ -109,7 +111,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
           return baseItem;
         }),
       })),
-    };
+    });
 
     // Step 3: Save the data to the new rubric
     const saveResponse = await fetch(
@@ -124,6 +126,10 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
     if (!saveResponse.ok) {
       const errorText = await saveResponse.text();
       throw new Error(`Failed to save duplicated rubric: ${saveResponse.status} ${errorText}`);
+    }
+
+    if (qaStates?.lessons?.length) {
+      await importQaStates(newRubricId, qaStates);
     }
 
     return { success: true };

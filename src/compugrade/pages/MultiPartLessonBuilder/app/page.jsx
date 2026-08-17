@@ -29,6 +29,12 @@ import {
   isTimedContentType,
   normalizeContentType,
 } from "../utils/contentType";
+import {
+  ensureInstructionItemNums,
+  exportQaStates,
+  getAppNameFromSession,
+  importQaStates,
+} from "../../../utils/rubricQaTransfer";
 
 
 export default function LessonBuilder() {
@@ -90,6 +96,7 @@ export default function LessonBuilder() {
   const [lessonStatesLoading, setLessonStatesLoading] = useState(false);
   const [lessonStateSaving, setLessonStateSaving] = useState(false);
   const [restoringStateId, setRestoringStateId] = useState(null);
+  const pendingQaStatesRef = useRef(null);
 
   useEffect(() => {
     let isFetching = false;
@@ -439,11 +446,21 @@ export default function LessonBuilder() {
     return fallback || `Request failed (${response.status})`;
   };
 
+  const importPendingQaStates = async () => {
+    if (!pendingQaStatesRef.current?.lessons?.length || !blockId) {
+      return;
+    }
+    await importQaStates(blockId, pendingQaStatesRef.current);
+    pendingQaStatesRef.current = null;
+  };
+
   const handleSubmitDraft = async () => {
 
     
     setSaveDraftLoading(true);
-    const backendPayload = await frontendToBackend(lessonConfig, blockId);
+    const backendPayload = ensureInstructionItemNums(
+      await frontendToBackend(lessonConfig, blockId)
+    );
     try {
       const response = await fetch(
         base_url + "/api/openedx/create_base_lesson_from_scratch",
@@ -468,6 +485,7 @@ export default function LessonBuilder() {
       promises.push(handleUploadToS3(mergedResult?.items));
 
       await Promise.all(promises);
+      await importPendingQaStates();
       await loadRubricFromApi();
       addToast({ title: "Draft Saved", message: "Lesson draft saved.", variant: "success" });
     } catch (error) {
@@ -1168,7 +1186,9 @@ export default function LessonBuilder() {
   
     
     setLoading(true);
-    const backendPayload = await frontendToBackend(lessonConfig, blockId);
+    const backendPayload = ensureInstructionItemNums(
+      await frontendToBackend(lessonConfig, blockId)
+    );
     try {
       backendPayload.publish_flag = true;
       const response = await fetch(
@@ -1194,6 +1214,7 @@ export default function LessonBuilder() {
       promises.push(handleUploadToS3(mergedResult?.items));
 
       await Promise.all(promises);
+      await importPendingQaStates();
       navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
     } catch (error) {
       console.error("Error during saving:", error);
@@ -1839,6 +1860,10 @@ export default function LessonBuilder() {
           typeof item === "string" ? item : item?.presigned_url || ""
         )
         .filter(Boolean),
+      qaStates: await exportQaStates(
+        blockId,
+        exportedLessonRaw?.app_name || getAppNameFromSession()
+      ),
     };
   };
 
@@ -1978,6 +2003,9 @@ export default function LessonBuilder() {
         throw new Error("Invalid snapshot payload.");
       }
       applyImportedPayload(snapshotPayload);
+      pendingQaStatesRef.current = snapshotPayload?.qaStates?.lessons?.length
+        ? snapshotPayload.qaStates
+        : null;
       setLessonStateModalOpen(false);
       addToast({
         title: "State Restored",
@@ -2000,6 +2028,9 @@ export default function LessonBuilder() {
     try {
       const raw = await file.text();
       const payload = JSON.parse(raw);
+      pendingQaStatesRef.current = payload?.qaStates?.lessons?.length
+        ? payload.qaStates
+        : null;
       applyImportedPayload(payload);
       addToast({
         title: "Lesson Imported",

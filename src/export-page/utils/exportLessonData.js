@@ -1,4 +1,5 @@
 import { base_url } from '../../compugrade-constants';
+import { exportQaStates, getAppNameFromSession } from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
 
 export async function exportLessonDataMapping(courseId, courseBlockId, options = {}) {
@@ -15,12 +16,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
     const lessonDataMapping = {};
     let processedUnits = 0;
 
-    const getAppName = () => {
-      const courseType = sessionStorage.getItem('courseType');
-      if (courseType === 'ms-word') return "word";
-      if (courseType === "powerpoint") return "powerpoint";
-      return "excel";
-    };
+    const getAppName = () => getAppNameFromSession();
 
     // First, count total units for accurate progress tracking
     const countTotalUnits = (sections) => {
@@ -105,6 +101,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                           items: (lesson.items || []).map((item) => {
                             const baseItem = {
                               id: item.block_type + item.id,
+                              item_num: item.item_num,
                               block_name: item.block_name || "",
                               instruction_category: item.instruction_category || "",
                               block_type: item.block_type || "",
@@ -152,8 +149,12 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                   rubricData = null;
                 }
 
+                let qaStates = null;
+                const appName = rubricData?.app_name || getAppName();
+                qaStates = await exportQaStates(unit.id, appName);
+
                 const mappingKey = unit.displayName || `Unit at ${unitPathKey}`;
-                lessonDataMapping[mappingKey] = {
+                const mappingEntry = {
                   originalUnitId: unit.id,
                   displayName: unit.displayName,
                   path: unitPathKey,
@@ -166,6 +167,10 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                   unitIndex: unitIdx,
                   rubricData,
                 };
+                if (qaStates) {
+                  mappingEntry.qaStates = qaStates;
+                }
+                lessonDataMapping[mappingKey] = mappingEntry;
                 processedUnits++;
 
                 if (options.onProgress) {
