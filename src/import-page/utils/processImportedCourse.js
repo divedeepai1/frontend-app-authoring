@@ -1,4 +1,5 @@
 import { base_url } from '../../compugrade-constants';
+import { ensureInstructionItemNums, importQaStates } from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
 // import { duplicateRubricData } from '../../course-outline/utils/duplicateRubricData';
 
@@ -92,7 +93,7 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
 
       const savePayload = {
         rubric_id: currentUnitId,
-        ...entry.rubricData,
+        ...ensureInstructionItemNums(entry.rubricData),
       };
 
       try {
@@ -106,9 +107,20 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
         );
 
         if (!saveResponse.ok) {
-          const errorText = await saveResponse.text();
+          // eslint-disable-next-line no-console
+          console.warn(
+            `Failed to create lesson for unit ${currentUnitId}:`,
+            await saveResponse.text(),
+          );
+          return;
+        }
+
+        if (entry.qaStates?.lessons?.length) {
+          await importQaStates(currentUnitId, entry.qaStates);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`Error creating lesson for unit ${currentUnitId}:`, error);
       }
     };
 
