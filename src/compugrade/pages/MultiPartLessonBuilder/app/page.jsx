@@ -29,6 +29,12 @@ import {
   isTimedContentType,
   normalizeContentType,
 } from "../utils/contentType";
+import {
+  ensureInstructionItemNums,
+  exportQaStates,
+  getAppNameFromSession,
+  importQaStates,
+} from "../../../utils/rubricQaTransfer";
 
 
 export default function LessonBuilder() {
@@ -90,6 +96,7 @@ export default function LessonBuilder() {
   const [lessonStatesLoading, setLessonStatesLoading] = useState(false);
   const [lessonStateSaving, setLessonStateSaving] = useState(false);
   const [restoringStateId, setRestoringStateId] = useState(null);
+  const pendingQaStatesRef = useRef(null);
 
   useEffect(() => {
     let isFetching = false;
@@ -411,11 +418,49 @@ export default function LessonBuilder() {
     }
   };
 
+  const getCreateLessonErrorMessage = async (response, fallback) => {
+    try {
+      const data = await response.json();
+      if (typeof data?.detail === "string" && data.detail.trim()) {
+        return data.detail.trim();
+      }
+      if (Array.isArray(data?.detail)) {
+        const detailMessage = data.detail
+          .map((item) => {
+            if (typeof item === "string") return item;
+            return item?.msg || item?.message || item?.detail || "";
+          })
+          .filter(Boolean)
+          .join(", ");
+        if (detailMessage) return detailMessage;
+      }
+      if (typeof data?.message === "string" && data.message.trim()) {
+        return data.message.trim();
+      }
+      if (typeof data?.error === "string" && data.error.trim()) {
+        return data.error.trim();
+      }
+    } catch {
+      // ignore JSON parse errors; use fallback
+    }
+    return fallback || `Request failed (${response.status})`;
+  };
+
+  const importPendingQaStates = async () => {
+    if (!pendingQaStatesRef.current?.lessons?.length || !blockId) {
+      return;
+    }
+    await importQaStates(blockId, pendingQaStatesRef.current);
+    pendingQaStatesRef.current = null;
+  };
+
   const handleSubmitDraft = async () => {
 
     
     setSaveDraftLoading(true);
-    const backendPayload = await frontendToBackend(lessonConfig, blockId);
+    const backendPayload = ensureInstructionItemNums(
+      await frontendToBackend(lessonConfig, blockId)
+    );
     try {
       const response = await fetch(
         base_url + "/api/openedx/create_base_lesson_from_scratch",
@@ -427,9 +472,11 @@ export default function LessonBuilder() {
       );
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to create base items: ${response.status} ${response.statusText}`
+        const message = await getCreateLessonErrorMessage(
+          response,
+          `Failed to save draft: ${response.status} ${response.statusText}`
         );
+        throw new Error(message);
       }
 
       const result = await response.json();
@@ -438,11 +485,17 @@ export default function LessonBuilder() {
       promises.push(handleUploadToS3(mergedResult?.items));
 
       await Promise.all(promises);
+      await importPendingQaStates();
       await loadRubricFromApi();
       addToast({ title: "Draft Saved", message: "Lesson draft saved.", variant: "success" });
     } catch (error) {
       console.error("Error during saving draft:", error);
-      addToast({ title: "Save Draft Error", message: error.message || "Request failed.", variant: "error" });
+      addToast({
+        title: "Save Draft Error",
+        message: error.message || "Request failed.",
+        variant: "error",
+        duration: 6000,
+      });
     } finally {
       setSaveDraftLoading(false);
     }
@@ -1133,7 +1186,9 @@ export default function LessonBuilder() {
   
     
     setLoading(true);
-    const backendPayload = await frontendToBackend(lessonConfig, blockId);
+    const backendPayload = ensureInstructionItemNums(
+      await frontendToBackend(lessonConfig, blockId)
+    );
     try {
       backendPayload.publish_flag = true;
       const response = await fetch(
@@ -1146,9 +1201,11 @@ export default function LessonBuilder() {
       );
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to create base items: ${response.status} ${response.statusText}`
+        const message = await getCreateLessonErrorMessage(
+          response,
+          `Failed to publish: ${response.status} ${response.statusText}`
         );
+        throw new Error(message);
       }
 
       const result = await response.json();
@@ -1157,9 +1214,16 @@ export default function LessonBuilder() {
       promises.push(handleUploadToS3(mergedResult?.items));
 
       await Promise.all(promises);
+      await importPendingQaStates();
       navigate(`/course/${courseId}/container/${blockId}/${sequenceId}`);
     } catch (error) {
       console.error("Error during saving:", error);
+      addToast({
+        title: "Publish Error",
+        message: error.message || "Request failed.",
+        variant: "error",
+        duration: 6000,
+      });
     } finally {
       setLoading(false);
     }
@@ -1796,6 +1860,10 @@ export default function LessonBuilder() {
           typeof item === "string" ? item : item?.presigned_url || ""
         )
         .filter(Boolean),
+      qaStates: await exportQaStates(
+        blockId,
+        exportedLessonRaw?.app_name || getAppNameFromSession()
+      ),
     };
   };
 
@@ -1935,6 +2003,9 @@ export default function LessonBuilder() {
         throw new Error("Invalid snapshot payload.");
       }
       applyImportedPayload(snapshotPayload);
+      pendingQaStatesRef.current = snapshotPayload?.qaStates?.lessons?.length
+        ? snapshotPayload.qaStates
+        : null;
       setLessonStateModalOpen(false);
       addToast({
         title: "State Restored",
@@ -1957,6 +2028,9 @@ export default function LessonBuilder() {
     try {
       const raw = await file.text();
       const payload = JSON.parse(raw);
+      pendingQaStatesRef.current = payload?.qaStates?.lessons?.length
+        ? payload.qaStates
+        : null;
       applyImportedPayload(payload);
       addToast({
         title: "Lesson Imported",
