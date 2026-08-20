@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import * as courseDisableByDefaultApi from "../services/courseDisableByDefaultApi"
 
-export function useCourseDisableByDefault(courseId) {
+export function useCourseDisableByDefault(courseKey, classroomId) {
   const [disableByDefault, setDisableByDefault] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const requestIdRef = useRef(0)
 
-  const load = useCallback(async (id) => {
+  const load = useCallback(async (nextCourseKey, nextClassroomId) => {
     const requestId = ++requestIdRef.current
-    if (!id) {
+    if (!nextCourseKey || !nextClassroomId) {
       setDisableByDefault(false)
       setError(null)
       setLoading(false)
@@ -20,7 +20,10 @@ export function useCourseDisableByDefault(courseId) {
     setLoading(true)
     setError(null)
     try {
-      const data = await courseDisableByDefaultApi.getCourseDisableByDefault(id)
+      const data = await courseDisableByDefaultApi.getCourseDisableByDefault(
+        nextCourseKey,
+        nextClassroomId
+      )
       if (requestId !== requestIdRef.current) return
       setDisableByDefault(courseDisableByDefaultApi.parseDisableByDefault(data))
     } catch (err) {
@@ -35,12 +38,12 @@ export function useCourseDisableByDefault(courseId) {
   }, [])
 
   useEffect(() => {
-    load(courseId)
-  }, [courseId, load])
+    load(courseKey, classroomId)
+  }, [courseKey, classroomId, load])
 
   const setPreference = useCallback(
     async (nextValue) => {
-      if (!courseId || saving) return
+      if (!courseKey || !classroomId || saving) return
 
       const previous = disableByDefault
       setDisableByDefault(nextValue)
@@ -49,7 +52,8 @@ export function useCourseDisableByDefault(courseId) {
 
       try {
         const data = await courseDisableByDefaultApi.setCourseDisableByDefault(
-          courseId,
+          courseKey,
+          classroomId,
           nextValue
         )
         setDisableByDefault(courseDisableByDefaultApi.parseDisableByDefault(data))
@@ -60,7 +64,7 @@ export function useCourseDisableByDefault(courseId) {
         setSaving(false)
       }
     },
-    [courseId, disableByDefault, saving]
+    [courseKey, classroomId, disableByDefault, saving]
   )
 
   const toggle = useCallback(() => {
@@ -74,6 +78,6 @@ export function useCourseDisableByDefault(courseId) {
     error,
     toggle,
     setPreference,
-    reload: () => load(courseId),
+    reload: () => load(courseKey, classroomId),
   }
 }
