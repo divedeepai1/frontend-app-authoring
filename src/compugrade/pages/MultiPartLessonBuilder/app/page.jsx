@@ -299,6 +299,16 @@ export default function LessonBuilder() {
             content: {
               html: item.natural_text || "",
               errorCodes: item.error_codes || [],
+              stringChecks: Array.isArray(item.string_checks)
+                ? item.string_checks.map((check, index) => ({
+                    id: check?.id || `string-check-${item.id}-${index}`,
+                    searchText: check?.search_text ?? check?.searchText ?? "",
+                    condition:
+                      check?.condition === "wrong_if_missing"
+                        ? "wrong_if_missing"
+                        : "wrong_if_exists",
+                  }))
+                : [],
               weightage: typeof item.weightage === 'number' ? item.weightage : 10,
               attachments: {
                 images: Array.isArray(item.image_name) ? item.image_name : [],
@@ -970,6 +980,15 @@ export default function LessonBuilder() {
                   item_type: block.content.item_type || "no-skill",
                   natural_text: block.content.html || "",
                   error_codes: block.content.errorCodes || [],
+                  string_checks: Array.isArray(block.content.stringChecks)
+                    ? block.content.stringChecks.map((check) => ({
+                        search_text: check?.searchText ?? check?.search_text ?? "",
+                        condition:
+                          check?.condition === "wrong_if_missing"
+                            ? "wrong_if_missing"
+                            : "wrong_if_exists",
+                      }))
+                    : [],
                   weightage: typeof block.content.weightage === 'number' ? block.content.weightage : 10,
                   images: imagesBase64,
                   videos: videosBase64,
@@ -1715,6 +1734,16 @@ export default function LessonBuilder() {
             content: {
               html: item.natural_text || "",
               errorCodes: item.error_codes || [],
+              stringChecks: Array.isArray(item.string_checks)
+                ? item.string_checks.map((check, index) => ({
+                    id: check?.id || `string-check-${itemSuffix}-${index}`,
+                    searchText: check?.search_text ?? check?.searchText ?? "",
+                    condition:
+                      check?.condition === "wrong_if_missing"
+                        ? "wrong_if_missing"
+                        : "wrong_if_exists",
+                  }))
+                : [],
               weightage: typeof item.weightage === 'number' ? item.weightage : 10,
               attachments: {
                 images: Array.isArray(item.image_name) ? item.image_name : [],

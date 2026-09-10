@@ -26,6 +26,7 @@ import downloadFile from "../utils/downloadFile";
 import TimestampModal from "./ui/timestamp";
 import DocumentPreviewDialog from "./ui/DocumentPreviewDialog";
 import ProgrammaticErrorCodeModal from "./ProgrammaticErrorCodeModal";
+import StringChecksModal from "./StringChecksModal";
 
 export function HybridContentEditor({
   video,
@@ -39,6 +40,7 @@ export function HybridContentEditor({
   const [tempWeightage, setTempWeightage] = useState(10);
   const [questionTypeModal, setQuestionTypeModal] = useState({ open: false, selectedType: "true-false" });
   const [errorCodesModal, setErrorCodesModal] = useState({ open: false, blockId: null });
+  const [stringChecksModal, setStringChecksModal] = useState({ open: false, blockId: null });
   const [errorCodesInput, setErrorCodesInput] = useState("");
   const [availableErrorCodes, setAvailableErrorCodes] = useState([]);
   const [selectedErrorCodes, setSelectedErrorCodes] = useState([]);
@@ -465,6 +467,7 @@ export function HybridContentEditor({
         weightage: 0,
         errorWeightage: 0,
         errorCodes: [],
+        stringChecks: [],
       });
     }
   };
@@ -503,6 +506,26 @@ export function HybridContentEditor({
 
   const closeProgrammaticModal = () => {
     setProgrammaticModalOpen(false);
+  };
+
+  const openStringChecksModal = (block) => {
+    setStringChecksModal({ open: true, blockId: block.id });
+  };
+
+  const closeStringChecksModal = () => {
+    setStringChecksModal({ open: false, blockId: null });
+  };
+
+  const saveStringChecks = (stringChecks) => {
+    const blockId = stringChecksModal.blockId;
+    if (!blockId) return;
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    updateBlock(blockId, {
+      ...block.content,
+      stringChecks,
+    });
+    closeStringChecksModal();
   };
 
   const fileToBase64 = async (input) => {
@@ -1378,18 +1401,32 @@ export function HybridContentEditor({
                           <Video className="w-4 h-4" /> Video
                         </button>
                         {!instructionNonGraded && (
-                          <button
-                            onClick={() => openErrorCodesModal(block)}
-                            className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
-                              block.content?.errorCodes &&
-                              Array.isArray(block.content.errorCodes) &&
-                              block.content.errorCodes.length > 0
-                                ? "text-green-700 bg-green-50 border border-green-200 hover:bg-green-100"
-                                : "text-gray-700 bg-transparent border border-gray-200 hover:bg-gray-50"
-                            }`}
-                          >
-                            Add Error Codes
-                          </button>
+                          <>
+                            <button
+                              onClick={() => openErrorCodesModal(block)}
+                              className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                                block.content?.errorCodes &&
+                                Array.isArray(block.content.errorCodes) &&
+                                block.content.errorCodes.length > 0
+                                  ? "text-green-700 bg-green-50 border border-green-200 hover:bg-green-100"
+                                  : "text-gray-700 bg-transparent border border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              Add Error Codes
+                            </button>
+                            <button
+                              onClick={() => openStringChecksModal(block)}
+                              className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
+                                block.content?.stringChecks &&
+                                Array.isArray(block.content.stringChecks) &&
+                                block.content.stringChecks.length > 0
+                                  ? "text-green-700 bg-green-50 border border-green-200 hover:bg-green-100"
+                                  : "text-gray-700 bg-transparent border border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              String Checks
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -2237,6 +2274,17 @@ export function HybridContentEditor({
         open={programmaticModalOpen && errorCodesModal.open}
         onClose={closeProgrammaticModal}
         onSave={handleProgrammaticPatternSave}
+      />
+
+      <StringChecksModal
+        open={stringChecksModal.open}
+        onClose={closeStringChecksModal}
+        onSave={saveStringChecks}
+        initialChecks={
+          blocks.find((b) => b.id === stringChecksModal.blockId)?.content
+            ?.stringChecks || []
+        }
+        sourceDocument={selectedPart?.sourceDocument || null}
       />
 
       {/* Preview Modal */}
