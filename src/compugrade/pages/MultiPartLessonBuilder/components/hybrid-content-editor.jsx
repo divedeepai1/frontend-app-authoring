@@ -1414,7 +1414,7 @@ export function HybridContentEditor({
                             >
                               Add Error Codes
                             </button>
-                            <button
+                            {/* <button
                               onClick={() => openStringChecksModal(block)}
                               className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-medium rounded-md transition-colors ${
                                 block.content?.stringChecks &&
@@ -1425,7 +1425,7 @@ export function HybridContentEditor({
                               }`}
                             >
                               String Checks
-                            </button>
+                            </button> */}
                           </>
                         )}
                       </div>
