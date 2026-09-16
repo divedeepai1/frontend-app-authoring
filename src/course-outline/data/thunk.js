@@ -691,7 +691,7 @@ export function duplicateSubsectionQuery(subsectionId, sectionId, courseId) {
         
         // Helper to extract parts from display name
         const extractParts = (titleValue) => {
-          const match = (titleValue || '').match(/^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
+          const match = (titleValue || '').match(/^(Unit|Chapter|Lesson|Assessment|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i);
           const typePart = match ? match[1] : '';
           const numberPart = match ? match[2] : '';
           // Remove "Duplicate of" prefix if present

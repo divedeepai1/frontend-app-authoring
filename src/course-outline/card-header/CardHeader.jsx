@@ -107,7 +107,7 @@ const CardHeader = ({
  
   function extractParts(titleValue) {
     const match = titleValue.match(
-      /^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
+      /^(Unit|Chapter|Lesson|Assessment|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
     );
     const typePart = match ? match[1] : "";
     const numberPart = match ? match[2] : "";
