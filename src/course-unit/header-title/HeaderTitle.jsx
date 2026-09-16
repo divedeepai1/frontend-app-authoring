@@ -34,6 +34,27 @@ const HeaderTitle = ({
   const { selectedPartitionIndex, selectedGroupsLabel } =
     currentItemData.userPartitionInfo;
 
+  function extractParts(nextTitle) {
+    const match = nextTitle.match(
+      /^(Unit|Chapter|Lesson|Assessment|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
+    );
+  
+    const typePart = match ? match[1] : "";
+    const numberPart = match ? match[2] : "";
+    const stringPart = match ? match[3] : nextTitle;
+  
+    return { numberPart, typePart, stringPart };
+  }
+
+  const [selectedItem, setSelectedItem] = useState(extractParts(unitTitle).typePart || "Unit");
+  const options = ["Unit", "Chapter", "Lesson", "Assessment"];
+
+  useEffect(() => {
+    setTitleValue(unitTitle);
+    setSelectedItem(extractParts(unitTitle).typePart || "Unit");
+    dispatch(updateQueryPendingStatus(true));
+  }, [unitTitle]);
+
   const onConfigureSubmit = (...arg) => {
     handleConfigureSubmit(currentItemData.id, ...arg, closeConfigureModal);
   };
@@ -57,28 +78,6 @@ const HeaderTitle = ({
       <p className="header-title__visibility-message mb-0">{message}</p>
     ) : null;
   };
-
-  useEffect(() => {
-    setTitleValue(unitTitle);
-    dispatch(updateQueryPendingStatus(true));
-  }, [unitTitle]);
-
-  function extractParts(titleValue) {
-    const match = titleValue.match(
-      /^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i
-    );
-  
-    const typePart = match ? match[1] : "";
-    const numberPart = match ? match[2] : "";
-    const stringPart = match ? match[3] : titleValue;
-  
-    return { numberPart, typePart, stringPart };
-  }
-  
-
-  const [selectedItem, setSelectedItem] = useState(extractParts(unitTitle).typePart || "Unit");
-
-  const options = ["Unit", "Chapter", "Lesson", "Part"];
 
   const handleTypeChange = (item) => {
     const { numberPart, stringPart } = extractParts(titleValue);
