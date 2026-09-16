@@ -16,7 +16,7 @@ import "../../theme/teachers-portal-scope.css"
 export default function ManageCourseApp() {
   const navigate = useNavigate()
   const c = useManageCourse()
-  const disablePref = useCourseDisableByDefault(c.selectedCourseId)
+  const disablePref = useCourseDisableByDefault(c.selectedCourseId, c.selectedClassId)
 
   return (
     <div className="tp-curriculum-page">
@@ -37,7 +37,7 @@ export default function ManageCourseApp() {
               checked={disablePref.disableByDefault}
               loading={disablePref.loading}
               saving={disablePref.saving}
-              disabled={!c.selectedCourseId}
+              disabled={!c.selectedCourseId || !c.selectedClassId}
               error={disablePref.error}
               onToggle={disablePref.toggle}
             />

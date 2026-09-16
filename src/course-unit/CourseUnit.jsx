@@ -236,7 +236,7 @@ const CourseUnit = ({ courseId }) => {
 
 
 
-  const match = unitTitle.match(/^(Unit|Chapter|Lesson|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i), 
+  const match = unitTitle.match(/^(Unit|Chapter|Lesson|Assessment|Part)?\s*(\d+(?:\.\d+)?)?\s*(.*)/i), 
   numberPart = match ? match[2] : "", 
   typePart = match ? match[1] : "", 
   stringPart = match ? match[3] : unitTitle;
