@@ -1,5 +1,4 @@
 import { Bell } from "lucide-react"
-import { MOCK_NEWS_NOTICES } from "../data/mockHomeData"
 
 export default function NewsNoticesPanel() {
   return (
@@ -12,14 +11,9 @@ export default function NewsNoticesPanel() {
           </h2>
         </div>
       </div>
-      <ul className="tp-home-news-list">
-        {MOCK_NEWS_NOTICES.map((notice) => (
-          <li key={notice.id} className="tp-home-news-item">
-            <p className="tp-home-news-text">{notice.text}</p>
-            <p className="tp-home-news-course">{notice.course}</p>
-          </li>
-        ))}
-      </ul>
+      <div className="tp-home-coming-soon">
+        <p className="tp-home-coming-soon-text">Coming Soon</p>
+      </div>
     </section>
   )
 }
