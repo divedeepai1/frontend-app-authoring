@@ -127,6 +127,15 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                                 ...baseItem,
                                 natural_text: item.natural_text || "",
                                 error_codes: item.error_codes || [],
+                                string_checks: Array.isArray(item.string_checks)
+                                  ? item.string_checks.map((check) => ({
+                                      string: (check?.string ?? check?.search_text ?? check?.searchText ?? "").trim(),
+                                      condition:
+                                        check?.condition === "wrong_if_missing"
+                                          ? "wrong_if_missing"
+                                          : "wrong_if_exists",
+                                    })).filter((check) => check.string)
+                                  : [],
                                 weightage: typeof item.weightage === 'number' ? item.weightage : 10,
                                 images: Array.isArray(item.image_name) ? item.image_name : (Array.isArray(item.images) ? item.images : []),
                                 videos: Array.isArray(item.video_name) ? item.video_name : (Array.isArray(item.videos) ? item.videos : []),

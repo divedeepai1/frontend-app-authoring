@@ -302,7 +302,7 @@ export default function LessonBuilder() {
               stringChecks: Array.isArray(item.string_checks)
                 ? item.string_checks.map((check, index) => ({
                     id: check?.id || `string-check-${item.id}-${index}`,
-                    searchText: check?.search_text ?? check?.searchText ?? "",
+                    string: check?.string ?? check?.search_text ?? check?.searchText ?? "",
                     condition:
                       check?.condition === "wrong_if_missing"
                         ? "wrong_if_missing"
@@ -982,7 +982,7 @@ export default function LessonBuilder() {
                   error_codes: block.content.errorCodes || [],
                   string_checks: Array.isArray(block.content.stringChecks)
                     ? block.content.stringChecks.map((check) => ({
-                        search_text: check?.searchText ?? check?.search_text ?? "",
+                        string: (check?.string ?? check?.searchText ?? check?.search_text ?? "").trim(),
                         condition:
                           check?.condition === "wrong_if_missing"
                             ? "wrong_if_missing"
@@ -1737,7 +1737,7 @@ export default function LessonBuilder() {
               stringChecks: Array.isArray(item.string_checks)
                 ? item.string_checks.map((check, index) => ({
                     id: check?.id || `string-check-${itemSuffix}-${index}`,
-                    searchText: check?.search_text ?? check?.searchText ?? "",
+                    string: check?.string ?? check?.search_text ?? check?.searchText ?? "",
                     condition:
                       check?.condition === "wrong_if_missing"
                         ? "wrong_if_missing"
