@@ -88,3 +88,28 @@ export function setRubricNumAttempts(rubricIdOrIds, attemptsAllotted, numOfAttem
     })
   )
 }
+
+function toStudentIdInts(studentIds) {
+  return (Array.isArray(studentIds) ? studentIds : [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id))
+}
+
+export function fetchAutomaticStartingFileLoad(rubricIdOrIds, studentIds) {
+  return postJson(
+    "/api/lms/get_automatic_starting_file_load",
+    withRubricIds(rubricIdOrIds, {
+      student_ids: toStudentIdInts(studentIds),
+    })
+  )
+}
+
+export function setAutomaticStartingFileLoad(rubricIdOrIds, automaticStartingFileLoad, studentIds) {
+  return postJson(
+    "/api/lms/set_automatic_starting_file_load",
+    withRubricIds(rubricIdOrIds, {
+      automatic_starting_file_load: Boolean(automaticStartingFileLoad),
+      student_ids: toStudentIdInts(studentIds),
+    })
+  )
+}
