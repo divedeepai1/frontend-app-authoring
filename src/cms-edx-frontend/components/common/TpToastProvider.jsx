@@ -11,6 +11,10 @@ export default function TpToastProvider({ children }) {
 
   useEffect(() => {
     return subscribeTpToast((toast) => {
+      if (toast?.dismiss) {
+        dismiss(toast.id)
+        return
+      }
       setToasts((prev) => [...prev, toast])
       if (toast.duration > 0) {
         window.setTimeout(() => dismiss(toast.id), toast.duration)
