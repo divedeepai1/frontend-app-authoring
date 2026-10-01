@@ -37,6 +37,7 @@ import { IframeProvider } from './generic/hooks/context/iFrameContext';
 import { CourseAuthoringProvider } from './CourseAuthoringContext';
 import { CourseImportProvider } from './import-page/CourseImportContext';
 import { CourseExportProvider } from './export-page/CourseExportContext';
+import InstructionsHelpEditorPage from './compugrade/pages/InstructionsHelpEditorPage';
 
 /**
  * As of this writing, these routes are mounted at a path prefixed with the following:
@@ -164,10 +165,18 @@ const CourseAuthoringRoutes = () => {
             }
           />
           <Route
-            path="editor/:blockType/:blockId?"
+            path="editor/:blockType/:blockId/:unitId?"
             element={
               <PageWrap>
                 <EditorContainer learningContextId={courseId} />
+              </PageWrap>
+            }
+          />
+          <Route
+            path="block/:blockId/:sequenceId/:blockType"
+            element={
+              <PageWrap>
+                <InstructionsHelpEditorPage courseId={courseId} />
               </PageWrap>
             }
           />

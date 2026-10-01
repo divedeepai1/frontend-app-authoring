@@ -8,6 +8,9 @@ import SidebarSection from './SidebarSection';
 import LocationInfo from './LocationInfo';
 import SplitTestSidebarInfo from './SplitTestSidebarInfo';
 import PublishControls from '../unit-sidebar/unit-info/PublishControls';
+import AccessCode from './AccessCode';
+import Attempts from './Attempts';
+import Timer from './Timer';
 
 export type XBlock = {
   id: string;
@@ -21,6 +24,7 @@ export interface LegacySidebarProps {
   readOnly: boolean;
   isUnitVerticalType: boolean;
   isSplitTestType: boolean;
+  unitData?: any;
 }
 
 /**
@@ -35,6 +39,7 @@ const LegacySidebar = ({
   xBlocks,
   readOnly,
   isSplitTestType,
+  unitData,
 }: LegacySidebarProps) => {
   const { blockId } = useParams();
   const { courseId } = useCourseAuthoringContext();
@@ -55,6 +60,7 @@ const LegacySidebar = ({
             unitTitle,
             xBlocks,
             readOnly,
+            unitData,
           }}
         >
           <SidebarSection data-testid="course-unit-sidebar">
@@ -63,6 +69,21 @@ const LegacySidebar = ({
           {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === 'true' && (
             <SidebarSection className="tags-sidebar">
               <TagsSidebarControls readOnly={readOnly} />
+            </SidebarSection>
+          )}
+          {unitData && (
+            <SidebarSection data-testid="course-unit-attempts-sidebar">
+              <Attempts attempts={unitData.num_of_attempts} blockId={blockId} />
+            </SidebarSection>
+          )}
+          {unitData && (
+            <SidebarSection data-testid="course-unit-timer-sidebar">
+              <Timer time={unitData?.time_allowed} blockId={blockId} />
+            </SidebarSection>
+          )}
+          {unitData && (
+            <SidebarSection data-testid="course-unit-access-code-sidebar">
+              <AccessCode accessCode={unitData.access_id} />
             </SidebarSection>
           )}
           <SidebarSection data-testid="course-unit-location-sidebar">

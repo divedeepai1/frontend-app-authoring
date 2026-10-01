@@ -26,9 +26,11 @@ export const handleSaveClicked = ({
   getContent,
   validateEntry,
   returnFunction,
+  redirectUrl,
 }) => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const returnUrl = useSelector(selectors.app.returnUrl);
+  const defaultReturnUrl = useSelector(selectors.app.returnUrl);
+  const returnUrl = redirectUrl || defaultReturnUrl;
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const createBlockOnSave = useSelector(selectors.app.shouldCreateBlock);
   const destination = returnFunction ? '' : returnUrl;
@@ -67,15 +69,18 @@ export const cancelConfirmModalToggle = () => {
 export const handleCancel = ({
   onClose = null,
   returnFunction = null,
+  redirectUrl,
 }: {
   onClose?: (() => void) | null;
   returnFunction?: (() => (result: any) => void) | null;
+  redirectUrl?: string;
 }): (result?: any) => void => {
   if (onClose) {
     return onClose;
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const returnUrl = useSelector(selectors.app.returnUrl);
+  const defaultReturnUrl = useSelector(selectors.app.returnUrl);
+  const returnUrl = redirectUrl || defaultReturnUrl;
   return navigateCallback({
     returnFunction,
     // eslint-disable-next-line react-hooks/rules-of-hooks

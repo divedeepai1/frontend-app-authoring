@@ -51,6 +51,7 @@ export interface AddComponentProps {
     args: object,
     callback?: (args: { courseKey: string; locator: string; }) => void,
   ) => void;
+  handleCreateCompugradeXBlock?: (type: string) => void;
   isProblemBankType?: boolean;
   addComponentTemplateData?: {
     blockId: string;
@@ -66,6 +67,7 @@ const AddComponent = ({
   isProblemBankType,
   addComponentTemplateData,
   handleCreateNewCourseXBlock,
+  handleCreateCompugradeXBlock,
 }: AddComponentProps) => {
   const intl = useIntl();
   const dispatch = useDispatch();
@@ -275,6 +277,38 @@ const AddComponent = ({
                     />
                   );
                 })}
+                {handleCreateCompugradeXBlock && (
+                  <>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('overview')}
+                        displayName="Overview"
+                        type="overview"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('skills')}
+                        displayName="Skills"
+                        type="skills"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('tools')}
+                        displayName="Tools and Terms"
+                        type="tools"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('text')}
+                        displayName="Document Text"
+                        type="text"
+                      />
+                    </li>
+                  </>
+                )}
               </ul>
             </>
           ) :

@@ -10,8 +10,8 @@ import {
   EditOutline as EditIcon,
   MoreVert as MoveVertIcon,
 } from "@openedx/paragon/icons";
-import DeleteModal from "../../generic/delete-modal/DeleteModal.jsx";
-import "./components.css"
+import DeleteModal from "../../generic/delete-modal/DeleteModal";
+import "./components.css";
 const InstructionXBlock = ({ title, data, handleEdit, type }) => {
   return (
     <div className={"course-unit__xblock instruction-xblock"}>

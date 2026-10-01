@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
+import { useParams } from 'react-router-dom';
 
 import {
+  Button,
   Spinner,
   Toast,
 } from '@openedx/paragon';
@@ -18,6 +20,8 @@ import * as hooks from './hooks';
 import messages from './messages';
 import TinyMceWidget from '../../sharedComponents/TinyMceWidget';
 import { prepareEditorRef, replaceStaticWithAsset } from '../../sharedComponents/TinyMceWidget/hooks';
+import InstructionsPreview from '../../../compugrade/components/InstructionsPreview';
+import { createRubricItem, getAllRubricItems } from '../../../compugrade/api';
 
 const TextEditor = ({
   onClose,
@@ -34,6 +38,7 @@ const TextEditor = ({
   isLibrary,
 }) => {
   const intl = useIntl();
+  const { unitId } = useParams();
   const { editorRef, refReady, setEditorRef } = prepareEditorRef();
   const initialContent = blockValue ? blockValue.data.data : '';
   const newContent = replaceStaticWithAsset({
@@ -41,6 +46,44 @@ const TextEditor = ({
     learningContextId,
   });
   const editorContent = newContent || initialContent;
+  const [lessonData, setLessonData] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchData = async () => {
+    if (!unitId) {
+      return;
+    }
+    try {
+      const data = await getAllRubricItems(unitId);
+      setLessonData(data);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [refreshKey, unitId]);
+
+  const handlePreview = async () => {
+    if (!unitId || !editorRef.current) {
+      return;
+    }
+    const editorText = editorRef.current.getContent({ format: 'text' });
+    const stringArray = editorText
+      .split('\n')
+      .filter((str) => str.trim() !== '');
+    setLessonData(null);
+    try {
+      await createRubricItem({ unitId, naturalText: stringArray });
+      setRefreshKey((prev) => prev + 1);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+    }
+  };
+
   let staticRootUrl;
   if (isLibrary) {
     staticRootUrl = `${getConfig().STUDIO_BASE_URL}/library_assets/blocks/${blockId}/`;
@@ -55,6 +98,37 @@ const TextEditor = ({
           editorRef={editorRef}
           content={blockValue}
         />
+      );
+    }
+    if (unitId) {
+      return (
+        <div style={{ display: 'flex', gap: '15px' }}>
+          <div style={{ width: '70%' }}>
+            <TinyMceWidget
+              editorType="text"
+              editorRef={editorRef}
+              editorContentHtml={editorContent}
+              setEditorRef={setEditorRef}
+              minHeight={500}
+              height="100%"
+              initializeEditor={initializeEditor}
+              {...{
+                images,
+                isLibrary,
+                learningContextId,
+                staticRootUrl,
+              }}
+            />
+            <div className="d-flex mt-3">
+              <Button variant="primary" onClick={handlePreview}>
+                AI Generate
+              </Button>
+            </div>
+          </div>
+          <div style={{ width: '30%', overflowY: 'auto' }}>
+            <InstructionsPreview lessonData={lessonData} refreshData={fetchData} />
+          </div>
+        </div>
       );
     }
     return (

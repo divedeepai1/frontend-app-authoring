@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
+import { useParams } from 'react-router-dom';
 
 import {
   ActionRow,
@@ -80,12 +81,16 @@ const EditorContainer: React.FC<Props> = ({
 }) => {
   const intl = useIntl();
   const dispatch = useDispatch();
+  const { courseId, unitId } = useParams();
+  const redirectUrl = courseId && unitId
+    ? `/course/${courseId}/container/${unitId}`
+    : undefined;
   // Required to mark data as not dirty on save
   const [saved, setSaved] = React.useState(false);
   const isInitialized = hooks.isInitialized();
   const { isCancelConfirmOpen, openCancelConfirmModal, closeCancelConfirmModal } = hooks.cancelConfirmModalToggle();
   const [isFullscreen, , , toggleFullscreen] = useToggle(false);
-  const handleCancel = hooks.handleCancel({ onClose, returnFunction });
+  const handleCancel = hooks.handleCancel({ onClose, returnFunction, redirectUrl });
   const { createFailed, createFailedError } = hooks.createFailed();
   const disableSave = !isInitialized;
   const saveFailed = hooks.saveFailed();
@@ -97,6 +102,7 @@ const EditorContainer: React.FC<Props> = ({
     getContent,
     validateEntry,
     returnFunction,
+    redirectUrl,
   });
 
   const onSave = () => {

@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { MessageDescriptor } from 'react-intl';
 import {
   Alert,
@@ -49,6 +49,8 @@ import { UnitSidebarPagesProvider } from './unit-sidebar/UnitSidebarPagesContext
 import { UNIT_VISIBILITY_STATES } from './constants';
 import { isUnitPageNewDesignEnabled } from './utils';
 import { useHelpUrls } from '@src/help-urls/hooks';
+import InstructionXBlock from '../compugrade/components/InstructionXBlock';
+import { getRubric } from '../compugrade/api';
 
 const StatusBar = ({ courseUnit }: { courseUnit: any; }) => {
   const { selectedPartitionIndex, selectedGroupsLabel } = courseUnit.userPartitionInfo ?? {};
@@ -163,9 +165,11 @@ const StatusBar = ({ courseUnit }: { courseUnit: any; }) => {
 
 const CourseUnit = () => {
   const intl = useIntl();
+  const navigate = useNavigate();
   const { blockId } = useParams();
   const { courseId } = useCourseAuthoringContext();
   const urls = useHelpUrls(['syncLibraryUpdates']);
+  const [unitData, setUnitData] = useState<any>(null);
 
   if (courseId === undefined) {
     // istanbul ignore next - This shouldn't be possible; it's just here to satisfy the type checker.
@@ -213,6 +217,24 @@ const CourseUnit = () => {
   } = useCourseUnit({ courseId, blockId });
 
   const handleCreateNewCourseXBlock = useHandleCreateNewCourseXBlock({ blockId });
+
+  const handleCreateCompugradeXBlock = (type: string) => {
+    navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type}`);
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await getRubric(blockId);
+        setUnitData(result);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.log(err);
+      }
+    };
+
+    fetchData();
+  }, [blockId]);
 
   const readOnly = !!courseUnit.readOnly;
 
@@ -358,6 +380,38 @@ const CourseUnit = () => {
                     courseVerticalChildren={courseVerticalChildren.children}
                   />
                 )}
+                {unitData?.description && (
+                  <InstructionXBlock
+                    title="Overview"
+                    data={unitData.description}
+                    type="overview"
+                    handleEdit={handleCreateCompugradeXBlock}
+                  />
+                )}
+                {unitData?.tools && (
+                  <InstructionXBlock
+                    title="Tools and Terms"
+                    data={unitData.tools}
+                    type="tools"
+                    handleEdit={handleCreateCompugradeXBlock}
+                  />
+                )}
+                {unitData?.skills && (
+                  <InstructionXBlock
+                    title="Skills"
+                    data={unitData.skills}
+                    type="skills"
+                    handleEdit={handleCreateCompugradeXBlock}
+                  />
+                )}
+                {unitData?.text && (
+                  <InstructionXBlock
+                    title="Document Text"
+                    data={unitData.text}
+                    type="text"
+                    handleEdit={handleCreateCompugradeXBlock}
+                  />
+                )}
                 {!readOnly && showPasteXBlock && canPasteComponent && isUnitVerticalType && sharedClipboardData
                   && /* istanbul ignore next */ (
                     <PasteComponent
@@ -376,6 +430,7 @@ const CourseUnit = () => {
                     isUnitVerticalType={isUnitVerticalType}
                     isProblemBankType={isProblemBankType}
                     handleCreateNewCourseXBlock={handleCreateNewCourseXBlock}
+                    handleCreateCompugradeXBlock={handleCreateCompugradeXBlock}
                     addComponentTemplateData={addComponentTemplateData}
                   />
                 )}
@@ -396,6 +451,7 @@ const CourseUnit = () => {
                   readOnly={readOnly}
                   isUnitVerticalType={isUnitVerticalType}
                   isSplitTestType={isSplitTestType}
+                  unitData={unitData}
                 />
               )}
             </div>

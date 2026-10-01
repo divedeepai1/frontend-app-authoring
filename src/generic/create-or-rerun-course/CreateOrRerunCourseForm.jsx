@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useParams } from 'react-router-dom';
 import classNames from 'classnames';
@@ -35,6 +35,7 @@ const CreateOrRerunCourseForm = ({
   const { allowToCreateNewOrg } = useSelector(getStudioHomeData);
   const runFieldReference = useRef(null);
   const displayNameFieldReference = useRef(null);
+  const [courseType, setCourseType] = useState('MS Word');
 
   const {
     intl,
@@ -146,7 +147,7 @@ const CreateOrRerunCourseForm = ({
     const courseData = isCreateNewCourse
       ? values
       : { ...values, sourceCourseKey: courseId };
-    dispatch(updateCreateOrRerunCourseQuery(courseData, !isCreateNewCourse));
+    dispatch(updateCreateOrRerunCourseQuery(courseData, !isCreateNewCourse, courseType));
   };
 
   const handleOnClickCancel = () => {
@@ -262,6 +263,24 @@ const CreateOrRerunCourseForm = ({
             )}
           </Form.Group>
         ))}
+        {isCreateNewCourse && (
+          <Form.Group className="form-group-custom">
+            <Form.Label>{intl.formatMessage(messages.courseTypeLabel)}</Form.Label>
+            <Dropdown className="mr-2" style={{ backgroundColor: 'white', width: '100%' }}>
+              <Dropdown.Toggle id="type-dropdown" variant="outline-primary">
+                {courseType || intl.formatMessage(messages.courseTypePlaceholder)}
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                {['MS Word', 'MS Excel', 'MS Powerpoint', 'Google Docs', 'Google Sheets', 'Google Slides'].map((value) => (
+                  <Dropdown.Item key={value} onClick={() => setCourseType(value)}>
+                    {value}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Menu>
+            </Dropdown>
+            <Form.Text>{intl.formatMessage(messages.courseTypeCreateHelpText)}</Form.Text>
+          </Form.Group>
+        )}
         <ActionRow className="justify-content-start">
           <Button
             variant="outline-primary"

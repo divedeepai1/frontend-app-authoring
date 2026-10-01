@@ -19,6 +19,7 @@ import { useMutationWithProcessingNotification } from '@src/generic/processing-n
 import { handleResponseErrors } from '@src/generic/saving-error-alert';
 import { useToastContext } from '@src/generic/toast-context';
 import { ParentIds } from '@src/generic/types';
+import { updateRubricTitle, updateSubsectionTitle } from '@src/compugrade/api';
 import {
   QueryClient,
   skipToken,
@@ -211,6 +212,18 @@ export const useUpdateCourseBlockName = (courseId: string) => {
       } & ParentIds,
     ) => editItemDisplayName({ itemId: variables.itemId, displayName: variables.displayName }),
     onSuccess: async (_data, variables) => {
+      const blockType = getBlockType(variables.itemId);
+      try {
+        if (blockType === 'sequential') {
+          await updateSubsectionTitle(variables.itemId, variables.displayName);
+        } else if (blockType === 'vertical') {
+          await updateRubricTitle(variables.itemId, variables.displayName);
+        }
+      } catch (error) {
+        // Keep Studio rename successful even if Compugrade sync fails.
+        // eslint-disable-next-line no-console
+        console.error('Error syncing Compugrade title:', error);
+      }
       await invalidateParentQueries(queryClient, variables);
       queryClient.invalidateQueries({ queryKey: containerComparisonQueryKeys.course(courseId) });
       queryClient.invalidateQueries({ queryKey: courseOutlineQueryKeys.courseDetails(courseId) });

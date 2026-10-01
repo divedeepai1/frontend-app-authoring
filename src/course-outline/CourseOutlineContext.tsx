@@ -14,6 +14,7 @@ import { SelectionState, type XBlock } from '@src/data/types';
 import { useToggleWithValue } from '@src/hooks';
 import { getBlockType } from '@src/generic/key-utils';
 import { COURSE_BLOCK_NAMES } from '@src/constants';
+import { createRubric, createSubsection } from '@src/compugrade/api';
 import { useCourseAuthoringContext, type ModalState } from '@src/CourseAuthoringContext';
 import {
   useCreateCourseBlock,
@@ -109,8 +110,42 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
     setSections(sectionsList);
   }, [sectionsList]);
 
-  const handleAddAndOpenUnit = useCreateCourseBlock(courseId, openUnitPage);
-  const handleAddBlock = useCreateCourseBlock(courseId);
+  const handleAddAndOpenUnit = useCreateCourseBlock(
+    courseId,
+    async (locator, parentLocator) => {
+      try {
+        await createRubric({
+          locator,
+          courseId,
+          subsectionId: parentLocator,
+        });
+      } catch (error) {
+        // Keep unit creation successful even if Compugrade sync fails.
+        // eslint-disable-next-line no-console
+        console.error('Error creating Compugrade rubric:', error);
+      }
+      await openUnitPage(locator);
+    },
+  );
+  const handleAddBlock = useCreateCourseBlock(
+    courseId,
+    async (locator) => {
+      if (getBlockType(locator) !== 'sequential') {
+        return;
+      }
+      try {
+        await createSubsection({
+          title: COURSE_BLOCK_NAMES.sequential.name,
+          locator,
+          courseId,
+        });
+      } catch (error) {
+        // Keep subsection creation successful even if Compugrade sync fails.
+        // eslint-disable-next-line no-console
+        console.error('Error creating Compugrade subsection:', error);
+      }
+    },
+  );
 
   const {
     mutate: duplicateItem,

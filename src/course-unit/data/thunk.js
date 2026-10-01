@@ -30,6 +30,7 @@ import {
   updateCourseOutlineInfoLoadingStatus,
   updateMovedXBlockParams,
 } from './slice';
+import { updateRubricTitle } from '../../compugrade/api';
 
 export function fetchCourseSectionVerticalData(courseId, sequenceId) {
   return async (dispatch) => {
@@ -68,6 +69,13 @@ export function editCourseItemQuery(itemId, displayName, sequenceId) {
     try {
       await editUnitDisplayName(itemId, displayName).then(async (result) => {
         if (result) {
+          try {
+            await updateRubricTitle(itemId, displayName);
+          } catch (error) {
+            // Keep Studio rename successful even if Compugrade sync fails.
+            // eslint-disable-next-line no-console
+            console.error('Error syncing Compugrade unit title:', error);
+          }
           const courseSectionVerticalData = await getVerticalData(itemId);
           dispatch(fetchCourseSectionVerticalDataSuccess(courseSectionVerticalData));
           dispatch(updateLoadingCourseSectionVerticalDataStatus({ status: RequestStatus.SUCCESSFUL }));

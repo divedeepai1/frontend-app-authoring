@@ -13,6 +13,7 @@ export const CourseAuthoringUnitSidebarSlot = (
     readOnly,
     isUnitVerticalType,
     isSplitTestType,
+    unitData,
   }: CourseAuthoringUnitSidebarSlotProps,
 ) => (
   <div
@@ -28,6 +29,7 @@ export const CourseAuthoringUnitSidebarSlot = (
         readOnly,
         isUnitVerticalType,
         isSplitTestType,
+        unitData,
       }}
     >
       <UnitSidebar
@@ -37,6 +39,7 @@ export const CourseAuthoringUnitSidebarSlot = (
           readOnly,
           isUnitVerticalType,
           isSplitTestType,
+          unitData,
         }}
       />
     </PluginSlot>
@@ -57,4 +60,5 @@ interface CourseAuthoringUnitSidebarSlotProps {
   readOnly: boolean;
   isUnitVerticalType: boolean;
   isSplitTestType: boolean;
+  unitData?: any;
 }

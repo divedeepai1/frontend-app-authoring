@@ -12,6 +12,7 @@ import {
   getOrganizations,
   getCourseRerun,
 } from './api';
+import { createExternalCourse } from '../../compugrade/api';
 
 export function fetchOrganizationsQuery() {
   return async (dispatch) => {
@@ -37,7 +38,7 @@ export function fetchCourseRerunQuery(courseId) {
   };
 }
 
-export function updateCreateOrRerunCourseQuery(courseData, isRerun = false) {
+export function updateCreateOrRerunCourseQuery(courseData, isRerun = false, courseType) {
   return async (dispatch) => {
     dispatch(updateSavingStatus({ status: RequestStatus.PENDING }));
 
@@ -50,6 +51,17 @@ export function updateCreateOrRerunCourseQuery(courseData, isRerun = false) {
       }
       dispatch(updatePostErrors('errMsg' in response ? response : {}));
       dispatch(updateSavingStatus({ status: RequestStatus.SUCCESSFUL }));
+
+      if (courseType && response.courseKey) {
+        try {
+          await createExternalCourse(courseData, courseType, response.courseKey);
+        } catch (error) {
+          // Keep Studio course creation successful even if Compugrade sync fails.
+          // eslint-disable-next-line no-console
+          console.error('Error creating Compugrade course:', error);
+        }
+      }
+
       return true;
     } catch {
       dispatch(updateSavingStatus({ status: RequestStatus.FAILED }));
