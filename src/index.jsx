@@ -8,7 +8,7 @@ import {
   getPath,
 } from '@edx/frontend-platform';
 import { AppProvider, ErrorPage } from '@edx/frontend-platform/react';
-import React, { StrictMode, useEffect } from 'react';
+import React, { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Route,
@@ -42,10 +42,24 @@ import { ContentTagsDrawer } from './content-tags-drawer';
 import AccessibilityPage from './accessibility-page';
 import { ToastProvider } from './generic/toast-context';
 import { ContentType } from './library-authoring/routes';
+import { LegacyLibMigrationPage } from './legacy-libraries-migration/LegacyLibMigrationPage';
+import { fetchCsrfToken } from './cms-csrftoken';
+
+import Main from './cms-edx-frontend/pages/main';
+import Classes from './cms-edx-frontend/pages/classes';
+import Teachers from './cms-edx-frontend/pages/teachers';
+import Courses from './cms-edx-frontend/pages/courses';
+import ManageClasses from './cms-edx-frontend/pages/manage-classes';
+import Reports from './cms-edx-frontend/pages/reports';
+import StudentsGrades from './cms-edx-frontend/pages/students-grades';
+import Resources from './cms-edx-frontend/pages/resources';
+import Chat from './cms-edx-frontend/pages/Chat';
+import Gradebook from './cms-edx-frontend/pages/gradebook';
+import AccountSettings from './cms-edx-frontend/pages/account-settings';
 
 import 'react-datepicker/dist/react-datepicker.css';
 import './index.scss';
-import { LegacyLibMigrationPage } from './legacy-libraries-migration/LegacyLibMigrationPage';
+import './global.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,8 +69,109 @@ const queryClient = new QueryClient({
   },
 });
 
+const studioRoutes = (
+  <>
+    <Route path="/home" element={<StudioHome />} />
+    <Route path="/libraries" element={<StudioHome />} />
+    <Route path="/libraries-v1" element={<StudioHome />} />
+    <Route path="/libraries-v1/migrate" element={<LegacyLibMigrationPage />} />
+    <Route path="/libraries-v1/create" element={<CreateLegacyLibrary />} />
+    <Route path="/library/create" element={<CreateLibrary />} />
+    <Route path="/library/:libraryId/*" element={<LibraryLayout />} />
+    <Route
+      path="/component-picker"
+      element={
+        <LibraryAndComponentPicker
+          extraFilter={['NOT block_type = "unit"', 'NOT block_type = "section"', 'NOT block_type = "subsection"']}
+          visibleTabs={[ContentType.home, ContentType.components, ContentType.collections]}
+        />
+      }
+    />
+    <Route
+      path="/component-picker/multiple"
+      element={
+        <LibraryAndComponentPicker
+          componentPickerMode="multiple"
+          extraFilter={['NOT block_type = "unit"', 'NOT block_type = "section"', 'NOT block_type = "subsection"']}
+          visibleTabs={[ContentType.home, ContentType.components, ContentType.collections]}
+        />
+      }
+    />
+    <Route path="/legacy/preview-changes/:usageKey" element={<PreviewChangesEmbed />} />
+    <Route path="/course/:courseId/*" element={<CourseAuthoringRoutes />} />
+    <Route path="/course_rerun/:courseId" element={<CourseRerun />} />
+    {getConfig().ENABLE_ACCESSIBILITY_PAGE === 'true' && (
+      <Route path="/accessibility" element={<AccessibilityPage />} />
+    )}
+    {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === 'true' && (
+      <>
+        <Route path="/taxonomies" element={<TaxonomyLayout />}>
+          <Route index element={<TaxonomyListPage />} />
+        </Route>
+        <Route path="/taxonomy" element={<TaxonomyLayout />}>
+          <Route path="/taxonomy/:taxonomyId" element={<TaxonomyDetailPage />} />
+        </Route>
+        <Route
+          path="/tagging/components/widget/:contentId"
+          element={<ContentTagsDrawer />}
+        />
+      </>
+    )}
+  </>
+);
+
+const teacherPortalRoutes = (
+  <>
+    <Route path="/home" element={<Main />} />
+    <Route path="/classes" element={<Classes />} />
+    <Route path="/classes/chat" element={<Chat />} />
+    <Route path="/classes/:classId" element={<Teachers />} />
+    <Route path="/classes/:classId/:studentId" element={<StudentsGrades />} />
+    <Route path="/reports" element={<Reports />} />
+    <Route path="/curriculum" element={<Courses />} />
+    <Route path="/curriculum/gradebook" element={<Gradebook />} />
+    <Route path="/resources" element={<Resources />} />
+    <Route path="/account-settings" element={<AccountSettings />} />
+    <Route path="/manage-classes/:step" element={<ManageClasses />} />
+  </>
+);
+
 const App = () => {
+  const [role, setRole] = useState('');
+  const [router, setRouter] = useState(null);
+
   useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const token = await fetchCsrfToken();
+        const response = await fetch(
+          `${getConfig().STUDIO_BASE_URL}/myplugin/get-user-role/`,
+          {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': token,
+            },
+          },
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to get: ${response.status} ${errorText}`);
+        }
+        const result = await response.json();
+        setRole(result?.role || 'course_creator_group');
+      } catch (error) {
+        // Fall back to Studio authoring routes if role lookup fails.
+        // eslint-disable-next-line no-console
+        console.error('Error fetching user role:', error.message);
+        setRole('course_creator_group');
+      }
+    };
+
+    fetchUserRole();
+
     if (process.env.HOTJAR_APP_ID) {
       try {
         initializeHotjar({
@@ -70,61 +185,30 @@ const App = () => {
     }
   }, []);
 
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <Route>
-        <Route path="/home" element={<StudioHome />} />
-        <Route path="/libraries" element={<StudioHome />} />
-        <Route path="/libraries-v1" element={<StudioHome />} />
-        <Route path="/libraries-v1/migrate" element={<LegacyLibMigrationPage />} />
-        <Route path="/libraries-v1/create" element={<CreateLegacyLibrary />} />
-        <Route path="/library/create" element={<CreateLibrary />} />
-        <Route path="/library/:libraryId/*" element={<LibraryLayout />} />
-        <Route
-          path="/component-picker"
-          element={
-            <LibraryAndComponentPicker
-              extraFilter={['NOT block_type = "unit"', 'NOT block_type = "section"', 'NOT block_type = "subsection"']}
-              visibleTabs={[ContentType.home, ContentType.components, ContentType.collections]}
-            />
-          }
-        />
-        <Route
-          path="/component-picker/multiple"
-          element={
-            <LibraryAndComponentPicker
-              componentPickerMode="multiple"
-              extraFilter={['NOT block_type = "unit"', 'NOT block_type = "section"', 'NOT block_type = "subsection"']}
-              visibleTabs={[ContentType.home, ContentType.components, ContentType.collections]}
-            />
-          }
-        />
-        <Route path="/legacy/preview-changes/:usageKey" element={<PreviewChangesEmbed />} />
-        <Route path="/course/:courseId/*" element={<CourseAuthoringRoutes />} />
-        <Route path="/course_rerun/:courseId" element={<CourseRerun />} />
-        {getConfig().ENABLE_ACCESSIBILITY_PAGE === 'true' && (
-          <Route path="/accessibility" element={<AccessibilityPage />} />
-        )}
-        {getConfig().ENABLE_TAGGING_TAXONOMY_PAGES === 'true' && (
-          <>
-            <Route path="/taxonomies" element={<TaxonomyLayout />}>
-              <Route index element={<TaxonomyListPage />} />
-            </Route>
-            <Route path="/taxonomy" element={<TaxonomyLayout />}>
-              <Route path="/taxonomy/:taxonomyId" element={<TaxonomyDetailPage />} />
-            </Route>
-            <Route
-              path="/tagging/components/widget/:contentId"
-              element={<ContentTagsDrawer />}
-            />
-          </>
-        )}
-      </Route>,
-    ),
-    {
-      basename: getPath(getConfig().PUBLIC_PATH),
-    },
-  );
+  useEffect(() => {
+    if (!role) {
+      return;
+    }
+
+    const roleBasedRoutes = role === 'staff' ? teacherPortalRoutes : studioRoutes;
+
+    const fullRouter = createBrowserRouter(
+      createRoutesFromElements(
+        <Route>
+          {roleBasedRoutes}
+        </Route>,
+      ),
+      {
+        basename: getPath(getConfig().PUBLIC_PATH),
+      },
+    );
+
+    setRouter(fullRouter);
+  }, [role]);
+
+  if (!router) {
+    return null;
+  }
 
   return (
     <AppProvider store={initializeStore()} wrapWithRouter={false}>
@@ -173,6 +257,7 @@ initialize({
         ENABLE_OPEN_MANAGED_TEAM_TYPE: process.env.ENABLE_OPEN_MANAGED_TEAM_TYPE === 'true',
         BBB_LEARN_MORE_URL: process.env.BBB_LEARN_MORE_URL || '',
         STUDIO_BASE_URL: process.env.STUDIO_BASE_URL || null,
+        CMS_HOST: process.env.CMS_HOST || null,
         STUDIO_SHORT_NAME: process.env.STUDIO_SHORT_NAME || null,
         TERMS_OF_SERVICE_URL: process.env.TERMS_OF_SERVICE_URL || null,
         PRIVACY_POLICY_URL: process.env.PRIVACY_POLICY_URL || null,
@@ -186,6 +271,7 @@ initialize({
         ENABLE_COURSE_IMPORT_IN_LIBRARY: process.env.ENABLE_COURSE_IMPORT_IN_LIBRARY || 'false',
         ENABLE_UNIT_PAGE_NEW_DESIGN: process.env.ENABLE_UNIT_PAGE_NEW_DESIGN || 'true',
         ENABLE_TAGGING_TAXONOMY_PAGES: process.env.ENABLE_TAGGING_TAXONOMY_PAGES || 'false',
+        ENABLE_HOME_PAGE_COURSE_API_V2: process.env.ENABLE_HOME_PAGE_COURSE_API_V2 === 'true',
         ENABLE_CHECKLIST_QUALITY: process.env.ENABLE_CHECKLIST_QUALITY || 'true',
         ENABLE_GRADING_METHOD_IN_PROBLEMS: process.env.ENABLE_GRADING_METHOD_IN_PROBLEMS === 'true',
         LIBRARY_UNSUPPORTED_BLOCKS:

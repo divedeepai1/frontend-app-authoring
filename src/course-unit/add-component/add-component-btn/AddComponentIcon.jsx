@@ -5,6 +5,8 @@ import { EditNote as EditNoteIcon } from '@openedx/paragon/icons';
 import overviewIcon from '../../../compugrade-assets/overview.png';
 import skillsIcon from '../../../compugrade-assets/skills.png';
 import toolsIcon from '../../../compugrade-assets/tools.png';
+import newLessonIcon from '../../../cms-edx-frontend/assests/document.svg';
+import engineIcon from '../../../cms-edx-frontend/assests/writer.svg';
 import {
   COMPONENT_TYPES,
   COMPONENT_TYPE_ICON_MAP,
@@ -14,6 +16,9 @@ const customTypeIcons = {
   overview: overviewIcon,
   skills: skillsIcon,
   tools: toolsIcon,
+  new: newLessonIcon,
+  engine: engineIcon,
+  text: overviewIcon,
 };
 
 const AddComponentIcon = ({ type }) => {
@@ -32,6 +37,10 @@ AddComponentIcon.propTypes = {
     'skills',
     'tools',
     'text',
+    'new',
+    'engine',
+    'preview',
+    'new-lesson',
   ]).isRequired,
 };
 

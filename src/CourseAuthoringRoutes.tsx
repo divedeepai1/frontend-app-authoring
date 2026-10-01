@@ -38,6 +38,8 @@ import { CourseAuthoringProvider } from './CourseAuthoringContext';
 import { CourseImportProvider } from './import-page/CourseImportContext';
 import { CourseExportProvider } from './export-page/CourseExportContext';
 import InstructionsHelpEditorPage from './compugrade/pages/InstructionsHelpEditorPage';
+import New from './compugrade/pages/NewLessonFlow/pages/New';
+import LessonBuilder from './compugrade/pages/MultiPartLessonBuilder/app/page';
 
 /**
  * As of this writing, these routes are mounted at a path prefixed with the following:
@@ -169,6 +171,22 @@ const CourseAuthoringRoutes = () => {
             element={
               <PageWrap>
                 <EditorContainer learningContextId={courseId} />
+              </PageWrap>
+            }
+          />
+          <Route
+            path="block/:blockId/:sequenceId/new"
+            element={
+              <PageWrap>
+                <New courseId={courseId} />
+              </PageWrap>
+            }
+          />
+          <Route
+            path="block/:blockId/:sequenceId/new-lesson"
+            element={
+              <PageWrap>
+                <LessonBuilder courseId={courseId} />
               </PageWrap>
             }
           />

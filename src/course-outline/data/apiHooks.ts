@@ -19,7 +19,8 @@ import { useMutationWithProcessingNotification } from '@src/generic/processing-n
 import { handleResponseErrors } from '@src/generic/saving-error-alert';
 import { useToastContext } from '@src/generic/toast-context';
 import { ParentIds } from '@src/generic/types';
-import { updateRubricTitle, updateSubsectionTitle } from '@src/compugrade/api';
+import { updateRubricTitle, updateSubsectionTitle, createRubric } from '@src/compugrade/api';
+import { duplicateRubricData } from '../utils/duplicateRubricData';
 import {
   QueryClient,
   skipToken,
@@ -360,6 +361,24 @@ export const useDuplicateItem = (courseKey: string) => {
       if (getBlockType(variables.itemId) === 'chapter') {
         const duplicatedItem = await getCourseItem(data.locator);
         dispatch(duplicateSection({ id: variables.itemId, duplicatedItem }));
+      }
+      // Sync Compugrade rubric data for duplicated units
+      if (getBlockType(variables.itemId) === 'vertical') {
+        try {
+          await createRubric({
+            locator: data.locator,
+            courseId: courseKey,
+            subsectionId: variables.parentId,
+          });
+          const duplicateResult = await duplicateRubricData(variables.itemId, data.locator);
+          if (!duplicateResult?.success) {
+            // eslint-disable-next-line no-console
+            console.error('Error duplicating rubric data:', duplicateResult?.error);
+          }
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Error syncing duplicated rubric:', error);
+        }
       }
       // scroll to newly added block
       setData({ id: data.locator });

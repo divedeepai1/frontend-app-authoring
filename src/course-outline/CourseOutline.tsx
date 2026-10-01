@@ -58,10 +58,17 @@ import headerMessages from './header-navigations/messages';
 import { getTagsExportFile } from './data/api';
 import OutlineAddChildButtons from './OutlineAddChildButtons';
 import { StatusBar } from './status-bar/StatusBar';
+import TableView from './TableView';
+import CourseWeightSettingsModal from './course-weight-settings-modal/CourseWeightSettingsModal';
+import courseWeightMessages from './course-weight-settings-modal/messages';
+import { base_url } from '../compugrade-constants';
 
 const CourseOutline = () => {
   const intl = useIntl();
   const location = useLocation();
+  const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
+  const [isCourseWeightModalOpen, setIsCourseWeightModalOpen] = useState(false);
+  const [skills, setSkills] = useState<any[]>([]);
   const {
     courseId,
     courseUsageKey,
@@ -146,6 +153,32 @@ const CourseOutline = () => {
       window.location.href = '#';
     }
   }, [location, courseId, courseName]);
+
+  useEffect(() => {
+    const fetchRubricSkills = async () => {
+      if (!courseId) {
+        return;
+      }
+      try {
+        const encodedCourseId = encodeURIComponent(courseId);
+        const response = await fetch(
+          `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSkills(Array.isArray(data) ? data : data?.skills || []);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error fetching rubric skills:', error);
+      }
+    };
+    fetchRubricSkills();
+  }, [courseId]);
 
   const { data: currentItemData } = useCourseItemData(currentSelection?.currentId);
 
@@ -265,12 +298,42 @@ const CourseOutline = () => {
                           : intl.formatMessage(headerMessages.expandAllButton)}
                       </Button>
                     )}
+                    <div className="ml-auto d-flex" style={{ gap: '4px' }}>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => setIsCourseWeightModalOpen(true)}
+                      >
+                        {intl.formatMessage(courseWeightMessages.openButton)}
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'primary' : 'outline-primary'}
+                        size="sm"
+                        onClick={() => setViewMode('list')}
+                      >
+                        List View
+                      </Button>
+                      <Button
+                        variant={viewMode === 'table' ? 'primary' : 'outline-primary'}
+                        size="sm"
+                        onClick={() => setViewMode('table')}
+                      >
+                        Table View
+                      </Button>
+                    </div>
                   </ActionRow>
                   <section>
                     {!errors?.outlineIndexApi && (
                       <div className="pt-4">
                         {sections.length ?
                           (
+                            viewMode === 'table' ? (
+                              <TableView
+                                courseId={courseId}
+                                skills={skills}
+                                sections={sections}
+                              />
+                            ) : (
                             <>
                               <DraggableList
                                 items={sections}
@@ -370,6 +433,7 @@ const CourseOutline = () => {
                                 />
                               )}
                             </>
+                            )
                           ) :
                           (
                             <EmptyPlaceholder>
@@ -433,6 +497,12 @@ const CourseOutline = () => {
           isOpen={isUnlinkModalOpen}
           close={closeUnlinkModal}
           onUnlinkSubmit={handleUnlinkItemSubmit}
+        />
+        <CourseWeightSettingsModal
+          isOpen={isCourseWeightModalOpen}
+          courseId={courseId}
+          onClose={() => setIsCourseWeightModalOpen(false)}
+          onSaveSuccess={() => setToastMessage('Course default weightage saved')}
         />
       </Container>
       <div className="alert-toast">

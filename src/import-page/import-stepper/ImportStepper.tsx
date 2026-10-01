@@ -1,6 +1,7 @@
 import { FormattedDate, useIntl } from '@edx/frontend-platform/i18n';
 import { Button } from '@openedx/paragon';
 import { getConfig } from '@edx/frontend-platform';
+import { useEffect, useRef } from 'react';
 
 import CourseStepper from '@src/generic/course-stepper';
 import { useCourseAuthoringContext } from '@src/CourseAuthoringContext';
@@ -8,9 +9,11 @@ import { useCourseAuthoringContext } from '@src/CourseAuthoringContext';
 import { IMPORT_STAGES } from '../data/constants';
 import messages from './messages';
 import { useCourseImportContext } from '../CourseImportContext';
+import { processImportedCourse } from '../utils/processImportedCourse';
 
 const ImportStepper = () => {
   const intl = useIntl();
+  const processedRef = useRef(false);
 
   const { courseId } = useCourseAuthoringContext();
   const {
@@ -19,7 +22,30 @@ const ImportStepper = () => {
     formattedErrorMessage,
     anyRequestFailed,
     successDate,
+    exportedLessonMetadata,
+    courseBlockId,
   } = useCourseImportContext();
+
+  useEffect(() => {
+    const runPostImport = async () => {
+      if (currentStage !== IMPORT_STAGES.SUCCESS || processedRef.current || !courseBlockId) {
+        return;
+      }
+      processedRef.current = true;
+      try {
+        await processImportedCourse(
+          courseId,
+          courseBlockId,
+          null,
+          exportedLessonMetadata,
+        );
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error processing imported Compugrade lessons:', error);
+      }
+    };
+    runPostImport();
+  }, [currentStage, courseId, courseBlockId, exportedLessonMetadata]);
 
   const handleRedirectCourseOutline = () =>
     window.location.replace(`${getConfig().STUDIO_BASE_URL}/course/${courseId}`);

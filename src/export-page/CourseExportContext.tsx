@@ -16,6 +16,8 @@ import { useExportStatus, useInvalidateExportStatus, useStartCourseExporting } f
 import { EXPORT_STAGES, LAST_EXPORT_COOKIE_NAME } from './data/constants';
 import messages from './messages';
 import { setExportCookie } from './utils';
+import { exportLessonDataMapping } from './utils/exportLessonData';
+import { getCourseOutlineIndex } from '../course-outline/data/api';
 
 export type CourseExportContextData = {
   currentStage: number;
@@ -108,6 +110,29 @@ export const CourseExportProvider = ({ children }: CourseExportProviderProps) =>
     reset();
     invalidateExportStatus();
     setExportTriggered(true);
+    try {
+      const outlineIndex = await getCourseOutlineIndex(courseId);
+      const courseBlockId = outlineIndex?.courseStructure?.id;
+      if (courseBlockId) {
+        const lessonResult = await exportLessonDataMapping(courseId, courseBlockId, {
+          skipSessionStorage: false,
+        });
+        if (lessonResult) {
+          const blob = new Blob([JSON.stringify(lessonResult, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `course-export-metadata-${courseId}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error exporting Compugrade lesson metadata:', error);
+    }
     await exportMutation.mutateAsync();
     const momentDate = moment().valueOf();
     setExportCookie(momentDate);

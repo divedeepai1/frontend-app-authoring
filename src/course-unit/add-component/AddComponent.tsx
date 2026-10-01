@@ -281,6 +281,13 @@ const AddComponent = ({
                   <>
                     <li>
                       <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('new')}
+                        displayName="New Lesson"
+                        type="new"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
                         onClick={() => handleCreateCompugradeXBlock('overview')}
                         displayName="Overview"
                         type="overview"
@@ -295,16 +302,23 @@ const AddComponent = ({
                     </li>
                     <li>
                       <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('tools')}
-                        displayName="Tools and Terms"
-                        type="tools"
+                        onClick={() => handleCreateCompugradeXBlock('text')}
+                        displayName="Document Text"
+                        type="text"
                       />
                     </li>
                     <li>
                       <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('text')}
-                        displayName="Document Text"
-                        type="text"
+                        onClick={() => handleCreateCompugradeXBlock('engine')}
+                        displayName="Compugrade Writer Engine"
+                        type="engine"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('tools')}
+                        displayName="Tools and Terms"
+                        type="tools"
                       />
                     </li>
                   </>

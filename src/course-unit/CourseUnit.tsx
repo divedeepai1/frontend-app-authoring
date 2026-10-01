@@ -219,7 +219,29 @@ const CourseUnit = () => {
   const handleCreateNewCourseXBlock = useHandleCreateNewCourseXBlock({ blockId });
 
   const handleCreateCompugradeXBlock = (type: string) => {
-    navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${type}`);
+    if (type === 'skills') {
+      sessionStorage.setItem('unitTitle', unitTitle);
+      sessionStorage.setItem('unitId', blockId);
+      sessionStorage.setItem('unitData', JSON.stringify(unitData));
+    }
+    if (type === 'text') {
+      sessionStorage.setItem('unitData', JSON.stringify(unitData));
+    }
+    if (type === 'overview') {
+      sessionStorage.setItem('skills_used', JSON.stringify(unitData?.skills_used));
+    }
+    if (type === 'engine') {
+      sessionStorage.setItem('skills_used', JSON.stringify(unitData?.skills_used));
+    }
+    if (type === 'new-lesson') {
+      sessionStorage.setItem('new', 'false');
+    }
+    if (type === 'new') {
+      sessionStorage.setItem('new', 'true');
+    }
+
+    const routeType = type === 'text' ? 'engine' : type === 'new' ? 'new-lesson' : type;
+    navigate(`/course/${courseId}/block/${blockId}/${sequenceId}/${routeType}`);
   };
 
   useEffect(() => {
@@ -396,19 +418,36 @@ const CourseUnit = () => {
                     handleEdit={handleCreateCompugradeXBlock}
                   />
                 )}
-                {unitData?.skills && (
+                {unitData?.skills_used?.length > 0 && (
                   <InstructionXBlock
                     title="Skills"
-                    data={unitData.skills}
+                    data={unitData.skills_used.map((item: any) => item.customer_facing_name).join(', ')}
                     type="skills"
                     handleEdit={handleCreateCompugradeXBlock}
                   />
                 )}
                 {unitData?.text && (
                   <InstructionXBlock
-                    title="Document Text"
-                    data={unitData.text}
+                    title="CWE Preview"
+                    data=""
                     type="text"
+                    handleEdit={handleCreateCompugradeXBlock}
+                  />
+                )}
+                {unitData?.items?.length > 0 && (
+                  <InstructionXBlock
+                    title="Addin Preview"
+                    data=""
+                    preview
+                    type="preview"
+                    handleEdit={handleCreateCompugradeXBlock}
+                  />
+                )}
+                {unitData?.rubric && (
+                  <InstructionXBlock
+                    title="MultiPart Lesson"
+                    data=""
+                    type="new-lesson"
                     handleEdit={handleCreateCompugradeXBlock}
                   />
                 )}

@@ -3,6 +3,8 @@ import { Editor } from "@tinymce/tinymce-react";
 import { Button } from "@openedx/paragon";
 import { useNavigate, useParams } from "react-router";
 import { base_url } from "../../compugrade-constants";
+import WriterEngine from "./WriterEngine";
+import NewSkills from "./NewSkills";
 
 const InstructionsHelpEditorPage = ({ courseId }) => {
   const editorRef = useRef(null);
@@ -12,6 +14,7 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
   const navigate = useNavigate()
 
   useEffect(() => {
+    
     // Conditional logic for setting blockInfo based on blockType
     if (blockType === "tools") {
       setBlockInfo({ key: "tools", title: "Tools and Terms" });
@@ -64,7 +67,7 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
       const requestBody = {
         openedx_based_id: blockId,
         [blockInfo.key]: content, // Set the dynamic key with the editor content as its value
-      };
+    };
 
       try {
         const response = await fetch(base_url+ "/api/openedx/update_rubric", {
@@ -89,6 +92,12 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
   };
 
   return (
+    <>
+    {blockType =="engine"
+      ?<WriterEngine /> :blockType =="preview"
+      ?<WriterEngine preview={true}/>: blockType =="skills"
+      ?<NewSkills />:
+    
     <div
       style={{
         position: "fixed",
@@ -124,9 +133,12 @@ const InstructionsHelpEditorPage = ({ courseId }) => {
           onClick={handleButtonClick}
         >
           Save
+
         </Button>
       </div>
-    </div>
+    </div>}
+    </>
+    
   );
 };
 

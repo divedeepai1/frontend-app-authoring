@@ -27,6 +27,9 @@ export type CourseImportContextData = {
   handleOnProcessUpload: (props: OnProcessUploadProps) => Promise<void>;
   formattedErrorMessage: string;
   successDate?: number;
+  exportedLessonMetadata?: any;
+  setExportedLessonMetadata: (metadata: any) => void;
+  courseBlockId?: string;
 };
 
 /**
@@ -49,7 +52,7 @@ type OnProcessUploadProps = {
 
 export const CourseImportProvider = ({ children }: CourseImportProviderProps) => {
   const intl = useIntl();
-  const { courseId } = useCourseAuthoringContext();
+  const { courseId, courseUsageKey } = useCourseAuthoringContext();
   const [isStopFetching, setStopFetching] = useState(false);
   const [importTriggered, setImportTriggered] = useState(false);
   const [currentStage, setCurrentStage] = useState(0);
@@ -57,6 +60,7 @@ export const CourseImportProvider = ({ children }: CourseImportProviderProps) =>
   const importMutation = useStartCourseImporting(courseId);
   const [progress, updateProgress] = useState<number>(0);
   const [successDate, setSuccessDate] = useState<number>();
+  const [exportedLessonMetadata, setExportedLessonMetadata] = useState<any>();
 
   const cookies = new Cookies();
 
@@ -140,6 +144,9 @@ export const CourseImportProvider = ({ children }: CourseImportProviderProps) =>
       handleOnProcessUpload,
       formattedErrorMessage,
       successDate,
+      exportedLessonMetadata,
+      setExportedLessonMetadata,
+      courseBlockId: courseUsageKey,
     };
 
     return contextValue;
@@ -154,6 +161,8 @@ export const CourseImportProvider = ({ children }: CourseImportProviderProps) =>
     handleOnProcessUpload,
     formattedErrorMessage,
     successDate,
+    exportedLessonMetadata,
+    courseUsageKey,
   ]);
 
   return (

@@ -11,6 +11,7 @@ import PublishControls from '../unit-sidebar/unit-info/PublishControls';
 import AccessCode from './AccessCode';
 import Attempts from './Attempts';
 import Timer from './Timer';
+import DueDate from './DueDate';
 
 export type XBlock = {
   id: string;
@@ -84,6 +85,11 @@ const LegacySidebar = ({
           {unitData && (
             <SidebarSection data-testid="course-unit-access-code-sidebar">
               <AccessCode accessCode={unitData.access_id} />
+            </SidebarSection>
+          )}
+          {unitData && (
+            <SidebarSection data-testid="course-unit-due-date-sidebar">
+              <DueDate date={unitData.due_date} blockId={blockId} />
             </SidebarSection>
           )}
           <SidebarSection data-testid="course-unit-location-sidebar">

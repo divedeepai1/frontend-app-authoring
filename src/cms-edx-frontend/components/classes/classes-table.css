@@ -1,0 +1,52 @@
+
+  
+  .activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #255A71;
+    color: white;
+    padding: 21px 8px 21px 30px;
+  }
+  
+  .activity-header h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+  
+
+  
+  .activity-table {
+    margin-bottom: 0;
+  }
+  
+  .activity-table thead {
+    background-color: #F7F7F7;
+  }
+  
+  .activity-table th {
+    font-weight: 600;
+    font-size: 18px;
+    font-style: bold;
+    padding: 10px 30px;
+    text-align: left;
+  }
+
+
+
+  
+
+  .activity-table td {
+    text-align: left; 
+    font-size: 14px;
+    padding: 10px 30px;
+    vertical-align: middle;
+    
+  }
+  .activity-table td  {
+    border: none !important;
+    border-bottom: 1px solid #E0E0E0 !important;
+  }
+
+  
+  

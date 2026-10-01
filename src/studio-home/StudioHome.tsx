@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Button,
   Container,
@@ -7,7 +7,7 @@ import {
   MailtoLink,
   Row,
 } from '@openedx/paragon';
-import { Add as AddIcon, Error, ManageAccounts } from '@openedx/paragon/icons';
+import { Add as AddIcon, Error, ManageAccounts, FolderOpen } from '@openedx/paragon/icons';
 import { useIntl } from '@edx/frontend-platform/i18n';
 import { getConfig } from '@edx/frontend-platform';
 import { StudioFooterSlot } from '@edx/frontend-component-footer';
@@ -26,11 +26,13 @@ import CreateNewCourseForm from './create-new-course-form';
 import messages from './messages';
 import { useStudioHome } from './hooks';
 import AlertMessage from '../generic/alert-message';
+import AddResourceModal from './additional-resources/AddResourceModal';
 
 const StudioHome = () => {
   const intl = useIntl();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
 
   const {
     isLoadingPage,
@@ -107,6 +109,17 @@ const StudioHome = () => {
         </Button>,
       );
     }
+
+    headerButtons.push(
+      <Button
+        variant="outline-primary"
+        iconBefore={FolderOpen}
+        size="sm"
+        onClick={() => setIsResourceModalOpen(true)}
+      >
+        Add resource
+      </Button>,
+    );
 
     if ((showNewLibraryButton && !showV2LibraryURL) || (showV2LibraryURL && showNewLibraryV2Button)) {
       const newLibraryClick = () => {
@@ -207,6 +220,10 @@ const StudioHome = () => {
         />
       </div>
       <StudioFooterSlot />
+      <AddResourceModal
+        isOpen={isResourceModalOpen}
+        onClose={() => setIsResourceModalOpen(false)}
+      />
     </>
   );
 };
