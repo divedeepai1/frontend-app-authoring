@@ -282,7 +282,7 @@ const AddComponent = ({
                     <li>
                       <AddComponentButton
                         onClick={() => handleCreateCompugradeXBlock('new')}
-                        displayName="New Lesson"
+                        displayName="Create MultiPart Lesson"
                         type="new"
                       />
                     </li>

@@ -36,6 +36,7 @@ import { scrollToElement } from '../utils';
 import CardStatus from './CardStatus';
 import messages from './messages';
 import { useOutlineSidebarContext } from '../outline-sidebar/OutlineSidebarContext';
+import { extractParts, buildDisplayName } from '@src/compugrade/titleUtils';
 
 interface CardHeaderProps {
   title: string;
@@ -74,6 +75,10 @@ interface CardHeaderProps {
   extraActionsComponent?: ReactNode;
   onClickSync?: () => void;
   readyToSync?: boolean;
+  /** When true (unit cards), edit form keeps type+number and only edits the string part */
+  fromUnitCard?: boolean;
+  index?: number;
+  subsectionIndex?: number;
 }
 
 const CardHeader = ({
@@ -105,6 +110,7 @@ const CardHeader = ({
   extraActionsComponent,
   onClickSync,
   readyToSync,
+  fromUnitCard = false,
 }: CardHeaderProps) => {
   const intl = useIntl();
   const [searchParams] = useSearchParams();
@@ -164,6 +170,10 @@ const CardHeader = ({
     dependency: [title],
   });
 
+  useEffect(() => {
+    setTitleValue(title);
+  }, [title]);
+
   const editMutation = useUpdateCourseBlockName(courseId);
   const handleEditSubmit = useCallback(() => {
     if (title !== titleValue) {
@@ -195,17 +205,35 @@ const CardHeader = ({
       >
         {isFormOpen ?
           (
-            <Form.Group className="m-0 w-75">
+            <Form.Group
+              className="m-0 w-75"
+              isInvalid={fromUnitCard && !extractParts(titleValue).stringPart.trim()}
+            >
               <Form.Control
                 data-testid={`${namePrefix}-edit-field`}
                 ref={(e) => e && e.focus()}
-                value={titleValue}
+                value={fromUnitCard ? extractParts(titleValue).stringPart : titleValue}
                 name="displayName"
-                onChange={(e) => setTitleValue(e.target.value)}
+                onChange={(e) => {
+                  if (fromUnitCard) {
+                    const { typePart, numberPart } = extractParts(titleValue);
+                    setTitleValue(buildDisplayName(typePart, numberPart, e.target.value));
+                  } else {
+                    setTitleValue(e.target.value);
+                  }
+                }}
                 aria-label={intl.formatMessage(messages.editFieldAriaLabel)}
-                onBlur={handleEditSubmit}
+                onBlur={() => {
+                  if (fromUnitCard && !extractParts(titleValue).stringPart.trim()) {
+                    return;
+                  }
+                  handleEditSubmit();
+                }}
                 onKeyDown={/* istanbul ignore next */ (e) => {
                   if (e.key === 'Enter') {
+                    if (fromUnitCard && !extractParts(titleValue).stringPart.trim()) {
+                      return;
+                    }
                     handleEditSubmit();
                   } else if (e.key === ' ') {
                     // Avoid passing propagation to the `SortableItem` in the card,
@@ -216,6 +244,11 @@ const CardHeader = ({
                 }}
                 disabled={editMutation.isPending}
               />
+              {fromUnitCard && !extractParts(titleValue).stringPart.trim() && (
+                <Form.Control.Feedback type="invalid">
+                  This field is required.
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
           ) :
           (

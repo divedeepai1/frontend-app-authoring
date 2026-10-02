@@ -83,6 +83,7 @@ const CourseOutline = () => {
     updateSectionOrderByIndex,
     updateSubsectionOrderByIndex,
     updateUnitOrderByIndex,
+    isDuplicatingItem,
   } = useCourseOutlineContext();
 
   const {
@@ -179,6 +180,35 @@ const CourseOutline = () => {
     };
     fetchRubricSkills();
   }, [courseId]);
+
+  // Refetch skills after duplication completes (cms parity)
+  useEffect(() => {
+    if (isDuplicatingItem || !courseId) {
+      return undefined;
+    }
+    let cancelled = false;
+    const refetch = async () => {
+      try {
+        const encodedCourseId = encodeURIComponent(courseId);
+        const response = await fetch(
+          `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+        if (!cancelled && response.ok) {
+          const data = await response.json();
+          setSkills(Array.isArray(data) ? data : data?.skills || []);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error refetching rubric skills:', error);
+      }
+    };
+    refetch();
+    return () => { cancelled = true; };
+  }, [isDuplicatingItem, courseId]);
 
   const { data: currentItemData } = useCourseItemData(currentSelection?.currentId);
 
@@ -403,6 +433,8 @@ const CourseOutline = () => {
                                                   isSelfPaced={statusBarData.isSelfPaced}
                                                   isCustomRelativeDatesActive={isCustomRelativeDatesActive}
                                                   index={unitIndex}
+                                                  subsectionIndex={subsectionIndex}
+                                                  skills={skills}
                                                   getPossibleMoves={possibleUnitMoves(
                                                     [...sections],
                                                     sectionIndex,

@@ -58,6 +58,7 @@ const AddContentButton = ({ name, blockType }: AddContentButtonProps) => {
   const {
     handleAddBlock,
     handleAddAndOpenUnit,
+    sections,
   } = useCourseOutlineContext();
   const {
     currentFlow,
@@ -105,11 +106,17 @@ const AddContentButton = ({ name, blockType }: AddContentButtonProps) => {
   };
 
   const addUnit = (subsectionId: string, sectionId?: string) => {
+    // Match cms-edx-frontend unit autonumber naming: "Unit {s}.{u} Unit"
+    const section = sections.find((s) => s.id === sectionId);
+    const subIdx = section?.childInfo?.children?.findIndex((ss) => ss.id === subsectionId) ?? 0;
+    const unitCount = section?.childInfo?.children?.[subIdx]?.childInfo?.children?.length ?? 0;
+    const numberPrefix = `${subIdx + 1}.${unitCount + 1}`;
     handleAddAndOpenUnit.mutate({
       type: ContainerType.Vertical,
       parentLocator: subsectionId,
-      displayName: COURSE_BLOCK_NAMES.vertical.name,
+      displayName: `Unit ${numberPrefix} Unit`,
       sectionId,
+      subsectionId,
     });
   };
 

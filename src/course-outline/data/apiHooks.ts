@@ -19,8 +19,19 @@ import { useMutationWithProcessingNotification } from '@src/generic/processing-n
 import { handleResponseErrors } from '@src/generic/saving-error-alert';
 import { useToastContext } from '@src/generic/toast-context';
 import { ParentIds } from '@src/generic/types';
-import { updateRubricTitle, updateSubsectionTitle, createRubric } from '@src/compugrade/api';
-import { duplicateRubricData } from '../utils/duplicateRubricData';
+import {
+  updateRubricTitle,
+  updateSubsectionTitle,
+  updateSectionTitle,
+  deleteRubric,
+  deleteSection as deleteCompugradeSection,
+  deleteSubsection as deleteCompugradeSubsection,
+} from '@src/compugrade/api';
+import {
+  syncDuplicatedUnit,
+  syncDuplicatedSubsection,
+  syncDuplicatedSection,
+} from '@src/compugrade/syncDuplicate';
 import {
   QueryClient,
   skipToken,
@@ -215,7 +226,9 @@ export const useUpdateCourseBlockName = (courseId: string) => {
     onSuccess: async (_data, variables) => {
       const blockType = getBlockType(variables.itemId);
       try {
-        if (blockType === 'sequential') {
+        if (blockType === 'chapter') {
+          await updateSectionTitle(variables.itemId, variables.displayName);
+        } else if (blockType === 'sequential') {
           await updateSubsectionTitle(variables.itemId, variables.displayName);
         } else if (blockType === 'vertical') {
           await updateRubricTitle(variables.itemId, variables.displayName);
@@ -255,6 +268,22 @@ export const useDeleteCourseItem = () => {
         itemId: string;
       } & ParentIds,
     ) => deleteCourseItem(variables.itemId),
+    onSuccess: async (_data, variables) => {
+      // Mirror cms-edx-frontend delete_* Compugrade calls after Studio delete succeeds.
+      const blockType = getBlockType(variables.itemId);
+      try {
+        if (blockType === 'vertical') {
+          await deleteRubric(variables.itemId);
+        } else if (blockType === 'chapter') {
+          await deleteCompugradeSection(variables.itemId);
+        } else if (blockType === 'sequential') {
+          await deleteCompugradeSubsection(variables.itemId);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error syncing Compugrade delete:', error);
+      }
+    },
     onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: courseOutlineQueryKeys.courseDetails(getCourseKey(variables.itemId)) });
       invalidateParentQueries(queryClient, variables).catch((e) => handleResponseErrors(e));
@@ -357,28 +386,30 @@ export const useDuplicateItem = (courseKey: string) => {
     ) => duplicateCourseItem(variables.itemId, variables.parentId),
     onSuccess: async (data, variables) => {
       await invalidateParentQueries(queryClient, variables);
+      const blockType = getBlockType(variables.itemId);
       // add duplicated section to store, subsection and unit are handled by invalidateParentQueries
-      if (getBlockType(variables.itemId) === 'chapter') {
+      if (blockType === 'chapter') {
         const duplicatedItem = await getCourseItem(data.locator);
         dispatch(duplicateSection({ id: variables.itemId, duplicatedItem }));
-      }
-      // Sync Compugrade rubric data for duplicated units
-      if (getBlockType(variables.itemId) === 'vertical') {
-        try {
-          await createRubric({
-            locator: data.locator,
-            courseId: courseKey,
-            subsectionId: variables.parentId,
-          });
-          const duplicateResult = await duplicateRubricData(variables.itemId, data.locator);
-          if (!duplicateResult?.success) {
-            // eslint-disable-next-line no-console
-            console.error('Error duplicating rubric data:', duplicateResult?.error);
-          }
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('Error syncing duplicated rubric:', error);
-        }
+        await syncDuplicatedSection({
+          originalSectionId: variables.itemId,
+          duplicatedSectionId: data.locator,
+          courseId: courseKey,
+        });
+      } else if (blockType === 'sequential') {
+        await syncDuplicatedSubsection({
+          originalSubsectionId: variables.itemId,
+          duplicatedSubsectionId: data.locator,
+          courseId: courseKey,
+          sectionId: variables.parentId,
+        });
+      } else if (blockType === 'vertical') {
+        await syncDuplicatedUnit({
+          originalUnitId: variables.itemId,
+          duplicatedUnitId: data.locator,
+          courseId: courseKey,
+          subsectionId: variables.parentId,
+        });
       }
       // scroll to newly added block
       setData({ id: data.locator });

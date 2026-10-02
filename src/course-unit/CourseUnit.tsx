@@ -393,15 +393,13 @@ const CourseUnit = () => {
                     courseId={courseId}
                   />
                 )}
-                {blockId && (
-                  <XBlockContainerIframe
-                    courseId={courseId}
-                    blockId={blockId}
-                    isUnitVerticalType={isUnitVerticalType}
-                    unitXBlockActions={unitXBlockActions}
-                    courseVerticalChildren={courseVerticalChildren.children}
-                  />
-                )}
+                {/* MultiPart always first, then other Compugrade blocks / components (cms Compugrade layout) */}
+                <InstructionXBlock
+                  title="MultiPart Lesson"
+                  data=""
+                  type="new-lesson"
+                  handleEdit={handleCreateCompugradeXBlock}
+                />
                 {unitData?.description && (
                   <InstructionXBlock
                     title="Overview"
@@ -443,12 +441,13 @@ const CourseUnit = () => {
                     handleEdit={handleCreateCompugradeXBlock}
                   />
                 )}
-                {unitData?.rubric && (
-                  <InstructionXBlock
-                    title="MultiPart Lesson"
-                    data=""
-                    type="new-lesson"
-                    handleEdit={handleCreateCompugradeXBlock}
+                {blockId && (
+                  <XBlockContainerIframe
+                    courseId={courseId}
+                    blockId={blockId}
+                    isUnitVerticalType={isUnitVerticalType}
+                    unitXBlockActions={unitXBlockActions}
+                    courseVerticalChildren={courseVerticalChildren.children}
                   />
                 )}
                 {!readOnly && showPasteXBlock && canPasteComponent && isUnitVerticalType && sharedClipboardData

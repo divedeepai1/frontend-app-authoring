@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
+  Dropdown,
   Form,
   IconButton,
   useToggle,
@@ -17,6 +18,11 @@ import { ConfigureUnitData } from '@src/course-outline/data/types';
 import { useIframe } from '@src/generic/hooks/context/hooks';
 import { messageTypes, PUBLISH_TYPES } from '@src/course-unit/constants';
 import { useConfigureUnitWithPageUpdates } from '@src/course-unit/data/apiHooks';
+import {
+  buildDisplayName,
+  extractParts,
+  TITLE_TYPE_OPTIONS,
+} from '@src/compugrade/titleUtils';
 import { getCourseUnitData } from '../data/selectors';
 import { updateQueryPendingStatus } from '../data/slice';
 import messages from './messages';
@@ -30,11 +36,8 @@ type HeaderTitleProps = {
 };
 
 /**
- * Component that renders the title and extra action buttons:
- * - Edit button: Hidden, It appears when you hover over it.
- *   The title becomes a text form.
- * - Settings button: Shown only in the legacy unit page.
- *   Opens a settings modal.
+ * Unit header title with lesson-type dropdown.
+ * Edit keeps type + number; only the string part is editable (cms Compugrade behavior).
  */
 const HeaderTitle = ({
   unitTitle,
@@ -47,6 +50,9 @@ const HeaderTitle = ({
   const [titleValue, setTitleValue] = useState(unitTitle);
   const currentItemData = useSelector(getCourseUnitData);
   const [isConfigureModalOpen, openConfigureModal, closeConfigureModal] = useToggle(false);
+  const [selectedItem, setSelectedItem] = useState(
+    extractParts(unitTitle).typePart || 'Unit',
+  );
 
   const isXBlockComponent = [
     COURSE_BLOCK_NAMES.libraryContent.id,
@@ -73,27 +79,72 @@ const HeaderTitle = ({
 
   useEffect(() => {
     setTitleValue(unitTitle);
+    setSelectedItem(extractParts(unitTitle).typePart || 'Unit');
     dispatch(updateQueryPendingStatus(true));
   }, [unitTitle]);
 
+  const handleTypeChange = (item: string) => {
+    const { numberPart, stringPart } = extractParts(titleValue);
+    const formattedTitle = buildDisplayName(item, numberPart, stringPart);
+    handleTitleEditSubmit(formattedTitle);
+    setSelectedItem(item);
+  };
+
   return (
     <div className="unit-header-title d-flex align-items-center lead" data-testid="unit-header-title">
+      <li className="d-flex mr-3 list-unstyled">
+        <Dropdown>
+          <Dropdown.Toggle
+            id="unit-lesson-type-dropdown"
+            className="py-2 bg-transparent text-primary"
+          >
+            <span className="small text-gray-700 px-1">{selectedItem}</span>
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            {TITLE_TYPE_OPTIONS.map((item) => (
+              <Dropdown.Item
+                key={item}
+                onClick={() => handleTypeChange(item)}
+                data-testid="unit-lesson-type-dropdown-item"
+              >
+                {item}
+              </Dropdown.Item>
+            ))}
+          </Dropdown.Menu>
+        </Dropdown>
+      </li>
       {isTitleEditFormOpen ?
         (
-          <Form.Group className="m-0">
+          <Form.Group className="m-0" isInvalid={!extractParts(titleValue).stringPart.trim()}>
             <Form.Control
               ref={(e) => e && e.focus()}
-              value={titleValue}
+              value={extractParts(titleValue).stringPart}
               name="displayName"
-              onChange={(e) => setTitleValue(e.target.value)}
+              onChange={(e) => {
+                const { numberPart, typePart } = extractParts(titleValue);
+                setTitleValue(buildDisplayName(typePart, numberPart, e.target.value));
+              }}
               aria-label={intl.formatMessage(messages.ariaLabelButtonEdit)}
-              onBlur={() => handleTitleEditSubmit(titleValue)}
+              onBlur={() => {
+                if (!extractParts(titleValue).stringPart.trim()) {
+                  return;
+                }
+                handleTitleEditSubmit(titleValue);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
+                  if (!extractParts(titleValue).stringPart.trim()) {
+                    return;
+                  }
                   handleTitleEditSubmit(titleValue);
                 }
               }}
             />
+            {!extractParts(titleValue).stringPart.trim() && (
+              <Form.Control.Feedback type="invalid">
+                This field is required.
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
         ) :
         unitTitle}

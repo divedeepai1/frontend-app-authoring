@@ -3,6 +3,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react';
 import classNames from 'classnames';
 import { useToggle } from '@openedx/paragon';
@@ -44,6 +45,8 @@ interface UnitCardProps {
     providerType: string;
     enableGradedUnits: boolean;
   };
+  skills?: Array<{ unit_id?: string; skills_used?: Array<{ customer_facing_name?: string }> }>;
+  subsectionIndex?: number;
 }
 
 const UnitCard = ({
@@ -59,8 +62,11 @@ const UnitCard = ({
   onDuplicateSubmit,
   onOrderChange,
   discussionsSettings,
+  skills = [],
+  subsectionIndex = 0,
 }: UnitCardProps) => {
   const currentRef = useRef(null);
+  const [unitSkills, setUnitSkills] = useState<Array<{ customer_facing_name?: string }>>([]);
   const [searchParams] = useSearchParams();
   const { selectedContainerState, openContainerSidebar, setSelectedContainerState } = useOutlineSidebarContext();
   const locatorId = searchParams.get('show');
@@ -201,6 +207,11 @@ const UnitCard = ({
     />
   );
 
+  useEffect(() => {
+    const filteredSkills = skills.filter((skill) => skill.unit_id === unit.id);
+    setUnitSkills(filteredSkills[0]?.skills_used || []);
+  }, [skills, unit.id]);
+
   /**
   Temporary measure to keep the react-query state updated with redux state  */
   useEffect(() => {
@@ -298,7 +309,32 @@ const UnitCard = ({
             parentInfo={parentInfo}
             extraActionsComponent={extraActionsComponent}
             readyToSync={upstreamInfo?.readyToSync}
+            fromUnitCard
+            index={index}
+            subsectionIndex={subsectionIndex}
           />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', padding: '0 0.75rem 0.5rem' }}>
+            {unitSkills?.length > 0 &&
+              unitSkills.map((skill, skillIndex) => (
+                <span
+                  key={skillIndex}
+                  className="skill-tag"
+                  style={{
+                    backgroundColor: 'white',
+                    border: '2px solid #F0CC00',
+                    borderRadius: '16px',
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    fontWeight: 500,
+                    color: '#1f2937',
+                    display: 'inline-block',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {skill?.customer_facing_name}
+                </span>
+              ))}
+          </div>
           <div className="unit-card__content item-children" data-testid="unit-card__content">
             <XBlockStatus
               isSelfPaced={isSelfPaced}

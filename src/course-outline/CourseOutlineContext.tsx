@@ -14,12 +14,14 @@ import { SelectionState, type XBlock } from '@src/data/types';
 import { useToggleWithValue } from '@src/hooks';
 import { getBlockType } from '@src/generic/key-utils';
 import { COURSE_BLOCK_NAMES } from '@src/constants';
-import { createRubric, createSubsection } from '@src/compugrade/api';
+import { createRubric, createSubsection, createSection } from '@src/compugrade/api';
+import { renumberSectionUnits } from '@src/compugrade/titleUtils';
 import { useCourseAuthoringContext, type ModalState } from '@src/CourseAuthoringContext';
 import {
   useCreateCourseBlock,
   useDeleteCourseItem,
   useDuplicateItem,
+  useUpdateCourseBlockName,
 } from './data/apiHooks';
 import { getOutlineIndexData, getSectionsList } from './data/selectors';
 import {
@@ -129,23 +131,48 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
   );
   const handleAddBlock = useCreateCourseBlock(
     courseId,
-    async (locator) => {
-      if (getBlockType(locator) !== 'sequential') {
-        return;
-      }
+    async (locator, parentLocator) => {
+      const blockType = getBlockType(locator);
       try {
-        await createSubsection({
-          title: COURSE_BLOCK_NAMES.sequential.name,
-          locator,
-          courseId,
-        });
+        if (blockType === 'chapter') {
+          await createSection({
+            title: COURSE_BLOCK_NAMES.chapter.name,
+            locator,
+            courseId,
+          });
+        } else if (blockType === 'sequential') {
+          await createSubsection({
+            title: COURSE_BLOCK_NAMES.sequential.name,
+            locator,
+            courseId,
+            sectionId: parentLocator,
+          });
+        }
       } catch (error) {
-        // Keep subsection creation successful even if Compugrade sync fails.
+        // Keep Studio create successful even if Compugrade sync fails.
         // eslint-disable-next-line no-console
-        console.error('Error creating Compugrade subsection:', error);
+        console.error('Error creating Compugrade section/subsection:', error);
       }
     },
   );
+
+  const renameMutation = useUpdateCourseBlockName(courseId);
+
+  const persistUnitRenames = async (saveOps: Array<{ unitId: string; sectionId: string; name: string }>) => {
+    for (const { unitId, sectionId, name } of saveOps) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await renameMutation.mutateAsync({
+          itemId: unitId,
+          displayName: name,
+          sectionId,
+        });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error persisting autonumber rename:', error);
+      }
+    }
+  };
 
   const {
     mutate: duplicateItem,
@@ -210,8 +237,30 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
     }
     const [sectionsCopy, newSubsections] = fn(...args);
     if (newSubsections && sectionId) {
+      const saveOps: Array<{ unitId: string; sectionId: string; name: string }> = [];
+      const destIdx = sectionsCopy.findIndex((s) => s.id === section.id);
+      if (destIdx !== -1) {
+        const { section: renumbered, saveOps: ops } = renumberSectionUnits(sectionsCopy[destIdx]);
+        sectionsCopy[destIdx] = renumbered;
+        saveOps.push(...ops);
+      }
+      if (sectionId !== section.id) {
+        const srcIdx = sectionsCopy.findIndex((s) => s.id === sectionId);
+        if (srcIdx !== -1) {
+          const { section: renumbered, saveOps: ops } = renumberSectionUnits(sectionsCopy[srcIdx]);
+          sectionsCopy[srcIdx] = renumbered;
+          saveOps.push(...ops);
+        }
+      }
       setSections(sectionsCopy);
-      handleSubsectionDragAndDrop(sectionId, section.id, newSubsections.map((subsection) => subsection.id));
+      handleSubsectionDragAndDrop(
+        sectionId,
+        section.id,
+        newSubsections.map((subsection) => subsection.id),
+      );
+      // Persist autonumber after order save (fire-and-forget sequential)
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      persistUnitRenames(saveOps);
     }
   };
 
@@ -223,8 +272,29 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
     }
     const [sectionsCopy, newUnits] = fn(...args);
     if (newUnits && subsectionId) {
+      const saveOps: Array<{ unitId: string; sectionId: string; name: string }> = [];
+      const renumberTarget = (targetSectionId: string) => {
+        const idx = sectionsCopy.findIndex((s) => s.id === targetSectionId);
+        if (idx === -1) {
+          return;
+        }
+        const { section: renumbered, saveOps: ops } = renumberSectionUnits(sectionsCopy[idx]);
+        sectionsCopy[idx] = renumbered;
+        saveOps.push(...ops);
+      };
+      renumberTarget(section.id);
+      if (sectionId && sectionId !== section.id) {
+        renumberTarget(sectionId);
+      }
       setSections(sectionsCopy);
-      handleUnitDragAndDrop(sectionId, section.id, subsectionId, newUnits.map((unit) => unit.id));
+      handleUnitDragAndDrop(
+        sectionId,
+        section.id,
+        subsectionId,
+        newUnits.map((unit) => unit.id),
+      );
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      persistUnitRenames(saveOps);
     }
   };
 

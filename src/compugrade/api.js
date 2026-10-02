@@ -14,7 +14,7 @@ async function postJson(path, body) {
   if (!response.ok) {
     throw new Error(`Compugrade API ${path} failed with status ${response.status}`);
   }
-  return response.json();
+  return response.json().catch(() => ({}));
 }
 
 async function patchJson(path, body) {
@@ -26,7 +26,18 @@ async function patchJson(path, body) {
   if (!response.ok) {
     throw new Error(`Compugrade API ${path} failed with status ${response.status}`);
   }
-  return response.json();
+  return response.json().catch(() => ({}));
+}
+
+async function deleteJson(path) {
+  const response = await fetch(`${base_url}${path}`, {
+    method: 'DELETE',
+    headers: jsonHeaders,
+  });
+  if (!response.ok) {
+    throw new Error(`Compugrade API ${path} failed with status ${response.status}`);
+  }
+  return response.json().catch(() => ({}));
 }
 
 export async function getRubric(openedxBasedId) {
@@ -45,11 +56,20 @@ export async function createRubric({ locator, courseId, subsectionId }) {
   });
 }
 
-export async function createSubsection({ title, locator, courseId }) {
+export async function createSection({ title, locator, courseId }) {
+  return postJson('/api/openedx/create_section', {
+    title,
+    openedx_based_id: locator,
+    course_id: courseId,
+  });
+}
+
+export async function createSubsection({ title, locator, courseId, sectionId }) {
   return postJson('/api/openedx/create_subsection', {
     title,
     openedx_based_id: locator,
     course_id: courseId,
+    section_id: sectionId,
   });
 }
 
@@ -65,6 +85,31 @@ export async function updateSubsectionTitle(itemId, title) {
     openedx_based_id: itemId,
     title,
   });
+}
+
+export async function updateSectionTitle(itemId, title) {
+  return patchJson('/api/openedx/update_section', {
+    openedx_based_id: itemId,
+    title,
+  });
+}
+
+export async function deleteRubric(itemId) {
+  return deleteJson(
+    `/api/openedx/delete_rubric?openedx_based_id=${encodeURIComponent(itemId)}`,
+  );
+}
+
+export async function deleteSection(itemId) {
+  return deleteJson(
+    `/api/openedx/delete_section?openedx_based_id=${encodeURIComponent(itemId)}`,
+  );
+}
+
+export async function deleteSubsection(itemId) {
+  return deleteJson(
+    `/api/openedx/delete_subsection?subsection_openedx_id=${encodeURIComponent(itemId)}`,
+  );
 }
 
 export async function createExternalCourse(courseData, courseType, courseKey) {
@@ -87,4 +132,19 @@ export async function createRubricItem({ unitId, naturalText }) {
     rubric_openedx_based_id: unitId,
     natural_text: naturalText,
   });
+}
+
+export async function getSkillsForAllCourseRubrics(courseId) {
+  const encodedCourseId = encodeURIComponent(courseId);
+  const response = await fetch(
+    `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
+    {
+      method: 'GET',
+      headers: jsonHeaders,
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`Compugrade get_skills_for_all_course_rubrics failed with status ${response.status}`);
+  }
+  return response.json();
 }

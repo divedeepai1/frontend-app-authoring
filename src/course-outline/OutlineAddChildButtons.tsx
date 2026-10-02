@@ -102,6 +102,7 @@ const OutlineAddChildButtons = ({
   const {
     handleAddBlock,
     handleAddAndOpenUnit,
+    sections,
   } = useCourseOutlineContext();
   const { startCurrentFlow, openContainerInfoSidebar } = useOutlineSidebarContext();
   let messageMap = {
@@ -153,13 +154,21 @@ const OutlineAddChildButtons = ({
         newButton: messages.newUnitButton,
         importButton: messages.useUnitFromLibraryButton,
       };
-      onNewCreateContent = () =>
-        handleAddAndOpenUnit.mutateAsync({
+      onNewCreateContent = () => {
+        // Match cms-edx-frontend: "Unit {subsectionIndex}.{unitIndex} Unit"
+        const section = sections.find((s) => s.id === grandParentLocator);
+        const subIdx = section?.childInfo?.children?.findIndex((ss) => ss.id === parentLocator) ?? 0;
+        const unitCount = section?.childInfo?.children?.[subIdx]?.childInfo?.children?.length ?? 0;
+        const numberPrefix = `${subIdx + 1}.${unitCount + 1}`;
+        const displayName = `Unit ${numberPrefix} Unit`;
+        return handleAddAndOpenUnit.mutateAsync({
           type: ContainerType.Vertical,
           parentLocator,
-          displayName: COURSE_BLOCK_NAMES.vertical.name,
+          displayName,
           sectionId: grandParentLocator,
+          subsectionId: parentLocator,
         });
+      };
       flowType = ContainerType.Unit;
       break;
     default:
