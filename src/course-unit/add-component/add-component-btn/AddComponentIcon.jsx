@@ -5,7 +5,6 @@ import { EditNote as EditNoteIcon } from '@openedx/paragon/icons';
 import overviewIcon from '../../../compugrade-assets/overview.png';
 import skillsIcon from '../../../compugrade-assets/skills.png';
 import toolsIcon from '../../../compugrade-assets/tools.png';
-import newLessonIcon from '../../../cms-edx-frontend/assests/document.svg';
 import engineIcon from '../../../cms-edx-frontend/assests/writer.svg';
 import {
   COMPONENT_TYPES,
@@ -16,12 +15,17 @@ const customTypeIcons = {
   overview: overviewIcon,
   skills: skillsIcon,
   tools: toolsIcon,
-  new: newLessonIcon,
   engine: engineIcon,
   text: overviewIcon,
 };
 
 const AddComponentIcon = ({ type }) => {
+  // MultiPart Lesson uses the same icon as Problem Bank (library V2 / newsstand)
+  if (type === 'new' || type === 'new-lesson') {
+    const problemBankIcon = COMPONENT_TYPE_ICON_MAP[COMPONENT_TYPES.libraryV2] || EditNoteIcon;
+    return <Icon src={problemBankIcon} screenReaderText={type} />;
+  }
+
   if (customTypeIcons[type]) {
     return <img src={customTypeIcons[type]} alt={type} style={{ width: '20px' }} />;
   }

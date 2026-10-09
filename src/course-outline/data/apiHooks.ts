@@ -128,7 +128,11 @@ type CreateCourseXBlockMutationProps = CreateCourseXBlockType & ParentIds;
  */
 export const useCreateCourseBlock = (
   courseKey: string,
-  callback?: (locator: string, parentLocator: string) => Promise<void>,
+  callback?: (
+    locator: string,
+    parentLocator: string,
+    variables?: CreateCourseXBlockMutationProps,
+  ) => Promise<void>,
 ) => {
   const queryClient = useQueryClient();
   const { setData } = useScrollState(courseKey);
@@ -136,7 +140,7 @@ export const useCreateCourseBlock = (
   return useMutationWithProcessingNotification({
     mutationFn: (variables: CreateCourseXBlockMutationProps) => createCourseXblock(variables),
     onSuccess: async (data: { locator: string; }, variables) => {
-      await callback?.(data.locator, variables.parentLocator);
+      await callback?.(data.locator, variables.parentLocator, variables);
       queryClient.invalidateQueries({
         queryKey: courseOutlineQueryKeys.courseDetails(getCourseKey(data.locator)),
       });

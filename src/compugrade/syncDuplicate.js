@@ -8,10 +8,10 @@ import {
   createSubsection,
   updateRubricTitle,
   updateSectionTitle,
-} from '../api';
-import { extractParts, stripDuplicatePrefix, buildDisplayName } from '../titleUtils';
-import { duplicateRubricData } from '../../course-outline/utils/duplicateRubricData';
-import { editItemDisplayName, getCourseItem } from '../../course-outline/data/api';
+} from './api';
+import { extractParts, stripDuplicatePrefix, buildDisplayName } from './titleUtils';
+import { duplicateRubricData } from '@src/course-outline/utils/duplicateRubricData';
+import { editItemDisplayName, getCourseItem } from '@src/course-outline/data/api';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

@@ -102,7 +102,7 @@ export const OutlineSidebarProvider = ({ children }: { children?: React.ReactNod
     setCurrentFlow,
     stopCurrentFlow,
   ] = useToggleWithValue<OutlineFlow>();
-  const [isOpen, open, , toggle] = useToggle(true);
+  const [isOpen, open, , toggle] = useToggle(false);
   const [currentTabKey, setCurrentTabKey] = useState<string>();
 
   /**

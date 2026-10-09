@@ -268,6 +268,7 @@ export function setSubsectionOrderListQuery(
   prevSectionId: string,
   subsectionListIds: string[],
   restoreCallback: () => void,
+  postSuccessCallback?: () => void | Promise<void>,
 ) {
   return async (dispatch) => {
     dispatch(setBlockOrderListQuery(
@@ -275,12 +276,15 @@ export function setSubsectionOrderListQuery(
       subsectionListIds,
       setCourseItemOrderList,
       restoreCallback,
-      () => {
+      async () => {
         const sectionIds = [sectionId];
         if (prevSectionId && prevSectionId !== sectionId) {
           sectionIds.push(prevSectionId);
         }
-        dispatch(fetchCourseSectionQuery(sectionIds));
+        await dispatch(fetchCourseSectionQuery(sectionIds));
+        if (typeof postSuccessCallback === 'function') {
+          await postSuccessCallback();
+        }
       },
     ));
   };
@@ -292,6 +296,7 @@ export function setUnitOrderListQuery(
   prevSectionId: string,
   unitListIds: string[],
   restoreCallback: () => void,
+  postSuccessCallback?: () => void | Promise<void>,
 ) {
   return async (dispatch) => {
     dispatch(setBlockOrderListQuery(
@@ -299,12 +304,15 @@ export function setUnitOrderListQuery(
       unitListIds,
       setCourseItemOrderList,
       restoreCallback,
-      () => {
+      async () => {
         const sectionIds = [sectionId];
         if (prevSectionId && prevSectionId !== sectionId) {
           sectionIds.push(prevSectionId);
         }
-        dispatch(fetchCourseSectionQuery(sectionIds));
+        await dispatch(fetchCourseSectionQuery(sectionIds));
+        if (typeof postSuccessCallback === 'function') {
+          await postSuccessCallback();
+        }
       },
     ));
   };

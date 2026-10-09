@@ -6,25 +6,15 @@ import { SidebarContent, SidebarSection, SidebarTitle } from '@src/generic/sideb
 import contentMessages from '@src/library-authoring/add-content/messages';
 import { useCourseAuthoringContext } from '@src/CourseAuthoringContext';
 import { useCourseOutlineContext } from '@src/course-outline/CourseOutlineContext';
-import { SidebarFilters } from '@src/library-authoring/library-filters/SidebarFilters';
 import {
   Stack,
-  Tab,
-  Tabs,
 } from '@openedx/paragon';
 import { getItemIcon } from '@src/generic/block-type-utils';
 import {
   useCallback,
-  useEffect,
   useMemo,
-  useState,
 } from 'react';
-import { ComponentSelectedEvent } from '@src/library-authoring/common/context/ComponentPickerContext';
-import { COMPONENT_TYPES } from '@src/generic/block-type-utils/constants';
 import { ContainerType, normalizeContainerType } from '@src/generic/key-utils';
-import { ContentType } from '@src/library-authoring/routes';
-import { ComponentPicker } from '@src/library-authoring';
-import { MultiLibraryProvider } from '@src/library-authoring/common/context/MultiLibraryContext';
 import { COURSE_BLOCK_NAMES } from '@src/constants';
 import { BlockCardButton } from '@src/generic/sidebar/BlockCardButton';
 import AlertMessage from '@src/generic/alert-message';
@@ -219,149 +209,6 @@ const AddNewContent = () => {
   );
 };
 
-/** Add Existing Content Tab Section */
-const ShowLibraryContent = () => {
-  const { courseUsageKey } = useCourseAuthoringContext();
-  const { handleAddBlock } = useCourseOutlineContext();
-  const {
-    isCurrentFlowOn,
-    currentFlow,
-    stopCurrentFlow,
-    lastEditableSection,
-    lastEditableSubsection,
-    selectedContainerState,
-    currentItemData,
-    openContainerInfoSidebar,
-  } = useOutlineSidebarContext();
-
-  let sectionParentId = lastEditableSection?.id;
-  let subsectionParentId = lastEditableSubsection?.data?.id;
-
-  const onComponentSelected: ComponentSelectedEvent = useCallback(async ({ usageKey, blockType }) => {
-    switch (blockType) {
-      case 'section':
-        await handleAddBlock.mutateAsync({
-          type: COMPONENT_TYPES.libraryV2,
-          category: ContainerType.Chapter,
-          parentLocator: courseUsageKey,
-          libraryContentKey: usageKey,
-        }, {
-          onSuccess: (data: { locator: string; }) => {
-            // istanbul ignore next
-            openContainerInfoSidebar(data.locator, undefined, data.locator);
-          },
-        });
-        break;
-      case 'subsection':
-        sectionParentId = currentFlow?.parentLocator || sectionParentId;
-        if (sectionParentId) {
-          await handleAddBlock.mutateAsync({
-            type: COMPONENT_TYPES.libraryV2,
-            category: ContainerType.Sequential,
-            parentLocator: sectionParentId,
-            libraryContentKey: usageKey,
-            sectionId: sectionParentId,
-          }, {
-            onSuccess: (data: { locator: string; }) => {
-              // istanbul ignore next
-              openContainerInfoSidebar(data.locator, data.locator, sectionParentId);
-            },
-          });
-        }
-        break;
-      case 'unit':
-        sectionParentId = currentFlow?.grandParentLocator || lastEditableSubsection?.sectionId || sectionParentId;
-        subsectionParentId = currentFlow?.parentLocator || subsectionParentId;
-        if (subsectionParentId) {
-          await handleAddBlock.mutateAsync({
-            type: COMPONENT_TYPES.libraryV2,
-            category: ContainerType.Vertical,
-            parentLocator: subsectionParentId,
-            libraryContentKey: usageKey,
-            sectionId: sectionParentId,
-          }, {
-            onSuccess: (data: { locator: string; }) => {
-              // istanbul ignore next
-              openContainerInfoSidebar(data.locator, subsectionParentId, sectionParentId);
-            },
-          });
-        }
-        break;
-      default:
-        // istanbul ignore next: should not happen
-        throw new Error(`Unrecognized block type ${blockType}`);
-    }
-    stopCurrentFlow();
-  }, [
-    courseUsageKey,
-    handleAddBlock,
-    lastEditableSection,
-    lastEditableSubsection,
-    currentFlow,
-    stopCurrentFlow,
-  ]);
-
-  const allowedBlocks = useMemo(() => {
-    const blocks: ContainerType[] = [];
-    if (currentFlow?.flowType) {
-      return [currentFlow.flowType];
-    }
-    if (!selectedContainerState) { blocks.push(ContainerType.Section); }
-    if (lastEditableSection) { blocks.push(ContainerType.Subsection); }
-    if (lastEditableSubsection) { blocks.push(ContainerType.Unit); }
-    return blocks;
-  }, [lastEditableSection, lastEditableSubsection, currentFlow]);
-
-  if (!isCurrentFlowOn && currentItemData && !currentItemData.actions.childAddable) {
-    return <CannotAddContentAlert />;
-  }
-
-  return (
-    <MultiLibraryProvider>
-      <ComponentPicker
-        showOnlyPublished
-        extraFilter={[
-          `block_type IN ["${allowedBlocks.join('","')}"]`,
-          'type = "library_container"',
-        ]}
-        visibleTabs={[ContentType.home]}
-        FiltersComponent={SidebarFilters}
-        onComponentSelected={onComponentSelected}
-      />
-    </MultiLibraryProvider>
-  );
-};
-
-/** Tabs Component */
-const AddTabs = () => {
-  const intl = useIntl();
-  const { isCurrentFlowOn } = useOutlineSidebarContext();
-  const [key, setKey] = useState('addNew');
-  useEffect(() => {
-    if (isCurrentFlowOn) {
-      setKey('addExisting');
-    }
-  }, [isCurrentFlowOn, setKey]);
-
-  return (
-    <Tabs
-      variant="tabs"
-      className="mb-4 mx-n4.5"
-      id="add-content-tabs"
-      activeKey={key}
-      onSelect={setKey}
-      mountOnEnter
-    >
-      <Tab eventKey="addNew" title={intl.formatMessage(messages.sidebarTabsAddNew)}>
-        <AddNewContent />
-      </Tab>
-      <Tab eventKey="addExisting" title={intl.formatMessage(messages.sidebarTabsAddExisiting)}>
-        <ShowLibraryContent />
-      </Tab>
-    </Tabs>
-  );
-};
-
 /** Main Sidebar Component */
 export const AddSidebar = () => {
   const intl = useIntl();
@@ -407,7 +254,7 @@ export const AddSidebar = () => {
       />
       <SidebarContent>
         <SidebarSection>
-          <AddTabs />
+          <AddNewContent />
         </SidebarSection>
       </SidebarContent>
     </div>

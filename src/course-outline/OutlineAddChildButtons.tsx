@@ -5,16 +5,13 @@ import {
   Row,
   Stack,
 } from '@openedx/paragon';
-import { Add as IconAdd, Close, Newsstand } from '@openedx/paragon/icons';
+import { Add as IconAdd, Close } from '@openedx/paragon/icons';
 import { useIntl } from '@edx/frontend-platform/i18n';
-import { useSelector } from 'react-redux';
-import { getStudioHomeData } from '@src/studio-home/data/selectors';
 import { ContainerType } from '@src/generic/key-utils';
 import { useOutlineSidebarContext } from '@src/course-outline/outline-sidebar/OutlineSidebarContext';
 import { useCourseAuthoringContext } from '@src/CourseAuthoringContext';
 import { useCourseOutlineContext } from '@src/course-outline/CourseOutlineContext';
 import { LoadingSpinner } from '@src/generic/Loading';
-import { useCallback } from 'react';
 import { COURSE_BLOCK_NAMES } from '@src/constants';
 import messages from './messages';
 
@@ -91,12 +88,6 @@ const OutlineAddChildButtons = ({
   parentLocator,
   grandParentLocator,
 }: ChildButtonsProps) => {
-  // WARNING: Do not use "useStudioHome" to get "librariesV2Enabled" flag below,
-  // as it has a useEffect that fetches course waffle flags whenever
-  // location.search is updated. Course search updates location.search when
-  // user types, which will then trigger the useEffect and reload the page.
-  // See https://github.com/openedx/frontend-app-authoring/pull/1938.
-  const { librariesV2Enabled } = useSelector(getStudioHomeData);
   const intl = useIntl();
   const { courseUsageKey } = useCourseAuthoringContext();
   const {
@@ -104,20 +95,17 @@ const OutlineAddChildButtons = ({
     handleAddAndOpenUnit,
     sections,
   } = useCourseOutlineContext();
-  const { startCurrentFlow, openContainerInfoSidebar } = useOutlineSidebarContext();
+  const { openContainerInfoSidebar } = useOutlineSidebarContext();
   let messageMap = {
     newButton: messages.newUnitButton,
-    importButton: messages.useUnitFromLibraryButton,
   };
   let onNewCreateContent: () => Promise<void>;
-  let flowType: ContainerType;
 
   // Based on the childType, determine the correct action and messages to display.
   switch (childType) {
     case ContainerType.Section:
       messageMap = {
         newButton: messages.newSectionButton,
-        importButton: messages.useSectionFromLibraryButton,
       };
       onNewCreateContent = () =>
         handleAddBlock.mutateAsync({
@@ -129,12 +117,10 @@ const OutlineAddChildButtons = ({
             openContainerInfoSidebar(data.locator, undefined, data.locator);
           },
         });
-      flowType = ContainerType.Section;
       break;
     case ContainerType.Subsection:
       messageMap = {
         newButton: messages.newSubsectionButton,
-        importButton: messages.useSubsectionFromLibraryButton,
       };
       onNewCreateContent = () =>
         handleAddBlock.mutateAsync({
@@ -147,12 +133,10 @@ const OutlineAddChildButtons = ({
             openContainerInfoSidebar(data.locator, data.locator, parentLocator);
           },
         });
-      flowType = ContainerType.Subsection;
       break;
     case ContainerType.Unit:
       messageMap = {
         newButton: messages.newUnitButton,
-        importButton: messages.useUnitFromLibraryButton,
       };
       onNewCreateContent = () => {
         // Match cms-edx-frontend: "Unit {subsectionIndex}.{unitIndex} Unit"
@@ -169,35 +153,18 @@ const OutlineAddChildButtons = ({
           subsectionId: parentLocator,
         });
       };
-      flowType = ContainerType.Unit;
       break;
     default:
       // istanbul ignore next: unreachable
       throw new Error(`Unrecognized block type ${childType}`);
   }
 
-  /**
-   * Starts add flow in sidebar when `Use content from library` button is clicked.
-   */
-  const onUseLibraryContent = useCallback(async () => {
-    startCurrentFlow({
-      flowType,
-      parentLocator,
-      grandParentLocator,
-    });
-  }, [
-    childType,
-    parentLocator,
-    grandParentLocator,
-    startCurrentFlow,
-  ]);
-
   return (
     <>
       <AddPlaceholder parentLocator={parentLocator} />
-      <Stack direction="horizontal" gap={3} onClick={onClickCard}>
+      <Stack direction="horizontal" gap={3} onClick={onClickCard} className="w-100">
         <Button
-          className={btnClasses}
+          className={`${btnClasses} w-100`}
           variant={btnVariant}
           iconBefore={IconAdd}
           size={btnSize}
@@ -206,18 +173,6 @@ const OutlineAddChildButtons = ({
         >
           {intl.formatMessage(messageMap.newButton)}
         </Button>
-        {librariesV2Enabled && (
-          <Button
-            className={btnClasses}
-            variant={btnVariant}
-            iconBefore={Newsstand}
-            block
-            size={btnSize}
-            onClick={onUseLibraryContent}
-          >
-            {intl.formatMessage(messageMap.importButton)}
-          </Button>
-        )}
       </Stack>
     </>
   );

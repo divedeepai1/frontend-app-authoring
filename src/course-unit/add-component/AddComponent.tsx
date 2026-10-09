@@ -18,6 +18,10 @@ import { useEventListener } from '@src/generic/hooks';
 import VideoSelectorPage from '@src/editors/VideoSelectorPage';
 import EditorPage from '@src/editors/EditorPage';
 import { SelectedComponent } from '@src/library-authoring';
+import overviewIcon from '@src/cms-edx-frontend/assests/overview.svg';
+import skillsIcon from '@src/cms-edx-frontend/assests/skills.svg';
+import textIcon from '@src/cms-edx-frontend/assests/text.svg';
+import writerIcon from '@src/cms-edx-frontend/assests/writer.svg';
 import { fetchCourseSectionVerticalData } from '../data/thunk';
 import { messageTypes } from '../constants';
 import messages from './messages';
@@ -225,6 +229,79 @@ const AddComponent = ({
             <>
               <h5 className="h3 mb-4 text-center">{intl.formatMessage(messages.title)}</h5>
               <ul className="new-component-type list-unstyled m-0 d-flex flex-wrap justify-content-center">
+                {handleCreateCompugradeXBlock && (
+                  <>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('new')}
+                        displayName="Create MultiPart Lesson"
+                        type="new"
+                        border="1px solid #255A71"
+                        background="rgba(130, 179, 223, 0.30)"
+                        boxshadow="0px 1px 2px 0px rgba(37, 90, 113, 0.05)"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('overview')}
+                        displayName="Overview"
+                        type="overview"
+                        icon={overviewIcon}
+                        disabled
+                        border="1px solid #F3B17A"
+                        background="rgba(243, 177, 122, 0.50)"
+                        boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('skills')}
+                        displayName="Skills"
+                        type="skills"
+                        icon={skillsIcon}
+                        disabled
+                        border="1px solid #B878BE"
+                        background="rgba(184, 120, 190, 0.50)"
+                        boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('text')}
+                        displayName="Document Text"
+                        type="text"
+                        icon={textIcon}
+                        disabled
+                        border="1px solid #FF5959"
+                        background="rgba(255, 89, 89, 0.30)"
+                        boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('engine')}
+                        displayName="Compugrade Writer Engine"
+                        type="engine"
+                        icon={writerIcon}
+                        disabled
+                        border="1px solid #285491"
+                        background="rgba(79, 179, 223, 0.30)"
+                        boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+                      />
+                    </li>
+                    <li>
+                      <AddComponentButton
+                        onClick={() => handleCreateCompugradeXBlock('tools')}
+                        displayName="Tools and Terms"
+                        type="tools"
+                        disabled
+                        border="1px solid #E2CA12"
+                        background="#F8FFBA"
+                        boxshadow="0px 1px 2px 0px rgba(0, 0, 0, 0.05)"
+                      />
+                    </li>
+                  </>
+                )}
                 {componentTemplates.map((component: ComponentTemplateData) => {
                   const { type, displayName, beta } = component;
                   let modalParams: { open: () => void; close: () => void; isOpen: boolean; };
@@ -277,52 +354,6 @@ const AddComponent = ({
                     />
                   );
                 })}
-                {handleCreateCompugradeXBlock && (
-                  <>
-                    <li>
-                      <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('new')}
-                        displayName="Create MultiPart Lesson"
-                        type="new"
-                      />
-                    </li>
-                    <li>
-                      <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('overview')}
-                        displayName="Overview"
-                        type="overview"
-                      />
-                    </li>
-                    <li>
-                      <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('skills')}
-                        displayName="Skills"
-                        type="skills"
-                      />
-                    </li>
-                    <li>
-                      <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('text')}
-                        displayName="Document Text"
-                        type="text"
-                      />
-                    </li>
-                    <li>
-                      <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('engine')}
-                        displayName="Compugrade Writer Engine"
-                        type="engine"
-                      />
-                    </li>
-                    <li>
-                      <AddComponentButton
-                        onClick={() => handleCreateCompugradeXBlock('tools')}
-                        displayName="Tools and Terms"
-                        type="tools"
-                      />
-                    </li>
-                  </>
-                )}
               </ul>
             </>
           ) :

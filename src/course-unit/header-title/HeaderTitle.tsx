@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  Dropdown,
   Form,
   IconButton,
   useToggle,
@@ -21,7 +20,6 @@ import { useConfigureUnitWithPageUpdates } from '@src/course-unit/data/apiHooks'
 import {
   buildDisplayName,
   extractParts,
-  TITLE_TYPE_OPTIONS,
 } from '@src/compugrade/titleUtils';
 import { getCourseUnitData } from '../data/selectors';
 import { updateQueryPendingStatus } from '../data/slice';
@@ -36,8 +34,8 @@ type HeaderTitleProps = {
 };
 
 /**
- * Unit header title with lesson-type dropdown.
- * Edit keeps type + number; only the string part is editable (cms Compugrade behavior).
+ * Unit header title.
+ * Type + number are display-only; only the name (string part) is editable (cms Compugrade behavior).
  */
 const HeaderTitle = ({
   unitTitle,
@@ -50,9 +48,9 @@ const HeaderTitle = ({
   const [titleValue, setTitleValue] = useState(unitTitle);
   const currentItemData = useSelector(getCourseUnitData);
   const [isConfigureModalOpen, openConfigureModal, closeConfigureModal] = useToggle(false);
-  const [selectedItem, setSelectedItem] = useState(
-    extractParts(unitTitle).typePart || 'Unit',
-  );
+
+  const { typePart, numberPart, stringPart } = extractParts(titleValue);
+  const typeLabel = typePart || 'Unit';
 
   const isXBlockComponent = [
     COURSE_BLOCK_NAMES.libraryContent.id,
@@ -79,50 +77,29 @@ const HeaderTitle = ({
 
   useEffect(() => {
     setTitleValue(unitTitle);
-    setSelectedItem(extractParts(unitTitle).typePart || 'Unit');
     dispatch(updateQueryPendingStatus(true));
   }, [unitTitle]);
 
-  const handleTypeChange = (item: string) => {
-    const { numberPart, stringPart } = extractParts(titleValue);
-    const formattedTitle = buildDisplayName(item, numberPart, stringPart);
-    handleTitleEditSubmit(formattedTitle);
-    setSelectedItem(item);
-  };
-
   return (
     <div className="unit-header-title d-flex align-items-center lead" data-testid="unit-header-title">
-      <li className="d-flex mr-3 list-unstyled">
-        <Dropdown>
-          <Dropdown.Toggle
-            id="unit-lesson-type-dropdown"
-            className="py-2 bg-transparent text-primary"
-          >
-            <span className="small text-gray-700 px-1">{selectedItem}</span>
-          </Dropdown.Toggle>
-          <Dropdown.Menu>
-            {TITLE_TYPE_OPTIONS.map((item) => (
-              <Dropdown.Item
-                key={item}
-                onClick={() => handleTypeChange(item)}
-                data-testid="unit-lesson-type-dropdown-item"
-              >
-                {item}
-              </Dropdown.Item>
-            ))}
-          </Dropdown.Menu>
-        </Dropdown>
-      </li>
+      <span className="small text-gray-700 mr-2 font-weight-bold">{typeLabel}</span>
+      {numberPart && (
+        <span className="small text-gray-700 mr-2">{numberPart}</span>
+      )}
       {isTitleEditFormOpen ?
         (
-          <Form.Group className="m-0" isInvalid={!extractParts(titleValue).stringPart.trim()}>
+          <Form.Group className="m-0" isInvalid={!stringPart.trim()}>
             <Form.Control
               ref={(e) => e && e.focus()}
-              value={extractParts(titleValue).stringPart}
+              value={stringPart}
               name="displayName"
               onChange={(e) => {
-                const { numberPart, typePart } = extractParts(titleValue);
-                setTitleValue(buildDisplayName(typePart, numberPart, e.target.value));
+                const parts = extractParts(titleValue);
+                setTitleValue(buildDisplayName(
+                  parts.typePart || 'Unit',
+                  parts.numberPart,
+                  e.target.value,
+                ));
               }}
               aria-label={intl.formatMessage(messages.ariaLabelButtonEdit)}
               onBlur={() => {
@@ -147,7 +124,9 @@ const HeaderTitle = ({
             )}
           </Form.Group>
         ) :
-        unitTitle}
+        (
+          <span>{stringPart || unitTitle}</span>
+        )}
       <IconButton
         alt={intl.formatMessage(messages.altButtonEdit)}
         className="ml-1 flex-shrink-0 edit-button"

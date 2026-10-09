@@ -1,4 +1,6 @@
+import { getConfig } from '@edx/frontend-platform';
 import { base_url } from '../compugrade-constants';
+import { fetchCsrfToken } from '../cms-csrftoken';
 
 const jsonHeaders = {
   Accept: 'application/json, text/plain, */*',
@@ -120,6 +122,33 @@ export async function createExternalCourse(courseData, courseType, courseKey) {
   });
 }
 
+/**
+ * Sets course type via Studio myplugin (cms-edx-frontend create parity).
+ * PUT /myplugin/courses/:courseKey/update-type/:course_type/
+ */
+export async function updateCourseTypePlugin(courseKey, courseType) {
+  const token = await fetchCsrfToken();
+  const typeSlug = String(courseType || '')
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+  const response = await fetch(
+    `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${courseKey}/update-type/${typeSlug}/`,
+    {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': token,
+      },
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to set course type: ${response.status} ${errorText}`);
+  }
+  return response.json().catch(() => ({}));
+}
+
 export async function getAllRubricItems(openedxBasedId) {
   return postJson(
     `/api/openedx/get_all_edx_rubric_items?openedx_based_id=${encodeURIComponent(openedxBasedId)}`,
@@ -139,7 +168,7 @@ export async function getSkillsForAllCourseRubrics(courseId) {
   const response = await fetch(
     `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
     {
-      method: 'GET',
+      method: 'POST',
       headers: jsonHeaders,
     },
   );

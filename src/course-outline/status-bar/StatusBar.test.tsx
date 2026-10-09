@@ -22,20 +22,14 @@ const statusBarData: CourseOutlineStatusBar = {
   videoSharingOptions: VIDEO_SHARING_OPTIONS.allOn,
 };
 
-jest.mock('@src/course-libraries/data/apiHooks', () => ({
-  useEntityLinksSummaryByDownstreamContext: () => ({
-    data: [{ readyToSyncCount: 2 }],
-    isLoading: false,
-  }),
+jest.mock('@src/generic/data/apiHooks', () => ({
+  useContentTagsCount: () => ({ data: 0, isLoading: false }),
 }));
 
-let mockHasChanges = false;
-jest.mock('@src/course-outline/data/apiHooks', () => ({
-  useCourseDetails: () => ({
-    data: { hasChanges: mockHasChanges },
-    isLoading: false,
-  }),
+jest.mock('@src/content-tags-drawer', () => ({
+  ContentTagsDrawerSheet: () => null,
 }));
+
 const mockOpenEnableHighlightsModal = jest.fn();
 const mockHandleVideoSharingOptionChange = jest.fn();
 
@@ -53,32 +47,28 @@ const renderComponent = (props?: Partial<StatusBarProps>) =>
 
 describe('<StatusBar />', () => {
   beforeEach(() => {
-    initializeMocks();
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2013-03-05'));
+    initializeMocks({
+      config: {
+        ENABLE_TAGGING_TAXONOMY_PAGES: 'true',
+      },
+    });
   });
 
-  it('renders StatusBar component correctly', async () => {
+  it('renders StatusBar cards correctly', async () => {
     renderComponent();
 
-    expect(await screen.findByText('Feb 05, 2013 - Apr 09, 2013')).toBeInTheDocument();
-    expect(await screen.findByText(`2/9 ${messages.checklistCompleted.defaultMessage}`)).toBeInTheDocument();
-    expect(await screen.findByText('Active')).toBeInTheDocument();
-
-    // Video sharing is not enabled by default
+    expect(await screen.findByTestId('outline-status-bar')).toBeInTheDocument();
+    expect(screen.getByText(messages.startDateTitle.defaultMessage)).toBeInTheDocument();
+    expect(screen.getByText(messages.pacingTypeTitle.defaultMessage)).toBeInTheDocument();
+    expect(screen.getByText(messages.checklistTitle.defaultMessage)).toBeInTheDocument();
+    expect(screen.getByText(messages.highlightEmailsTitle.defaultMessage)).toBeInTheDocument();
+    expect(screen.getByText(messages.courseTagsTitle.defaultMessage)).toBeInTheDocument();
+    expect(screen.getByText(messages.pacingTypeSelfPaced.defaultMessage)).toBeInTheDocument();
+    expect(screen.getByText(/2\/9/)).toBeInTheDocument();
+    expect(screen.getByText(messages.checklistCompleted.defaultMessage)).toBeInTheDocument();
+    expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unpublished Changes')).not.toBeInTheDocument();
     expect(screen.queryByText('Video Sharing:')).not.toBeInTheDocument();
-  });
-
-  it('renders Archived Badge', async () => {
-    jest.setSystemTime(new Date('2014-03-05'));
-    renderComponent();
-    expect(await screen.findByText('Archived')).toBeInTheDocument();
-  });
-
-  it('renders Upcoming Badge', async () => {
-    jest.setSystemTime(new Date('2012-03-05'));
-    renderComponent();
-    expect(await screen.findByText('Upcoming')).toBeInTheDocument();
   });
 
   it('renders set date link if date is not set', async () => {
@@ -97,38 +87,10 @@ describe('<StatusBar />', () => {
     expect(await screen.findByTestId('redux-provider')).toBeEmptyDOMElement();
   });
 
-  it('renders unpublished badge', async () => {
-    mockHasChanges = true;
-    renderComponent();
-    expect(await screen.findByText('Unpublished Changes')).toBeInTheDocument();
-  });
-
-  it('renders library updates', async () => {
-    renderComponent();
-    expect(await screen.findByText('2 Library Updates')).toBeInTheDocument();
-  });
-
-  it('hides checklist if completed', async () => {
-    renderComponent({
-      statusBarData: {
-        ...statusBarData,
-        checklist: {
-          totalCourseLaunchChecks: 5,
-          completedCourseLaunchChecks: 5,
-          totalCourseBestPracticesChecks: 4,
-          completedCourseBestPracticesChecks: 4,
-        },
-      },
-    });
-    // wait for render
-    expect(await screen.findByText('Feb 05, 2013 - Apr 09, 2013')).toBeInTheDocument();
-    expect(screen.queryByText(`9/9 ${messages.checklistCompleted.defaultMessage}`)).toBeNull();
-  });
-
   it('calls openEnableHighlightsModal when the button is clicked', async () => {
     renderComponent();
 
-    const button = await screen.findByRole('button', { name: 'Enable highlights emails' });
+    const button = await screen.findByRole('button', { name: 'Enable now' });
     expect(button).toBeInTheDocument();
 
     button.click();
@@ -154,5 +116,15 @@ describe('<StatusBar />', () => {
     });
 
     expect(await screen.findByText('Video Sharing:')).toBeInTheDocument();
+  });
+
+  it('renders instructor-paced when not self paced', async () => {
+    renderComponent({
+      statusBarData: {
+        ...statusBarData,
+        isSelfPaced: false,
+      },
+    });
+    expect(await screen.findByText(messages.pacingTypeInstructorPaced.defaultMessage)).toBeInTheDocument();
   });
 });

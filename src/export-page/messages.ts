@@ -15,7 +15,7 @@ const messages = defineMessages({
   },
   description1: {
     id: 'course-authoring.export.description1',
-    defaultMessage: 'You can export courses and edit them outside of {studioShortName}. The exported file is a .tar.gz file (that is, a .tar file compressed with GNU Zip) that contains the course structure and content. You can also re-import courses that you\'ve exported.',
+    defaultMessage: 'You can export courses and edit them outside of {studioShortName}. The exported files includes MetaData File ending with .json and is a .tar.gz file (that is, a .tar file compressed with GNU Zip) that contains the course structure and content. You can also re-import courses that you\'ve exported.',
   },
   description2: {
     id: 'course-authoring.export.description2',

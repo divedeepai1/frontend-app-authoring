@@ -14,6 +14,8 @@ const ExportStepper = () => {
     successDate,
     fetchExportErrorMessage,
     downloadPath,
+    isExportingMetadata,
+    exportProgress,
   } = useCourseExportContext();
 
   const successTitle = intl.formatMessage(messages.stepperSuccessTitle);
@@ -39,9 +41,13 @@ const ExportStepper = () => {
     );
   }
 
+  const preparingTitle = isExportingMetadata
+    ? `Exporting rubric data (${exportProgress.current}/${exportProgress.total})`
+    : intl.formatMessage(messages.stepperPreparingTitle);
+
   const steps = [
     {
-      title: intl.formatMessage(messages.stepperPreparingTitle),
+      title: preparingTitle,
       description: intl.formatMessage(messages.stepperPreparingDescription),
       key: EXPORT_STAGES.PREPARING,
     },
@@ -72,8 +78,8 @@ const ExportStepper = () => {
         errorMessage={fetchExportErrorMessage}
         hasError={!!fetchExportErrorMessage}
       />
-      {downloadPath && currentStage === EXPORT_STAGES.SUCCESS && (
-        <Button className="ml-5.5 mt-n2.5" href={downloadPath}>
+      {downloadPath && currentStage === EXPORT_STAGES.SUCCESS && !isExportingMetadata && (
+        <Button className="ml-5.5 mt-n2.5" href={downloadPath} download>
           {intl.formatMessage(messages.downloadCourseButtonTitle)}
         </Button>
       )}

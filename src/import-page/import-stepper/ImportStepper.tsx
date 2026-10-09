@@ -1,19 +1,24 @@
 import { FormattedDate, useIntl } from '@edx/frontend-platform/i18n';
 import { Button } from '@openedx/paragon';
 import { getConfig } from '@edx/frontend-platform';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import CourseStepper from '@src/generic/course-stepper';
 import { useCourseAuthoringContext } from '@src/CourseAuthoringContext';
+import { getCourseOutlineIndex } from '@src/course-outline/data/api';
 
 import { IMPORT_STAGES } from '../data/constants';
 import messages from './messages';
 import { useCourseImportContext } from '../CourseImportContext';
 import { processImportedCourse } from '../utils/processImportedCourse';
 
+type ProcessingStatus = 'idle' | 'in_progress' | 'done' | 'failed';
+
 const ImportStepper = () => {
   const intl = useIntl();
-  const processedRef = useRef(false);
+  const originalCourseStructureRef = useRef<any>(null);
+  const processingStartedRef = useRef(false);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>('idle');
 
   const { courseId } = useCourseAuthoringContext();
   const {
@@ -23,29 +28,70 @@ const ImportStepper = () => {
     anyRequestFailed,
     successDate,
     exportedLessonMetadata,
-    courseBlockId,
+    fileName,
   } = useCourseImportContext();
 
+  // Capture original outline when import upload starts (cms parity)
   useEffect(() => {
-    const runPostImport = async () => {
-      if (currentStage !== IMPORT_STAGES.SUCCESS || processedRef.current || !courseBlockId) {
-        return;
-      }
-      processedRef.current = true;
+    if (fileName && !originalCourseStructureRef.current && !processingStartedRef.current) {
+      getCourseOutlineIndex(courseId)
+        .then((outlineIndex) => {
+          if (outlineIndex?.courseStructure) {
+            originalCourseStructureRef.current = outlineIndex.courseStructure;
+          }
+        })
+        .catch((error) => {
+          // eslint-disable-next-line no-console
+          console.warn('Failed to fetch original course structure:', error);
+        });
+    }
+  }, [fileName, courseId]);
+
+  // Run Compugrade post-import only after Studio import SUCCESS; gate View Outline on this
+  useEffect(() => {
+    const shouldProcess = currentStage === IMPORT_STAGES.SUCCESS
+      && !processingStartedRef.current
+      && courseId;
+
+    if (!shouldProcess) {
+      return undefined;
+    }
+
+    processingStartedRef.current = true;
+    setProcessingStatus('in_progress');
+
+    const timeoutId = setTimeout(async () => {
       try {
-        await processImportedCourse(
+        // Fresh outline after Open edX finishes import processing
+        const importedOutline = await getCourseOutlineIndex(courseId);
+        if (!importedOutline?.courseStructure) {
+          setProcessingStatus('failed');
+          processingStartedRef.current = false;
+          return;
+        }
+
+        const courseBlockId = importedOutline.courseStructure.id;
+        const result = await processImportedCourse(
           courseId,
           courseBlockId,
-          null,
+          originalCourseStructureRef.current,
           exportedLessonMetadata,
         );
+
+        setProcessingStatus(result?.success ? 'done' : 'failed');
+        if (!result?.success) {
+          processingStartedRef.current = false;
+        }
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error processing imported Compugrade lessons:', error);
+        setProcessingStatus('failed');
+        processingStartedRef.current = false;
       }
-    };
-    runPostImport();
-  }, [currentStage, courseId, courseBlockId, exportedLessonMetadata]);
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentStage, courseId, fileName, exportedLessonMetadata]);
 
   const handleRedirectCourseOutline = () =>
     window.location.replace(`${getConfig().STUDIO_BASE_URL}/course/${courseId}`);
@@ -101,17 +147,22 @@ const ImportStepper = () => {
     },
   ];
 
+  // Stay on UPDATING until Compugrade post-import finishes (cms parity)
+  const activeKey = processingStatus === 'done'
+    ? currentStage
+    : Math.min(currentStage, IMPORT_STAGES.UPDATING);
+
   return (
     <section>
       <h3 className="mt-4">{intl.formatMessage(messages.stepperHeaderTitle)}</h3>
       <CourseStepper
         percent={currentStage === IMPORT_STAGES.UPLOADING ? progress : undefined}
         steps={steps}
-        activeKey={currentStage}
-        hasError={anyRequestFailed}
+        activeKey={activeKey}
+        hasError={anyRequestFailed || processingStatus === 'failed'}
         errorMessage={formattedErrorMessage}
       />
-      {currentStage === IMPORT_STAGES.SUCCESS && (
+      {currentStage === IMPORT_STAGES.SUCCESS && processingStatus === 'done' && (
         <Button className="ml-5.5 mt-n2.5" onClick={handleRedirectCourseOutline}>
           {intl.formatMessage(messages.viewOutlineButton)}
         </Button>

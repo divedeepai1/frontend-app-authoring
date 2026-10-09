@@ -30,15 +30,25 @@ const messages = defineMessages({
     defaultMessage: '{count, plural, one {{count} notification} other {{count} notifications}}',
     description: 'Metadata notifications text in course outline',
   },
+  highlightEmailsTitle: {
+    id: 'course-authoring.course-outline.status-bar.highlight-emails.title',
+    defaultMessage: 'Course highlight emails',
+    description: 'Course highlight emails card title in course outline status bar',
+  },
   highlightEmailsButton: {
     id: 'course-authoring.course-outline.status-bar.highlight-emails.button',
-    defaultMessage: 'Enable highlights emails',
+    defaultMessage: 'Enable now',
     description: 'Enable highlights emails button in course outline',
   },
   highlightEmailsEnabled: {
     id: 'course-authoring.course-outline.status-bar.highlight-emails.enabled',
-    defaultMessage: 'Highlights emails enabled',
+    defaultMessage: 'Enabled',
     description: 'Message displayed when highlights emails are enabled',
+  },
+  highlightEmailsLink: {
+    id: 'course-authoring.course-outline.status-bar.highlight-emails.link',
+    defaultMessage: 'Learn more',
+    description: 'Learn more link for course highlight emails',
   },
   courseTagsTitle: {
     id: 'course-authoring.course-outline.status-bar.course-tags',
@@ -69,31 +79,6 @@ const messages = defineMessages({
   videoSharingAllOnText: {
     id: 'course-authoring.course-outline.status-bar.video-sharing.allOn.text',
     defaultMessage: 'All Videos',
-  },
-  unpublishedBadgeText: {
-    id: 'course-authoring.course-outline.status-bar.unpublished.badge.text',
-    defaultMessage: 'Unpublished Changes',
-    description: 'Text in badge displayed in course outline if course has unpublished changes.',
-  },
-  activeBadgeText: {
-    id: 'course-authoring.course-outline.status-bar.active.badge.text',
-    defaultMessage: 'Active',
-    description: 'Active Badge shown in course outline when the course is active, i.e., course has started and not ended yet.',
-  },
-  archivedBadgeText: {
-    id: 'course-authoring.course-outline.status-bar.archived.badge.text',
-    defaultMessage: 'Archived',
-    description: 'Archived Badge shown in course outline when the course is archived, i.e., ended',
-  },
-  upcomingBadgeText: {
-    id: 'course-authoring.course-outline.status-bar.upcoming.badge.text',
-    defaultMessage: 'Upcoming',
-    description: 'Upcoming Badge shown in course outline when the course has not started yet.',
-  },
-  libraryUpdatesText: {
-    id: 'course-authoring.course-outline.status-bar.library.updates.text',
-    defaultMessage: '{count, plural, one {{count} Library Update} other {{count} Library Updates}}',
-    description: 'Status text displaying count of library updates',
   },
 });
 

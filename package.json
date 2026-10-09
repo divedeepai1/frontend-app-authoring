@@ -121,7 +121,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.6.1",
     "axios-mock-adapter": "2.1.0",
-    "dprint": "^0.54.0",
+    "dprint": "^0.55.0",
     "fetch-mock-jest": "^1.5.1",
     "jest-canvas-mock": "^2.5.2",
     "jest-expect-message": "^1.1.3",

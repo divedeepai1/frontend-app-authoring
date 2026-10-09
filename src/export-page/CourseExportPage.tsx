@@ -37,6 +37,10 @@ const CourseExportPage = () => {
     isLoadingDenied,
     anyRequestInProgress,
     handleStartExportingCourse,
+    isExportingMetadata,
+    exportProgress,
+    downloadFailed,
+    handleManualJsonDownload,
   } = useCourseExportContext();
 
   const isShowExportButton = !exportTriggered || fetchExportErrorMessage || currentStage === EXPORT_STAGES.SUCCESS;
@@ -61,6 +65,12 @@ const CourseExportPage = () => {
       </Container>
     );
   }
+
+  const exportButtonLabel = isExportingMetadata
+    ? (exportProgress.total > 0
+      ? `Exporting data (${exportProgress.current}/${exportProgress.total})...`
+      : 'Preparing export...')
+    : intl.formatMessage(messages.buttonTitle);
 
   return (
     <>
@@ -103,14 +113,40 @@ const CourseExportPage = () => {
                         size="lg"
                         block
                         className="mb-4"
+                        disabled={isExportingMetadata}
                         onClick={handleStartExportingCourse}
                         iconBefore={ArrowCircleDownIcon}
                       >
-                        {intl.formatMessage(messages.buttonTitle)}
+                        {exportButtonLabel}
                       </Button>
                     </Card.Section>
                   )}
                 </Card>
+                {downloadFailed && (
+                  <Card className="mt-3 border-warning">
+                    <Card.Section className="px-3 py-3">
+                      <div className="d-flex align-items-center justify-content-between flex-wrap">
+                        <div className="mb-2 mb-md-0" style={{ flex: '1 1 auto', minWidth: '200px' }}>
+                          <h5 className="mb-1 text-warning">Export Ready - Manual Download Required</h5>
+                          <p className="small text-muted mb-0">
+                            Automatic download failed, but your export data is ready.
+                            Click the button below to download the JSON file manually.
+                          </p>
+                        </div>
+                        <div className="ml-md-3">
+                          <Button
+                            variant="primary"
+                            size="lg"
+                            onClick={handleManualJsonDownload}
+                            iconBefore={ArrowCircleDownIcon}
+                          >
+                            Download JSON File
+                          </Button>
+                        </div>
+                      </div>
+                    </Card.Section>
+                  </Card>
+                )}
                 {exportTriggered && <ExportStepper />}
                 <ExportFooter />
               </article>

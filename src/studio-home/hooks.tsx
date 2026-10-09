@@ -48,19 +48,19 @@ const useStudioHome = () => {
     }
   }
   const courseListQueryString = courseListQuery.size ? `?${courseListQuery.toString()}` : '';
-  useEffect(() => {
-    dispatch(fetchStudioHomeData(courseListQueryString, false, studioHomeCoursesParams));
-    setShowNewCourseContainer(false);
-  }, [courseListQueryString]);
 
+  // Single fetch on mount / query-string change — avoids double load flicker on refresh
   useEffect(() => {
     const firstPage = 1;
     dispatch(fetchStudioHomeData(courseListQueryString, false, {
       ...studioHomeCoursesParams,
-      page: firstPage,
-      order: 'display_name',
+      page: studioHomeCoursesParams?.page || firstPage,
+      order: studioHomeCoursesParams?.order || 'display_name',
     }));
-  }, []);
+    setShowNewCourseContainer(false);
+    // Only re-run when the course list query string changes (not on every params object identity)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseListQueryString]);
 
   useEffect(() => {
     if (courseCreatorSavingStatus === RequestStatus.SUCCESSFUL) {

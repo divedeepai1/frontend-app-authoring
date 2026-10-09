@@ -53,12 +53,33 @@ export type CourseOutlineContextData = {
   openPublishModal: (value: ModalState) => void;
   closePublishModal: () => void;
   handleSectionDragAndDrop: (sectionListIds: string[]) => void;
-  handleSubsectionDragAndDrop: (sectionId: string, prevSectionId: string, subsectionListIds: string[]) => void;
+  handleSubsectionDragAndDrop: (
+    sectionId: string,
+    prevSectionId: string,
+    subsectionListIds: string[],
+    restoreList?: () => void,
+    postSuccessCallback?: () => void | Promise<void>,
+  ) => void;
   handleUnitDragAndDrop: (
     sectionId: string,
     prevSectionId: string,
     subsectionId: string,
     unitListIds: string[],
+    restoreList?: () => void,
+    postSuccessCallback?: () => void | Promise<void>,
+  ) => void;
+  handleSubsectionDragAndDropWithRenumber: (
+    sectionId: string,
+    prevSectionId: string,
+    subsectionListIds: string[],
+    restoreList?: () => void,
+  ) => void;
+  handleUnitDragAndDropWithRenumber: (
+    sectionId: string,
+    prevSectionId: string,
+    subsectionId: string,
+    unitListIds: string[],
+    restoreList?: () => void,
   ) => void;
   updateSectionOrderByIndex: (currentIndex: number, newIndex: number) => void;
   updateSubsectionOrderByIndex: (section: XBlock, moveDetails: any) => void;
@@ -101,7 +122,14 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
   const [currentSelection, setCurrentSelection] = useState<SelectionState | undefined>();
 
   const restoreSectionList = () => {
-    setSections(() => [...sectionsList]);
+    setSections(
+      sectionsList.map((section) => {
+        const { section: renumbered } = renumberSectionUnits(
+          JSON.parse(JSON.stringify(section)),
+        );
+        return renumbered;
+      }),
+    );
   };
 
   useEffect(() => {
@@ -109,12 +137,35 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
   }, [courseId]);
 
   useEffect(() => {
-    setSections(sectionsList);
+    // Keep lesson numbers aligned with current order instantly (cms autonumber UX).
+    setSections(
+      sectionsList.map((section) => {
+        const { section: renumbered } = renumberSectionUnits(
+          JSON.parse(JSON.stringify(section)),
+        );
+        return renumbered;
+      }),
+    );
   }, [sectionsList]);
+
+  const renameMutation = useUpdateCourseBlockName(courseId);
 
   const handleAddAndOpenUnit = useCreateCourseBlock(
     courseId,
-    async (locator, parentLocator) => {
+    async (locator, parentLocator, variables) => {
+      // Ensure ascending unit number is applied (cms: "Unit {s}.{u} Unit")
+      let displayName = variables?.displayName;
+      if (!displayName) {
+        const section = sections.find((s) => (
+          s.childInfo?.children?.some((ss) => ss.id === parentLocator)
+        ));
+        const subIdx = section?.childInfo?.children?.findIndex((ss) => ss.id === parentLocator) ?? 0;
+        const unitCount = section?.childInfo?.children?.[subIdx]?.childInfo?.children?.length ?? 0;
+        // unit already created — count includes the new one, so use unitCount (1-based last index)
+        const numberPrefix = `${subIdx + 1}.${Math.max(unitCount, 1)}`;
+        displayName = `Unit ${numberPrefix} Unit`;
+      }
+
       try {
         await createRubric({
           locator,
@@ -126,6 +177,20 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
         // eslint-disable-next-line no-console
         console.error('Error creating Compugrade rubric:', error);
       }
+
+      try {
+        await renameMutation.mutateAsync({
+          itemId: locator,
+          displayName,
+          sectionId: variables?.sectionId || sections.find((s) => (
+            s.childInfo?.children?.some((ss) => ss.id === parentLocator)
+          ))?.id,
+        });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error setting ascending unit title:', error);
+      }
+
       await openUnitPage(locator);
     },
   );
@@ -155,8 +220,6 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
       }
     },
   );
-
-  const renameMutation = useUpdateCourseBlockName(courseId);
 
   const persistUnitRenames = async (saveOps: Array<{ unitId: string; sectionId: string; name: string }>) => {
     for (const { unitId, sectionId, name } of saveOps) {
@@ -204,8 +267,16 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
     sectionId: string,
     prevSectionId: string,
     subsectionListIds: string[],
+    restoreList?: () => void,
+    postSuccessCallback?: () => void | Promise<void>,
   ) => {
-    dispatch(setSubsectionOrderListQuery(sectionId, prevSectionId, subsectionListIds, restoreSectionList));
+    dispatch(setSubsectionOrderListQuery(
+      sectionId,
+      prevSectionId,
+      subsectionListIds,
+      restoreList || restoreSectionList,
+      postSuccessCallback,
+    ));
   };
 
   const handleUnitDragAndDrop = (
@@ -213,8 +284,113 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
     prevSectionId: string,
     subsectionId: string,
     unitListIds: string[],
+    restoreList?: () => void,
+    postSuccessCallback?: () => void | Promise<void>,
   ) => {
-    dispatch(setUnitOrderListQuery(sectionId, subsectionId, prevSectionId, unitListIds, restoreSectionList));
+    dispatch(setUnitOrderListQuery(
+      sectionId,
+      subsectionId,
+      prevSectionId,
+      unitListIds,
+      restoreList || restoreSectionList,
+      postSuccessCallback,
+    ));
+  };
+
+  /** DnD subsection drop: reorder + renumber lesson titles (cms parity). */
+  const handleSubsectionDragAndDropWithRenumber = (
+    sectionId: string,
+    prevSectionId: string,
+    subsectionListIds: string[],
+    restoreList?: () => void,
+  ) => {
+    const sectionsCopy = JSON.parse(JSON.stringify(sections));
+    const destSectionIdx = sectionsCopy.findIndex((s) => s.id === sectionId);
+    if (destSectionIdx !== -1) {
+      const destSection = sectionsCopy[destSectionIdx];
+      const idToSubsection: Record<string, XBlock> = {};
+      (destSection.childInfo?.children || []).forEach((ss) => {
+        idToSubsection[ss.id] = ss;
+      });
+      destSection.childInfo.children = subsectionListIds
+        .map((id) => idToSubsection[id])
+        .filter(Boolean);
+    }
+
+    const saveOps: Array<{ unitId: string; sectionId: string; name: string }> = [];
+    const renumberTarget = (targetSectionId: string) => {
+      const idx = sectionsCopy.findIndex((s) => s.id === targetSectionId);
+      if (idx === -1) {
+        return;
+      }
+      const { section: renumbered, saveOps: ops } = renumberSectionUnits(sectionsCopy[idx]);
+      sectionsCopy[idx] = renumbered;
+      saveOps.push(...ops);
+    };
+    renumberTarget(sectionId);
+    if (prevSectionId && prevSectionId !== sectionId) {
+      renumberTarget(prevSectionId);
+    }
+
+    setSections(sectionsCopy);
+    handleSubsectionDragAndDrop(
+      sectionId,
+      prevSectionId,
+      subsectionListIds,
+      restoreList,
+      () => persistUnitRenames(saveOps),
+    );
+  };
+
+  /** DnD unit drop: reorder + renumber lesson titles (cms parity). */
+  const handleUnitDragAndDropWithRenumber = (
+    sectionId: string,
+    prevSectionId: string,
+    subsectionId: string,
+    unitListIds: string[],
+    restoreList?: () => void,
+  ) => {
+    const sectionsCopy = JSON.parse(JSON.stringify(sections));
+    const destSectionIdx = sectionsCopy.findIndex((s) => s.id === sectionId);
+    if (destSectionIdx !== -1) {
+      const destSection = sectionsCopy[destSectionIdx];
+      const destSubIdx = (destSection.childInfo?.children || []).findIndex(
+        (ss) => ss.id === subsectionId,
+      );
+      if (destSubIdx !== -1) {
+        const subRef = destSection.childInfo.children[destSubIdx];
+        const idToUnit: Record<string, XBlock> = {};
+        (subRef.childInfo?.children || []).forEach((u) => {
+          idToUnit[u.id] = u;
+        });
+        subRef.childInfo.children = unitListIds.map((id) => idToUnit[id]).filter(Boolean);
+      }
+    }
+
+    const saveOps: Array<{ unitId: string; sectionId: string; name: string }> = [];
+    const renumberTarget = (targetSectionId: string) => {
+      const idx = sectionsCopy.findIndex((s) => s.id === targetSectionId);
+      if (idx === -1) {
+        return;
+      }
+      const { section: renumbered, saveOps: ops } = renumberSectionUnits(sectionsCopy[idx]);
+      sectionsCopy[idx] = renumbered;
+      saveOps.push(...ops);
+    };
+    renumberTarget(sectionId);
+    if (prevSectionId && prevSectionId !== sectionId) {
+      renumberTarget(prevSectionId);
+    }
+
+    setSections(sectionsCopy);
+    handleUnitDragAndDrop(
+      sectionId,
+      prevSectionId,
+      subsectionId,
+      unitListIds,
+      restoreList,
+      () => persistUnitRenames(saveOps),
+    );
   };
 
   /** Move section to new index */
@@ -257,10 +433,9 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
         sectionId,
         section.id,
         newSubsections.map((subsection) => subsection.id),
+        restoreSectionList,
+        () => persistUnitRenames(saveOps),
       );
-      // Persist autonumber after order save (fire-and-forget sequential)
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      persistUnitRenames(saveOps);
     }
   };
 
@@ -271,7 +446,7 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
       return;
     }
     const [sectionsCopy, newUnits] = fn(...args);
-    if (newUnits && subsectionId) {
+    if (newUnits && sectionId && subsectionId) {
       const saveOps: Array<{ unitId: string; sectionId: string; name: string }> = [];
       const renumberTarget = (targetSectionId: string) => {
         const idx = sectionsCopy.findIndex((s) => s.id === targetSectionId);
@@ -292,9 +467,9 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
         section.id,
         subsectionId,
         newUnits.map((unit) => unit.id),
+        restoreSectionList,
+        () => persistUnitRenames(saveOps),
       );
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      persistUnitRenames(saveOps);
     }
   };
 
@@ -373,6 +548,8 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
     handleSectionDragAndDrop,
     handleSubsectionDragAndDrop,
     handleUnitDragAndDrop,
+    handleSubsectionDragAndDropWithRenumber,
+    handleUnitDragAndDropWithRenumber,
     updateSectionOrderByIndex,
     updateSubsectionOrderByIndex,
     updateUnitOrderByIndex,
@@ -399,6 +576,8 @@ export const CourseOutlineProvider = ({ children }: CourseOutlineProviderProps) 
     handleSectionDragAndDrop,
     handleSubsectionDragAndDrop,
     handleUnitDragAndDrop,
+    handleSubsectionDragAndDropWithRenumber,
+    handleUnitDragAndDropWithRenumber,
     updateSectionOrderByIndex,
     updateSubsectionOrderByIndex,
     updateUnitOrderByIndex,

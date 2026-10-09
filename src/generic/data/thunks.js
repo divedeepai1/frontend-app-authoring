@@ -12,7 +12,7 @@ import {
   getOrganizations,
   getCourseRerun,
 } from './api';
-import { createExternalCourse } from '../../compugrade/api';
+import { createExternalCourse, updateCourseTypePlugin } from '../../compugrade/api';
 
 export function fetchOrganizationsQuery() {
   return async (dispatch) => {
@@ -54,11 +54,20 @@ export function updateCreateOrRerunCourseQuery(courseData, isRerun = false, cour
 
       if (courseType && response.courseKey) {
         try {
+          // Compugrade external course create (cms parity)
           await createExternalCourse(courseData, courseType, response.courseKey);
         } catch (error) {
           // Keep Studio course creation successful even if Compugrade sync fails.
           // eslint-disable-next-line no-console
           console.error('Error creating Compugrade course:', error);
+        }
+
+        try {
+          // Studio myplugin course type set (cms parity)
+          await updateCourseTypePlugin(response.courseKey, courseType);
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Error setting course type via myplugin:', error);
         }
       }
 

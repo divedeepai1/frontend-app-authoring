@@ -87,15 +87,7 @@ const FileSection = () => {
         {isShowedDropzone && metadataMessage?.type === 'success' && (
           <Dropzone
             onProcessUpload={handleOnProcessUpload}
-            accept={{ 'application/x-tar.gz': ['.tar.gz'] }}
-            data-testid="dropzone"
-            style={{ height: '200px' }}
-          />
-        )}
-        {isShowedDropzone && metadataMessage?.type !== 'success' && (
-          <Dropzone
-            onProcessUpload={handleOnProcessUpload}
-            accept={{ 'application/x-tar.gz': ['.tar.gz'] }}
+            accept={{ 'application/gzip': ['.tar.gz'] }}
             data-testid="dropzone"
             style={{ height: '200px' }}
           />

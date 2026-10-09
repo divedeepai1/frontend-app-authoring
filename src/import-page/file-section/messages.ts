@@ -3,7 +3,7 @@ import { defineMessages } from '@edx/frontend-platform/i18n';
 const messages = defineMessages({
   headingTitle: {
     id: 'course-authoring.import.file-section.title',
-    defaultMessage: 'Select a .tar.gz file to replace your course content',
+    defaultMessage: 'Select Metadata Course file then upload a .tar.gz file to replace your course content',
   },
   fileChosen: {
     id: 'course-authoring.import.file-section.chosen-file',

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import classNames from 'classnames';
 import { useSelector } from 'react-redux';
 import {
@@ -12,6 +12,7 @@ import {
   TransitionReplace,
 } from '@openedx/paragon';
 import { Info as InfoIcon } from '@openedx/paragon/icons';
+import { getConfig } from '@edx/frontend-platform';
 import TypeaheadDropdown from '../../editors/sharedComponents/TypeaheadDropdown';
 
 import AlertMessage from '../alert-message';
@@ -21,6 +22,8 @@ import { getSavingStatus } from '../data/selectors';
 import { getStudioHomeData } from '../../studio-home/data/selectors';
 import { updatePostErrors } from '../data/slice';
 import { updateCreateOrRerunCourseQuery } from '../data/thunks';
+import { fetchCsrfToken } from '../../cms-csrftoken';
+import { base_url } from '../../compugrade-constants';
 import { useCreateOrRerunCourse } from './hooks';
 import messages from './messages';
 
@@ -29,13 +32,16 @@ const CreateOrRerunCourseForm = ({
   isCreateNewCourse,
   initialValues,
   onClickCancel,
+  edit = false,
 }) => {
+  const navigate = useNavigate();
   const { courseId } = useParams();
   const savingStatus = useSelector(getSavingStatus);
   const { allowToCreateNewOrg } = useSelector(getStudioHomeData);
   const runFieldReference = useRef(null);
   const displayNameFieldReference = useRef(null);
   const [courseType, setCourseType] = useState('MS Word');
+  const [loading, setLoading] = useState(false);
 
   const {
     intl,
@@ -133,6 +139,10 @@ const CreateOrRerunCourseForm = ({
     },
   ];
 
+  const filteredCourseFields = edit
+    ? newCourseFields.filter((field) => field.name === 'displayName')
+    : newCourseFields;
+
   const errorMessage = errors[TOTAL_LENGTH_KEY] || postErrors?.errMsg;
 
   const createButtonState = {
@@ -148,6 +158,44 @@ const CreateOrRerunCourseForm = ({
       ? values
       : { ...values, sourceCourseKey: courseId };
     dispatch(updateCreateOrRerunCourseQuery(courseData, !isCreateNewCourse, courseType));
+  };
+
+  const handleOnClickEdit = async () => {
+    setLoading(true);
+    try {
+      const token = await fetchCsrfToken();
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${courseId}/update/`,
+        {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token,
+          },
+          body: JSON.stringify({ display_name: values.displayName }),
+        },
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to edit course: ${response.status} ${errorText}`);
+      }
+      await fetch(`${base_url}/api/course/update_course_name`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          course_title: values.displayName,
+          course_id: courseId,
+        }),
+      });
+      navigate('/home');
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error editing course:', error.message);
+      dispatch(updatePostErrors({ errMsg: error.message }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOnClickCancel = () => {
@@ -200,10 +248,10 @@ const CreateOrRerunCourseForm = ({
 
   useEffect(() => {
     // it needs to display the initial focus for the field depending on the current page
-    if (!isCreateNewCourse) {
-      runFieldReference?.current?.focus();
-    } else {
+    if (edit || isCreateNewCourse) {
       displayNameFieldReference?.current?.focus();
+    } else {
+      runFieldReference?.current?.focus();
     }
   }, []);
 
@@ -229,7 +277,7 @@ const CreateOrRerunCourseForm = ({
       </TransitionReplace>
       <h3 className="mb-3">{title}</h3>
       <Form>
-        {newCourseFields.map((field) => (
+        {filteredCourseFields.map((field) => (
           <Form.Group
             className={classNames('form-group-custom', {
               'form-group-custom_isInvalid': hasErrorField(field.name),
@@ -263,7 +311,7 @@ const CreateOrRerunCourseForm = ({
             )}
           </Form.Group>
         ))}
-        {isCreateNewCourse && (
+        {isCreateNewCourse && !edit && (
           <Form.Group className="form-group-custom">
             <Form.Label>{intl.formatMessage(messages.courseTypeLabel)}</Form.Label>
             <Dropdown className="mr-2" style={{ backgroundColor: 'white', width: '100%' }}>
@@ -288,16 +336,28 @@ const CreateOrRerunCourseForm = ({
           >
             {intl.formatMessage(messages.cancelButton)}
           </Button>
-          <StatefulButton
-            key="save-button"
-            className="ml-3"
-            onClick={handleOnClickCreate}
-            disabled={!isFormFilled || isFormInvalid}
-            state={savingStatus === RequestStatus.PENDING
-              ? STATEFUL_BUTTON_STATES.pending
-              : STATEFUL_BUTTON_STATES.default}
-            {...createButtonState}
-          />
+          {edit ? (
+            <Button
+              variant="primary"
+              className="ml-3"
+              disabled={!values.displayName || loading}
+              onClick={handleOnClickEdit}
+            >
+              {loading && <span className="spinner-border spinner-border-sm mr-2" />}
+              Edit Course
+            </Button>
+          ) : (
+            <StatefulButton
+              key="save-button"
+              className="ml-3"
+              onClick={handleOnClickCreate}
+              disabled={!isFormFilled || isFormInvalid}
+              state={savingStatus === RequestStatus.PENDING
+                ? STATEFUL_BUTTON_STATES.pending
+                : STATEFUL_BUTTON_STATES.default}
+              {...createButtonState}
+            />
+          )}
         </ActionRow>
       </Form>
     </div>
@@ -307,6 +367,7 @@ const CreateOrRerunCourseForm = ({
 CreateOrRerunCourseForm.defaultProps = {
   title: '',
   isCreateNewCourse: false,
+  edit: false,
 };
 
 CreateOrRerunCourseForm.propTypes = {
@@ -319,6 +380,7 @@ CreateOrRerunCourseForm.propTypes = {
   }).isRequired,
   isCreateNewCourse: PropTypes.bool,
   onClickCancel: PropTypes.func.isRequired,
+  edit: PropTypes.bool,
 };
 
 export default CreateOrRerunCourseForm;

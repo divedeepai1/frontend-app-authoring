@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useIntl } from '@edx/frontend-platform/i18n';
 import {
   Container,
@@ -9,7 +9,12 @@ import {
   ActionRow,
 } from '@openedx/paragon';
 import { Helmet } from 'react-helmet';
-import { CheckCircle as CheckCircleIcon, CloseFullscreen, OpenInFull } from '@openedx/paragon/icons';
+import {
+  CheckCircle as CheckCircleIcon,
+  CloseFullscreen,
+  OpenInFull,
+  Edit as EditIcon,
+} from '@openedx/paragon/icons';
 import { useSelector } from 'react-redux';
 import {
   SortableContext,
@@ -29,6 +34,8 @@ import AlertMessage from '@src/generic/alert-message';
 import getPageHeadTitle from '@src/generic/utils';
 import CourseOutlineHeaderActionsSlot from '@src/plugin-slots/CourseOutlineHeaderActionsSlot';
 import { useCourseAuthoringContext } from '@src/CourseAuthoringContext';
+import RichTextEditorModal from '@src/compugrade/pages/MultiPartLessonBuilder/components/RichTextEditorModal';
+import { useCourseTypeSession } from '@src/compugrade/useCourseTypeSession';
 import { useCourseOutlineContext } from './CourseOutlineContext';
 import LegacyLibContentBlockAlert from '@src/course-libraries/LegacyLibContentBlockAlert';
 import { ContainerType } from '@src/generic/key-utils';
@@ -53,12 +60,12 @@ import {
   possibleSubsectionMoves,
 } from './drag-helper/utils';
 import { useCourseOutline } from './hooks';
+import { useCourseIntroEditors } from './hooks/useCourseIntroEditors';
 import messages from './messages';
 import headerMessages from './header-navigations/messages';
 import { getTagsExportFile } from './data/api';
 import OutlineAddChildButtons from './OutlineAddChildButtons';
 import { StatusBar } from './status-bar/StatusBar';
-import TableView from './TableView';
 import CourseWeightSettingsModal from './course-weight-settings-modal/CourseWeightSettingsModal';
 import courseWeightMessages from './course-weight-settings-modal/messages';
 import { base_url } from '../compugrade-constants';
@@ -66,7 +73,6 @@ import { base_url } from '../compugrade-constants';
 const CourseOutline = () => {
   const intl = useIntl();
   const location = useLocation();
-  const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
   const [isCourseWeightModalOpen, setIsCourseWeightModalOpen] = useState(false);
   const [skills, setSkills] = useState<any[]>([]);
   const {
@@ -76,6 +82,18 @@ const CourseOutline = () => {
     closeUnlinkModal,
   } = useCourseAuthoringContext();
   const {
+    isCourseDashboardModalOpen,
+    setIsCourseDashboardModalOpen,
+    isCourseDescriptionModalOpen,
+    setIsCourseDescriptionModalOpen,
+    courseDashboardText,
+    courseDescriptionText,
+    isSavingCourseDashboard,
+    isSavingCourseDescription,
+    handleCourseDashboardSave,
+    handleCourseDescriptionSave,
+  } = useCourseIntroEditors(courseId);
+  const {
     currentSelection,
     sections,
     restoreSectionList,
@@ -83,7 +101,8 @@ const CourseOutline = () => {
     updateSectionOrderByIndex,
     updateSubsectionOrderByIndex,
     updateUnitOrderByIndex,
-    isDuplicatingItem,
+    handleSubsectionDragAndDropWithRenumber,
+    handleUnitDragAndDropWithRenumber,
   } = useCourseOutlineContext();
 
   const {
@@ -131,16 +150,48 @@ const CourseOutline = () => {
     handleDismissNotification,
     advanceSettingsUrl,
     handleSectionDragAndDrop,
-    handleSubsectionDragAndDrop,
-    handleUnitDragAndDrop,
     errors,
     handleUnlinkItemSubmit,
   } = useCourseOutline({ courseId });
 
+  useCourseTypeSession(courseId);
+
   // Use `setToastMessage` to show the toast.
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const fetchRubricSkills = useCallback(async () => {
+    if (!courseId) {
+      return;
+    }
+    try {
+      const encodedCourseId = encodeURIComponent(courseId);
+      const response = await fetch(
+        `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSkills(Array.isArray(data) ? data : data?.skills || []);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error fetching rubric skills:', error);
+    }
+  }, [courseId]);
+
+  const handleDuplicateSectionSubmitWithSkills = useCallback(() => {
+    handleDuplicateSectionSubmit();
+    setTimeout(() => {
+      fetchRubricSkills();
+    }, 2000);
+  }, [handleDuplicateSectionSubmit, fetchRubricSkills]);
+
   useEffect(() => {
+    fetchRubricSkills();
+
     // Wait for the course data to load before exporting tags.
     if (courseId && courseName && location.hash === '#export-tags') {
       setToastMessage(intl.formatMessage(messages.exportTagsCreatingToastMessage));
@@ -153,62 +204,41 @@ const CourseOutline = () => {
       // Delete `#export-tags` from location
       window.location.href = '#';
     }
-  }, [location, courseId, courseName]);
+  }, [location, courseId, courseName, fetchRubricSkills, intl]);
 
-  useEffect(() => {
-    const fetchRubricSkills = async () => {
-      if (!courseId) {
-        return;
-      }
-      try {
-        const encodedCourseId = encodeURIComponent(courseId);
-        const response = await fetch(
-          `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          },
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setSkills(Array.isArray(data) ? data : data?.skills || []);
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error fetching rubric skills:', error);
-      }
-    };
-    fetchRubricSkills();
-  }, [courseId]);
+  // Refetch skills when outline structure changes (e.g. after section/unit duplication)
+  const structureHash = useMemo(() => {
+    if (!sections?.length) {
+      return '';
+    }
+    const sectionIds = sections.map((s) => s.id).join(',');
+    const totalUnitCount = sections.reduce((count, section) => (
+      count + (section.childInfo?.children || []).reduce((subCount, subsection) => (
+        subCount + (subsection.childInfo?.children || []).length
+      ), 0)
+    ), 0);
+    return `${sectionIds}-${totalUnitCount}`;
+  }, [sections]);
 
-  // Refetch skills after duplication completes (cms parity)
+  const prevStructureHashRef = useRef('');
   useEffect(() => {
-    if (isDuplicatingItem || !courseId) {
+    if (!courseId || !structureHash) {
       return undefined;
     }
-    let cancelled = false;
-    const refetch = async () => {
-      try {
-        const encodedCourseId = encodeURIComponent(courseId);
-        const response = await fetch(
-          `${base_url}/api/openedx/get_skills_for_all_course_rubrics?course_id=${encodedCourseId}`,
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          },
-        );
-        if (!cancelled && response.ok) {
-          const data = await response.json();
-          setSkills(Array.isArray(data) ? data : data?.skills || []);
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error refetching rubric skills:', error);
-      }
-    };
-    refetch();
-    return () => { cancelled = true; };
-  }, [isDuplicatingItem, courseId]);
+    if (structureHash === prevStructureHashRef.current) {
+      return undefined;
+    }
+    const isInitial = !prevStructureHashRef.current;
+    prevStructureHashRef.current = structureHash;
+    // Skip initial load — fetchRubricSkills already ran once above
+    if (isInitial) {
+      return undefined;
+    }
+    const timeoutId = setTimeout(() => {
+      fetchRubricSkills();
+    }, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [structureHash, courseId, fetchRubricSkills]);
 
   const { data: currentItemData } = useCourseItemData(currentSelection?.currentId);
 
@@ -331,24 +361,26 @@ const CourseOutline = () => {
                     <div className="ml-auto d-flex" style={{ gap: '4px' }}>
                       <Button
                         variant="outline-primary"
+                        iconBefore={EditIcon}
+                        size="sm"
+                        onClick={() => setIsCourseDescriptionModalOpen(true)}
+                      >
+                        Course Description
+                      </Button>
+                      <Button
+                        variant="outline-primary"
+                        iconBefore={EditIcon}
+                        size="sm"
+                        onClick={() => setIsCourseDashboardModalOpen(true)}
+                      >
+                        Course Dashboard Text
+                      </Button>
+                      <Button
+                        variant="outline-primary"
                         size="sm"
                         onClick={() => setIsCourseWeightModalOpen(true)}
                       >
                         {intl.formatMessage(courseWeightMessages.openButton)}
-                      </Button>
-                      <Button
-                        variant={viewMode === 'list' ? 'primary' : 'outline-primary'}
-                        size="sm"
-                        onClick={() => setViewMode('list')}
-                      >
-                        List View
-                      </Button>
-                      <Button
-                        variant={viewMode === 'table' ? 'primary' : 'outline-primary'}
-                        size="sm"
-                        onClick={() => setViewMode('table')}
-                      >
-                        Table View
                       </Button>
                     </div>
                   </ActionRow>
@@ -357,21 +389,14 @@ const CourseOutline = () => {
                       <div className="pt-4">
                         {sections.length ?
                           (
-                            viewMode === 'table' ? (
-                              <TableView
-                                courseId={courseId}
-                                skills={skills}
-                                sections={sections}
-                              />
-                            ) : (
                             <>
                               <DraggableList
                                 items={sections}
                                 setSections={setSections}
                                 restoreSectionList={restoreSectionList}
                                 handleSectionDragAndDrop={handleSectionDragAndDrop}
-                                handleSubsectionDragAndDrop={handleSubsectionDragAndDrop}
-                                handleUnitDragAndDrop={handleUnitDragAndDrop}
+                                handleSubsectionDragAndDrop={handleSubsectionDragAndDropWithRenumber}
+                                handleUnitDragAndDrop={handleUnitDragAndDropWithRenumber}
                               >
                                 <SortableContext
                                   id="root"
@@ -389,7 +414,7 @@ const CourseOutline = () => {
                                       onOpenHighlightsModal={handleOpenHighlightsModal}
                                       onOpenConfigureModal={openConfigureModal}
                                       onOpenDeleteModal={openDeleteModal}
-                                      onDuplicateSubmit={handleDuplicateSectionSubmit}
+                                      onDuplicateSubmit={handleDuplicateSectionSubmitWithSkills}
                                       isSectionsExpanded={isSectionsExpanded}
                                       onOrderChange={updateSectionOrderByIndex}
                                     >
@@ -465,7 +490,6 @@ const CourseOutline = () => {
                                 />
                               )}
                             </>
-                            )
                           ) :
                           (
                             <EmptyPlaceholder>
@@ -535,6 +559,28 @@ const CourseOutline = () => {
           courseId={courseId}
           onClose={() => setIsCourseWeightModalOpen(false)}
           onSaveSuccess={() => setToastMessage('Course default weightage saved')}
+        />
+        <RichTextEditorModal
+          open={isCourseDashboardModalOpen}
+          title="Course Dashboard Text"
+          initialValue={courseDashboardText}
+          onSave={handleCourseDashboardSave}
+          onClose={() => setIsCourseDashboardModalOpen(false)}
+          saveLabel="Save"
+          fromCourseOutline
+          editorId="outline-course-dashboard-text-editor"
+          isSaving={isSavingCourseDashboard}
+        />
+        <RichTextEditorModal
+          open={isCourseDescriptionModalOpen}
+          title="Course Description"
+          initialValue={courseDescriptionText}
+          onSave={handleCourseDescriptionSave}
+          onClose={() => setIsCourseDescriptionModalOpen(false)}
+          saveLabel="Save"
+          fromCourseOutline
+          editorId="outline-course-description-text-editor"
+          isSaving={isSavingCourseDescription}
         />
       </Container>
       <div className="alert-toast">

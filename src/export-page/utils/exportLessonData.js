@@ -1,5 +1,9 @@
 import { base_url } from '../../compugrade-constants';
-import { exportQaStates, getAppNameFromSession } from '../../compugrade/utils/rubricQaTransfer';
+import {
+  exportQaStates,
+  getAppNameFromSession,
+  resolveAppName,
+} from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
 
 export async function exportLessonDataMapping(courseId, courseBlockId, options = {}) {
@@ -15,8 +19,8 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
 
     const lessonDataMapping = {};
     let processedUnits = 0;
-
-    const getAppName = () => getAppNameFromSession();
+    const fallbackAppName = options.appName || getAppNameFromSession();
+    const getAppName = (rubricAppName) => resolveAppName(rubricAppName, fallbackAppName);
 
     // First, count total units for accurate progress tracking
     const countTotalUnits = (sections) => {
@@ -84,7 +88,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                         video_transcript: originalRubric.video_transcript || "",
                         skills: originalRubric.skills || [],
                         num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
-                        app_name: originalRubric.app_name || getAppName(),
+                        app_name: getAppName(originalRubric.app_name),
                         source_document: originalRubric.source_document || null,
                         answer_key: originalRubric.answer_key || null,
                         text_before_video: originalRubric.text_before_video || "",
@@ -159,7 +163,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                 }
 
                 let qaStates = null;
-                const appName = rubricData?.app_name || getAppName();
+                const appName = getAppName(rubricData?.app_name);
                 qaStates = await exportQaStates(unit.id, appName);
 
                 const mappingKey = unit.displayName || `Unit at ${unitPathKey}`;

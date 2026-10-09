@@ -1,10 +1,78 @@
 import { base_url } from '../../compugrade-constants';
+import { getConfig } from '@edx/frontend-platform';
+import { fetchCsrfToken } from '../../cms-csrftoken';
 
 export function getAppNameFromSession() {
   const courseType = sessionStorage.getItem('courseType');
   if (courseType === 'ms-word') return 'word';
   if (courseType === 'powerpoint') return 'powerpoint';
+  if (courseType === 'excel') return 'excel';
   return 'excel';
+}
+
+/**
+ * Resolve app_name without relying on sessionStorage.
+ * Prefer rubric.app_name; optionally use an explicit override; then session; default excel.
+ */
+export function resolveAppName(rubricAppName, overrideAppName) {
+  if (rubricAppName) {
+    return rubricAppName;
+  }
+  if (overrideAppName) {
+    return overrideAppName;
+  }
+  return getAppNameFromSession();
+}
+
+/**
+ * Best-effort: load course type from myplugin into session so QA export has a valid app_name
+ * even on a cold visit to the export page.
+ */
+export async function ensureCourseTypeInSession(courseId) {
+  if (sessionStorage.getItem('courseType') || !courseId) {
+    return sessionStorage.getItem('courseType');
+  }
+  try {
+    const token = await fetchCsrfToken();
+    const response = await fetch(
+      `${getConfig().STUDIO_BASE_URL}/myplugin/courses/`,
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': token,
+        },
+      },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const courses = await response.json();
+    const currentCourse = (Array.isArray(courses) ? courses : []).find(
+      (course) => course.id === courseId,
+    );
+    if (!currentCourse?.course_type) {
+      return null;
+    }
+    let courseType = currentCourse.course_type;
+    if (courseType === 'ms_powerpoint' || courseType === 'google_slides') {
+      courseType = 'powerpoint';
+    } else if (courseType === 'ms_excel' || courseType === 'google_sheets') {
+      courseType = 'excel';
+    } else if (courseType === 'ms_word' || courseType === 'google_docs') {
+      courseType = 'ms-word';
+    }
+    sessionStorage.setItem('courseType', courseType);
+    if (currentCourse.display_name) {
+      sessionStorage.setItem('courseTitle', currentCourse.display_name);
+    }
+    return courseType;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn('Could not preload course type for export:', error);
+    return null;
+  }
 }
 
 export function ensureInstructionItemNums(rubricData) {

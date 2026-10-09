@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -12,6 +13,10 @@ import { getConfig } from '@edx/frontend-platform';
 import { useCourseAuthoringContext } from '@src/CourseAuthoringContext';
 
 import { useIntl } from '@edx/frontend-platform/i18n';
+import {
+  ensureCourseTypeInSession,
+  getAppNameFromSession,
+} from '@src/compugrade/utils/rubricQaTransfer';
 import { useExportStatus, useInvalidateExportStatus, useStartCourseExporting } from './data/apiHooks';
 import { EXPORT_STAGES, LAST_EXPORT_COOKIE_NAME } from './data/constants';
 import messages from './messages';
@@ -30,6 +35,10 @@ export type CourseExportContextData = {
   successDate?: number;
   handleStartExportingCourse: () => void;
   downloadPath?: string;
+  isExportingMetadata: boolean;
+  exportProgress: { current: number; total: number; };
+  downloadFailed: boolean;
+  handleManualJsonDownload: () => void;
 };
 
 /**
@@ -44,19 +53,103 @@ type CourseExportProviderProps = {
   children?: React.ReactNode;
 };
 
+async function downloadExportJson(exportMeta: object, courseId: string) {
+  const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
+  const fileName = `course-export-metadata-${safeCourseId}.json`;
+
+  let jsonString: string | null = null;
+  let stringifyAttempts = 0;
+  const maxStringifyAttempts = 3;
+
+  while (stringifyAttempts < maxStringifyAttempts && !jsonString) {
+    try {
+      if (stringifyAttempts === 0) {
+        jsonString = JSON.stringify(exportMeta, null, 2);
+      } else if (stringifyAttempts === 1) {
+        jsonString = JSON.stringify(exportMeta);
+      } else {
+        const seen = new WeakSet();
+        jsonString = JSON.stringify(exportMeta, (_key, value) => {
+          if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) {
+              return '[Circular]';
+            }
+            seen.add(value);
+          }
+          return value;
+        });
+      }
+      break;
+    } catch (stringifyError) {
+      stringifyAttempts += 1;
+      if (stringifyAttempts >= maxStringifyAttempts) {
+        throw new Error(
+          `Failed to stringify export data after ${maxStringifyAttempts} attempts: ${
+            (stringifyError as Error).message
+          }`,
+        );
+      }
+    }
+  }
+
+  if (!jsonString) {
+    throw new Error('Failed to stringify export data');
+  }
+
+  let blob: Blob;
+  try {
+    blob = new Blob([jsonString], { type: 'application/json' });
+  } catch {
+    const encoder = new TextEncoder();
+    blob = new Blob([encoder.encode(jsonString)], { type: 'application/json' });
+  }
+
+  if (!blob || blob.size === 0) {
+    throw new Error('Failed to create export JSON blob');
+  }
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    try {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // non-critical cleanup
+    }
+  }, 500);
+
+  return { blob, fileName };
+}
+
 export const CourseExportProvider = ({ children }: CourseExportProviderProps) => {
   const intl = useIntl();
-  const { courseId } = useCourseAuthoringContext();
+  const { courseId, courseDetails } = useCourseAuthoringContext();
   const cookies = new Cookies();
 
   const [isStopFetching, setStopFetching] = useState(false);
   const [exportTriggered, setExportTriggered] = useState(false);
   const [successDate, setSuccessDate] = useState<number>();
+  const [isExportingMetadata, setIsExportingMetadata] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
+  const [downloadFailed, setDownloadFailed] = useState(false);
+  const [downloadBlob, setDownloadBlob] = useState<Blob | null>(null);
+  const [downloadFileName, setDownloadFileName] = useState<string | null>(null);
 
   const reset = () => {
     setStopFetching(false);
     setExportTriggered(false);
     setSuccessDate(undefined);
+    setIsExportingMetadata(false);
+    setExportProgress({ current: 0, total: 0 });
+    setDownloadFailed(false);
+    setDownloadBlob(null);
+    setDownloadFileName(null);
   };
 
   const {
@@ -69,7 +162,9 @@ export const CourseExportProvider = ({ children }: CourseExportProviderProps) =>
   const invalidateExportStatus = useInvalidateExportStatus(courseId);
 
   const currentStage = exportStatus?.exportStatus ?? 0;
-  const anyRequestInProgress = exportMutation.isPending || isPendingExportStatus;
+  const anyRequestInProgress = exportMutation.isPending
+    || isPendingExportStatus
+    || isExportingMetadata;
   const anyRequestFailed = exportMutation.isError || isErrorExportStatus;
   const isLoadingDenied = exportStatusError?.response?.status === 403;
 
@@ -106,38 +201,116 @@ export const CourseExportProvider = ({ children }: CourseExportProviderProps) =>
     }
   }, [currentStage, anyRequestFailed, fetchExportErrorMessage]);
 
-  const handleStartExportingCourse = async () => {
+  const handleManualJsonDownload = useCallback(() => {
+    if (!downloadBlob || !downloadFileName) {
+      return;
+    }
+    try {
+      const url = window.URL.createObjectURL(downloadBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = downloadFileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        try {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch {
+          // non-critical
+        }
+        setDownloadFailed(false);
+        setDownloadBlob(null);
+        setDownloadFileName(null);
+      }, 100);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Manual JSON download failed:', error);
+      // eslint-disable-next-line no-alert
+      alert(`Download failed: ${(error as Error).message}`);
+    }
+  }, [downloadBlob, downloadFileName]);
+
+  const handleStartExportingCourse = useCallback(async () => {
     reset();
     invalidateExportStatus();
     setExportTriggered(true);
+    setIsExportingMetadata(true);
+    setExportProgress({ current: 0, total: 0 });
+
     try {
+      // Preload course type so QA export works even without prior outline visit
+      await ensureCourseTypeInSession(courseId);
+      const appName = getAppNameFromSession();
+
       const outlineIndex = await getCourseOutlineIndex(courseId);
-      const courseBlockId = outlineIndex?.courseStructure?.id;
-      if (courseBlockId) {
-        const lessonResult = await exportLessonDataMapping(courseId, courseBlockId, {
-          skipSessionStorage: false,
-        });
-        if (lessonResult) {
-          const blob = new Blob([JSON.stringify(lessonResult, null, 2)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `course-export-metadata-${courseId}.json`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
+      if (!outlineIndex?.courseStructure?.id) {
+        throw new Error('Could not load course outline for export');
+      }
+
+      const courseBlockId = outlineIndex.courseStructure.id;
+      const courseDisplayName = outlineIndex.courseStructure.displayName
+        || courseDetails?.name
+        || 'Course Export';
+
+      // Full course Compugrade metadata — JSON download is source of truth (not sessionStorage)
+      const lessonResult = await exportLessonDataMapping(courseId, courseBlockId, {
+        skipSessionStorage: true,
+        appName,
+        onProgress: (current, total) => {
+          setExportProgress({ current, total });
+        },
+      });
+
+      if (!lessonResult?.success || !lessonResult.exportData) {
+        throw new Error(lessonResult?.error || 'Compugrade lesson export failed');
+      }
+
+      // Import expects top-level courseId / lessonDataMapping — not the wrapper
+      const exportMeta = {
+        ...lessonResult.exportData,
+        courseDisplayName,
+      };
+
+      try {
+        await downloadExportJson(exportMeta, courseId);
+        setDownloadFailed(false);
+        setDownloadBlob(null);
+        setDownloadFileName(null);
+      } catch (downloadError) {
+        // Keep blob for manual retry; still continue to Studio export after alert
+        // eslint-disable-next-line no-console
+        console.error('Auto-download failed, storing blob for manual download:', downloadError);
+        try {
+          const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
+          const fallbackBlob = new Blob(
+            [JSON.stringify(exportMeta)],
+            { type: 'application/json' },
+          );
+          setDownloadBlob(fallbackBlob);
+          setDownloadFileName(`course-export-metadata-${safeCourseId}.json`);
+          setDownloadFailed(true);
+        } catch {
+          throw downloadError;
         }
       }
+
+      // Only start Studio .tar.gz export after Compugrade JSON is ready (cms parity)
+      await exportMutation.mutateAsync();
+      const momentDate = moment().valueOf();
+      setExportCookie(momentDate);
+      setSuccessDate(momentDate);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error exporting Compugrade lesson metadata:', error);
+      console.error('Export error:', error);
+      // eslint-disable-next-line no-alert
+      alert(`Export failed: ${(error as Error).message}`);
+      setExportTriggered(false);
+    } finally {
+      setIsExportingMetadata(false);
     }
-    await exportMutation.mutateAsync();
-    const momentDate = moment().valueOf();
-    setExportCookie(momentDate);
-    setSuccessDate(momentDate);
-  };
+  }, [courseId, courseDetails?.name, exportMutation, invalidateExportStatus]);
 
   const context = useMemo<CourseExportContextData>(() => ({
     currentStage,
@@ -150,6 +323,10 @@ export const CourseExportProvider = ({ children }: CourseExportProviderProps) =>
     successDate,
     handleStartExportingCourse,
     downloadPath,
+    isExportingMetadata,
+    exportProgress,
+    downloadFailed,
+    handleManualJsonDownload,
   }), [
     currentStage,
     exportTriggered,
@@ -161,6 +338,10 @@ export const CourseExportProvider = ({ children }: CourseExportProviderProps) =>
     successDate,
     handleStartExportingCourse,
     downloadPath,
+    isExportingMetadata,
+    exportProgress,
+    downloadFailed,
+    handleManualJsonDownload,
   ]);
 
   return (

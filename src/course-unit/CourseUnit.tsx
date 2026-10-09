@@ -51,6 +51,7 @@ import { isUnitPageNewDesignEnabled } from './utils';
 import { useHelpUrls } from '@src/help-urls/hooks';
 import InstructionXBlock from '../compugrade/components/InstructionXBlock';
 import { getRubric } from '../compugrade/api';
+import { useCourseTypeSession } from '../compugrade/useCourseTypeSession';
 
 const StatusBar = ({ courseUnit }: { courseUnit: any; }) => {
   const { selectedPartitionIndex, selectedGroupsLabel } = courseUnit.userPartitionInfo ?? {};
@@ -216,15 +217,20 @@ const CourseUnit = () => {
     addComponentTemplateData,
   } = useCourseUnit({ courseId, blockId });
 
+  useCourseTypeSession(courseId);
+
   const handleCreateNewCourseXBlock = useHandleCreateNewCourseXBlock({ blockId });
 
   const handleCreateCompugradeXBlock = (type: string) => {
+    // Always set unit title before navigating (needed by MultiPart builder)
+    sessionStorage.setItem('unitTitle', unitTitle);
+    sessionStorage.setItem('unitId', blockId);
+
     if (type === 'skills') {
-      sessionStorage.setItem('unitTitle', unitTitle);
-      sessionStorage.setItem('unitId', blockId);
       sessionStorage.setItem('unitData', JSON.stringify(unitData));
+      sessionStorage.setItem('skills_used', JSON.stringify(unitData?.skills_used));
     }
-    if (type === 'text') {
+    if (type === 'text' || type === 'preview') {
       sessionStorage.setItem('unitData', JSON.stringify(unitData));
     }
     if (type === 'overview') {

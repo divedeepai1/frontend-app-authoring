@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useState,
 } from 'react';
 import { useSelector } from 'react-redux';
 import {
@@ -20,6 +21,9 @@ import { Link } from 'react-router-dom';
 
 import { useWaffleFlags } from '@src/data/apiHooks';
 import { COURSE_CREATOR_STATES } from '@src/constants';
+import DeleteModal from '@src/generic/delete-modal/DeleteModal';
+import { fetchCsrfToken } from '@src/cms-csrftoken';
+import { base_url } from '@src/compugrade-constants';
 import classNames from 'classnames';
 import { getStudioHomeData } from '../data/selectors';
 import messages from '../messages';
@@ -124,6 +128,7 @@ interface CardMenuProps {
   isShowRerunLink?: boolean;
   rerunLink: string | null;
   lmsLink: string | null;
+  courseKey?: string;
 }
 
 const CardMenu = ({
@@ -131,35 +136,99 @@ const CardMenu = ({
   isShowRerunLink,
   rerunLink,
   lmsLink,
+  courseKey = '',
 }: CardMenuProps) => {
   const intl = useIntl();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const deleteCourse = async () => {
+    if (!courseKey) {
+      return;
+    }
+    const encodedCourseId = encodeURIComponent(courseKey);
+    try {
+      const response = await fetch(
+        `${base_url}/api/course/delete_course?course_id=${encodedCourseId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to delete course on Compugrade: ${response.statusText}`);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error deleting Compugrade course:', error);
+    }
+
+    try {
+      const token = await fetchCsrfToken();
+      const response = await fetch(
+        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${courseKey}/delete/`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': token,
+          },
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to delete course: ${response.statusText}`);
+      }
+      setIsDeleteOpen(false);
+      window.location.reload();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error deleting Studio course:', error);
+    }
+  };
 
   if (!showMenu) {
     return null;
   }
 
   return (
-    <Dropdown>
-      <Dropdown.Toggle
-        as={IconButton}
-        iconAs={MoreHoriz}
-        variant="primary"
-        aria-label={intl.formatMessage(messages.btnDropDownText)}
-      />
-      <Dropdown.Menu>
-        {isShowRerunLink && (
-          <Dropdown.Item
-            as={Link}
-            to={rerunLink ?? ''}
-          >
-            <FormattedMessage {...messages.btnReRunText} />
+    <>
+      <Dropdown>
+        <Dropdown.Toggle
+          as={IconButton}
+          iconAs={MoreHoriz}
+          variant="primary"
+          aria-label={intl.formatMessage(messages.btnDropDownText)}
+        />
+        <Dropdown.Menu>
+          {isShowRerunLink && (
+            <Dropdown.Item
+              as={Link}
+              to={rerunLink ?? ''}
+            >
+              <FormattedMessage {...messages.btnReRunText} />
+            </Dropdown.Item>
+          )}
+          <Dropdown.Item href={lmsLink}>
+            <FormattedMessage {...messages.viewLiveBtnText} />
           </Dropdown.Item>
-        )}
-        <Dropdown.Item href={lmsLink}>
-          <FormattedMessage {...messages.viewLiveBtnText} />
-        </Dropdown.Item>
-      </Dropdown.Menu>
-    </Dropdown>
+          <Dropdown.Item as={Link} to={`/course_edit/${courseKey}`}>
+            Edit Course
+          </Dropdown.Item>
+          <Dropdown.Item onClick={() => setIsDeleteOpen(true)}>
+            Delete Course
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
+      <DeleteModal
+        category="course"
+        title="Are you sure you want to delete"
+        isOpen={isDeleteOpen}
+        close={() => setIsDeleteOpen(false)}
+        description="course will be deleted from course list"
+        btnLabel="Delete"
+        onDeleteSubmit={deleteCourse}
+      />
+    </>
   );
 };
 
@@ -321,6 +390,7 @@ export const CardItem: React.FC<Props> = ({
                 isShowRerunLink={isShowRerunLink}
                 rerunLink={rerunLink}
                 lmsLink={lmsLink}
+                courseKey={courseKey}
               />
             )}
         />

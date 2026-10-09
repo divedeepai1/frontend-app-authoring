@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Button,
   Container,
@@ -7,13 +7,15 @@ import {
   MailtoLink,
   Row,
 } from '@openedx/paragon';
-import { Add as AddIcon, Error, ManageAccounts, FolderOpen } from '@openedx/paragon/icons';
+import { Add as AddIcon, Error, ManageAccounts, FolderOpen, Edit } from '@openedx/paragon/icons';
 import { useIntl } from '@edx/frontend-platform/i18n';
 import { getConfig } from '@edx/frontend-platform';
 import { StudioFooterSlot } from '@edx/frontend-component-footer';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useWaffleFlags } from '@src/data/apiHooks';
+import RichTextEditorModal from '@src/compugrade/pages/MultiPartLessonBuilder/components/RichTextEditorModal';
+import { base_url } from '@src/compugrade-constants';
 import Loading from '../generic/Loading';
 import InternetConnectionAlert from '../generic/internet-connection-alert';
 import Header from '../header';
@@ -33,6 +35,9 @@ const StudioHome = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [welcomeText, setWelcomeText] = useState('');
+  const [isSavingWelcome, setIsSavingWelcome] = useState(false);
 
   const {
     isLoadingPage,
@@ -66,6 +71,44 @@ const StudioHome = () => {
     showNewLibraryV2Button,
   } = studioHomeData;
 
+  useEffect(() => {
+    const fetchWelcomeText = async () => {
+      try {
+        const response = await fetch(`${base_url}/api/course/home_intro_text`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setWelcomeText(data?.home_intro_text || '');
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error fetching welcome text:', error);
+      }
+    };
+    fetchWelcomeText();
+  }, []);
+
+  const handleWelcomeSave = async (content) => {
+    setIsSavingWelcome(true);
+    try {
+      await fetch(`${base_url}/api/course/home_intro_text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home_intro_text: content }),
+      });
+      setWelcomeText(content);
+      setIsWelcomeModalOpen(false);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error saving welcome text:', error);
+    } finally {
+      setIsSavingWelcome(false);
+    }
+  };
+
   const getHeaderButtons = useCallback(() => {
     const headerButtons: JSX.Element[] = [];
 
@@ -96,9 +139,34 @@ const StudioHome = () => {
       );
     }
 
+    headerButtons.push(
+      <Button
+        key="welcome-text"
+        variant="outline-primary"
+        iconBefore={Edit}
+        size="sm"
+        onClick={() => setIsWelcomeModalOpen(true)}
+      >
+        Welcome Text
+      </Button>,
+    );
+
+    headerButtons.push(
+      <Button
+        key="add-resource"
+        variant="outline-primary"
+        iconBefore={FolderOpen}
+        size="sm"
+        onClick={() => setIsResourceModalOpen(true)}
+      >
+        Add resource
+      </Button>,
+    );
+
     if (hasAbilityToCreateNewCourse) {
       headerButtons.push(
         <Button
+          key="new-course"
           variant="outline-primary"
           iconBefore={AddIcon}
           size="sm"
@@ -109,17 +177,6 @@ const StudioHome = () => {
         </Button>,
       );
     }
-
-    headerButtons.push(
-      <Button
-        variant="outline-primary"
-        iconBefore={FolderOpen}
-        size="sm"
-        onClick={() => setIsResourceModalOpen(true)}
-      >
-        Add resource
-      </Button>,
-    );
 
     if ((showNewLibraryButton && !showV2LibraryURL) || (showV2LibraryURL && showNewLibraryV2Button)) {
       const newLibraryClick = () => {
@@ -132,6 +189,7 @@ const StudioHome = () => {
 
       headerButtons.push(
         <Button
+          key="new-library"
           variant="outline-primary"
           iconBefore={AddIcon}
           size="sm"
@@ -143,7 +201,23 @@ const StudioHome = () => {
     }
 
     return headerButtons;
-  }, [location, userIsActive, isFailedLoadingPage, isAuthzEnabled]);
+  }, [
+    location,
+    userIsActive,
+    isFailedLoadingPage,
+    isAuthzEnabled,
+    hasAbilityToCreateNewCourse,
+    showNewCourseContainer,
+    showNewLibraryButton,
+    showV2LibraryURL,
+    showNewLibraryV2Button,
+    intl,
+    navigate,
+    setShowNewCourseContainer,
+    studioRequestEmail,
+    isShowEmailStaff,
+    adminConsoleUrl,
+  ]);
 
   const headerButtons = userIsActive ? getHeaderButtons() : [];
   if (isLoadingPage && !isFiltered) {
@@ -223,6 +297,16 @@ const StudioHome = () => {
       <AddResourceModal
         isOpen={isResourceModalOpen}
         onClose={() => setIsResourceModalOpen(false)}
+      />
+      <RichTextEditorModal
+        open={isWelcomeModalOpen}
+        title="Home Intro Text"
+        initialValue={welcomeText}
+        onSave={handleWelcomeSave}
+        onClose={() => setIsWelcomeModalOpen(false)}
+        saveLabel="Save"
+        editorId="home-welcome-text-editor"
+        isSaving={isSavingWelcome}
       />
     </>
   );
