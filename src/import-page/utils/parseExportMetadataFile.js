@@ -5,10 +5,20 @@
  * Large-file path: stream bytes through a SAX-style JSON parser that never
  * builds one giant string — only the resulting object graph (many smaller strings).
  *
- * Output shape is unchanged: { courseId, lessonDataMapping, qaStates, ... }
+ * For very large files, use prepareExportMetadataForImport() which offloads each
+ * lessonDataMapping unit to IndexedDB (exact data) so React never holds the full map.
  */
 
+import {
+  IMPORT_STORE_MARKER,
+  clearMetadataImportStore,
+  createMetadataImportStore,
+  putImportUnit,
+} from './exportMetadataUnitStore';
+
 const FAST_PATH_MAX_BYTES = 48 * 1024 * 1024; // 48 MiB
+/** Above this size, ingest units into IndexedDB instead of keeping the full mapping in memory. */
+const INCREMENTAL_IMPORT_BYTES = 24 * 1024 * 1024; // 24 MiB
 const STREAM_READ_YIELD_BYTES = 2 * 1024 * 1024;
 
 function isInvalidStringLengthError(error) {
@@ -70,7 +80,7 @@ async function* iterateBlobChunks(blob) {
  * Builds the same value JSON.parse would for valid JSON.
  */
 class StreamingJsonParser {
-  constructor() {
+  constructor(options = {}) {
     this.root = undefined;
     this.stack = []; // frames: { type: 'object'|'array', value, key? }
     this.expectingKey = false;
@@ -78,10 +88,26 @@ class StreamingJsonParser {
     this.expectingCommaOrEnd = false;
     this.expectingValue = true;
     this.done = false;
+    /** @type {null|((key: string, value: any) => (void|Promise<void>))} */
+    this.onLessonUnit = options.onLessonUnit || null;
+    this.unitWork = [];
   }
 
   get result() {
     return this.root;
+  }
+
+  enqueueUnitWork(work) {
+    this.unitWork.push(Promise.resolve(work));
+  }
+
+  async drainUnitWork() {
+    if (!this.unitWork.length) {
+      return;
+    }
+    const pending = this.unitWork;
+    this.unitWork = [];
+    await Promise.all(pending);
   }
 
   pushValue(value) {
@@ -103,6 +129,15 @@ class StreamingJsonParser {
     if (frame.type === 'object') {
       if (frame.pendingKey === undefined) {
         throw new Error('Invalid JSON: value without key in object');
+      }
+      // Offload completed non-object lessonDataMapping entries (null / primitives)
+      if (frame.isLessonMapping && this.onLessonUnit) {
+        const unitKey = frame.pendingKey;
+        frame.pendingKey = undefined;
+        this.expectingValue = false;
+        this.expectingCommaOrEnd = true;
+        this.enqueueUnitWork(this.onLessonUnit(unitKey, value));
+        return;
       }
       frame.value[frame.pendingKey] = value;
       frame.pendingKey = undefined;
@@ -183,7 +218,10 @@ class StreamingJsonParser {
         if (ch === '}') {
           // empty object already handled when opened; closing with no more keys
           i += 1;
-          this.stack.pop();
+          const closed = this.stack.pop();
+          if (closed?.offloadUnitKey && this.onLessonUnit) {
+            this.enqueueUnitWork(this.onLessonUnit(closed.offloadUnitKey, closed.value));
+          }
           this.expectingKey = false;
           this.expectingCommaOrEnd = this.stack.length > 0 || this.root !== undefined;
           this.expectingValue = false;
@@ -213,7 +251,10 @@ class StreamingJsonParser {
             throw new Error('Invalid JSON: unexpected }');
           }
           i += 1;
-          this.stack.pop();
+          const closed = this.stack.pop();
+          if (closed?.offloadUnitKey && this.onLessonUnit) {
+            this.enqueueUnitWork(this.onLessonUnit(closed.offloadUnitKey, closed.value));
+          }
         } else {
           if (!this.stack.length || this.stack[this.stack.length - 1].type !== 'array') {
             throw new Error('Invalid JSON: unexpected ]');
@@ -249,9 +290,38 @@ class StreamingJsonParser {
       }
 
       if (ch === '{') {
+        const parentFrame = this.stack.length ? this.stack[this.stack.length - 1] : null;
+        // Offload each lessonDataMapping unit object — do not attach it to the root map
+        if (
+          parentFrame?.isLessonMapping
+          && parentFrame.pendingKey !== undefined
+          && this.onLessonUnit
+        ) {
+          const unitKey = parentFrame.pendingKey;
+          parentFrame.pendingKey = undefined;
+          const obj = {};
+          this.stack.push({
+            type: 'object',
+            value: obj,
+            pendingKey: undefined,
+            offloadUnitKey: unitKey,
+          });
+          this.expectingCommaOrEnd = false;
+          this.expectingKey = true;
+          this.expectingValue = false;
+          i += 1;
+          continue;
+        }
+
+        const parentKey = parentFrame?.type === 'object' ? parentFrame.pendingKey : undefined;
         const obj = {};
         this.pushValue(obj);
-        this.stack.push({ type: 'object', value: obj, pendingKey: undefined });
+        this.stack.push({
+          type: 'object',
+          value: obj,
+          pendingKey: undefined,
+          isLessonMapping: parentKey === 'lessonDataMapping',
+        });
         // pushValue set expectingCommaOrEnd; for empty object we need key or }
         this.expectingCommaOrEnd = false;
         this.expectingKey = true;
@@ -460,15 +530,16 @@ function isValueBoundary(ch) {
 /**
  * Stream-parse a Blob/File into a JS value without one giant string.
  * @param {Blob} file
+ * @param {{ onLessonUnit?: (key: string, value: any) => (void|Promise<void>) }} [options]
  * @returns {Promise<*>}
  */
-async function parseJsonFileStreaming(file) {
-  const parser = new StreamingJsonParser();
+async function parseJsonFileStreaming(file, options = {}) {
+  const parser = new StreamingJsonParser(options);
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let pending = '';
   let bytesSinceYield = 0;
 
-  const processBuffer = (isFinal) => {
+  const processBuffer = async (isFinal) => {
     let offset = 0;
     while (offset < pending.length) {
       const before = offset;
@@ -488,6 +559,7 @@ async function parseJsonFileStreaming(file) {
       parser.feed(pending, 0);
       pending = '';
     }
+    await parser.drainUnitWork();
     if (isFinal && !parser.done) {
       throw new Error('Invalid JSON: unexpected end of file');
     }
@@ -496,7 +568,7 @@ async function parseJsonFileStreaming(file) {
   for await (const value of iterateBlobChunks(file)) {
     bytesSinceYield += value.byteLength;
     pending += decoder.decode(value, { stream: true });
-    processBuffer(false);
+    await processBuffer(false);
 
     if (bytesSinceYield >= STREAM_READ_YIELD_BYTES) {
       bytesSinceYield = 0;
@@ -507,7 +579,7 @@ async function parseJsonFileStreaming(file) {
   }
 
   pending += decoder.decode();
-  processBuffer(true);
+  await processBuffer(true);
 
   if (parser.result === undefined) {
     throw new Error('Invalid JSON: empty document');
@@ -561,3 +633,133 @@ export async function parseExportMetadataFile(file, options = {}) {
 
   return data;
 }
+
+function buildUnitSortMeta(mappingKey, unitData, recordId) {
+  return {
+    recordId,
+    mappingKey,
+    sectionIndex: typeof unitData?.sectionIndex === 'number' ? unitData.sectionIndex : 0,
+    subsectionIndex: typeof unitData?.subsectionIndex === 'number' ? unitData.subsectionIndex : 0,
+    unitIndex: typeof unitData?.unitIndex === 'number' ? unitData.unitIndex : 0,
+    path: unitData?.path || '',
+    hasRubricData: Boolean(unitData?.rubricData),
+  };
+}
+
+function sortUnitMeta(a, b) {
+  if (a.sectionIndex !== b.sectionIndex) {
+    return a.sectionIndex - b.sectionIndex;
+  }
+  if (a.subsectionIndex !== b.subsectionIndex) {
+    return a.subsectionIndex - b.subsectionIndex;
+  }
+  if (a.unitIndex !== b.unitIndex) {
+    return a.unitIndex - b.unitIndex;
+  }
+  return String(a.path).localeCompare(String(b.path));
+}
+
+/**
+ * Ingest a large export metadata file unit-by-unit into IndexedDB.
+ * Root fields (courseId, courseLevel, …) stay in memory; each mapping unit is stored exactly once then dropped.
+ * @param {File|Blob} file
+ * @param {{ onProgress?: (done: number) => void }} [options]
+ */
+async function ingestLargeExportMetadataFile(file, options = {}) {
+  const storeId = await createMetadataImportStore({
+    fileName: file.name || 'metadata.json',
+    fileSize: file.size,
+  });
+  const unitMetaList = [];
+  let unitSeq = 0;
+
+  try {
+    const root = await parseJsonFileStreaming(file, {
+      onLessonUnit: async (mappingKey, unitData) => {
+        unitSeq += 1;
+        const recordId = `${storeId}::unit::${unitSeq}`;
+        // Exact unit object (rubricData + qaStates + indexes) via structured clone into IDB
+        await putImportUnit(storeId, recordId, unitData);
+        unitMetaList.push(buildUnitSortMeta(mappingKey, unitData, recordId));
+        if (typeof options.onProgress === 'function') {
+          options.onProgress(unitMetaList.length);
+        }
+      },
+    });
+
+    if (!root || typeof root !== 'object' || Array.isArray(root)) {
+      throw new Error('Metadata JSON must be an object');
+    }
+    if (!root.courseId) {
+      throw new Error('Missing courseId in metadata file');
+    }
+
+    // lessonDataMapping stays empty {} when units were offloaded — replace with marker handle
+    unitMetaList.sort(sortUnitMeta);
+
+    return {
+      [IMPORT_STORE_MARKER]: true,
+      mode: 'unit-store',
+      storeId,
+      courseId: root.courseId,
+      courseBlockId: root.courseBlockId,
+      courseDisplayName: root.courseDisplayName,
+      exportedAt: root.exportedAt,
+      exportedUnits: root.exportedUnits ?? unitMetaList.length,
+      courseLevel: root.courseLevel || {
+        dashboardText: root.courseDashboardText || '',
+        description: root.courseDescription || '',
+      },
+      // Lightweight index only — full unit payloads live in IndexedDB
+      unitRecords: unitMetaList,
+      // Keep empty mapping for any code that checks the key exists
+      lessonDataMapping: {},
+    };
+  } catch (error) {
+    await clearMetadataImportStore(storeId);
+    throw error;
+  }
+}
+
+/**
+ * Prepare export metadata for import without holding a 700MB object in React state.
+ * Small files → inline full object (same as before).
+ * Large files → unit-store handle (exact per-unit data in IndexedDB).
+ *
+ * @param {File|Blob} file
+ * @param {{ onProgress?: (done: number) => void, forceIncremental?: boolean }} [options]
+ * @returns {Promise<object>}
+ */
+export async function prepareExportMetadataForImport(file, options = {}) {
+  if (!file) {
+    throw new Error('No metadata file provided');
+  }
+
+  const useIncremental = options.forceIncremental
+    || file.size > INCREMENTAL_IMPORT_BYTES;
+
+  if (!useIncremental) {
+    try {
+      const data = await parseExportMetadataFile(file);
+      return {
+        mode: 'inline',
+        courseId: data.courseId,
+        data,
+      };
+    } catch (error) {
+      if (!isInvalidStringLengthError(error) && file.size <= INCREMENTAL_IMPORT_BYTES) {
+        throw error;
+      }
+      // Fall through to incremental ingest
+    }
+  }
+
+  const storeHandle = await ingestLargeExportMetadataFile(file, options);
+  return {
+    mode: 'unit-store',
+    courseId: storeHandle.courseId,
+    data: storeHandle,
+  };
+}
+
+export { IMPORT_STORE_MARKER, INCREMENTAL_IMPORT_BYTES };
