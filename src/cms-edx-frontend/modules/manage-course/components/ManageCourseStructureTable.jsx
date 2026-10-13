@@ -17,6 +17,7 @@ export default function ManageCourseStructureTable({
   onPreview,
   onTimer,
   onAttempts,
+  onStartingFileLoad,
   onSchedule,
   isLoading = false,
   loadingLabel = "Loading curriculum…",
@@ -52,6 +53,7 @@ export default function ManageCourseStructureTable({
               onPreview={onPreview}
               onTimer={onTimer}
               onAttempts={onAttempts}
+              onStartingFileLoad={onStartingFileLoad}
               onSchedule={onSchedule}
             />
           ))}
@@ -74,6 +76,7 @@ function ChapterBlock({
   onPreview,
   onTimer,
   onAttempts,
+  onStartingFileLoad,
   onSchedule,
 }) {
   const chapterId = String(chapter.id)
@@ -105,6 +108,7 @@ function ChapterBlock({
             onPreview={onPreview}
             onTimer={onTimer}
             onAttempts={onAttempts}
+            onStartingFileLoad={onStartingFileLoad}
             onSchedule={onSchedule}
           />
         ))}
@@ -122,6 +126,7 @@ function LessonBlock({
   onPreview,
   onTimer,
   onAttempts,
+  onStartingFileLoad,
   onSchedule,
 }) {
   const lessonOpen = expandedLessons[lesson.id]
@@ -151,6 +156,7 @@ function LessonBlock({
             onPreview={() => onPreview(lesson, vertical)}
             onTimer={() => onTimer(lesson, vertical)}
             onAttempts={() => onAttempts(lesson, vertical)}
+            onStartingFileLoad={() => onStartingFileLoad(lesson, vertical)}
             onSchedule={() => onSchedule(lesson, vertical)}
           />
         ))}

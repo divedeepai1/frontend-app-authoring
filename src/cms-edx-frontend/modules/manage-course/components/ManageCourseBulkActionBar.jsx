@@ -1,10 +1,11 @@
-import { Calendar, Clock, ListChecks, X } from "lucide-react"
+import { Calendar, Clock, FileInput, ListChecks, X } from "lucide-react"
 
 export default function ManageCourseBulkActionBar({
   selectedCount,
   onSchedule,
   onTimer,
   onAttempts,
+  onStartingFileLoad,
   onClear,
 }) {
   if (!selectedCount) return null
@@ -33,6 +34,14 @@ export default function ManageCourseBulkActionBar({
         <button type="button" className="tp-btn tp-btn-outline tp-curriculum-bulk-btn" onClick={onAttempts}>
           <ListChecks size={16} strokeWidth={2} aria-hidden />
           Setup attempts
+        </button>
+        <button
+          type="button"
+          className="tp-btn tp-btn-outline tp-curriculum-bulk-btn"
+          onClick={onStartingFileLoad}
+        >
+          <FileInput size={16} strokeWidth={2} aria-hidden />
+          Starting file load
         </button>
         <button type="button" className="tp-btn tp-btn-outline tp-curriculum-bulk-btn" onClick={onSchedule}>
           <Calendar size={16} strokeWidth={2} aria-hidden />

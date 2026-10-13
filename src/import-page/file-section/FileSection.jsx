@@ -14,6 +14,7 @@ import {
 import messages from './messages';
 import { handleProcessUpload } from '../data/thunks';
 import { updateExportedLessonMetadata } from '../data/slice';
+import { parseExportMetadataFile } from '../utils/parseExportMetadataFile';
 
 const FileSection = ({ intl, courseId }) => {
   const dispatch = useDispatch();
@@ -37,12 +38,8 @@ const FileSection = ({ intl, courseId }) => {
     }
 
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!data.courseId) {
-        throw new Error('Missing courseId in metadata file');
-      }
-
+      // Size-safe parse (fast path + streaming) — same metadata shape for integration/QA
+      const data = await parseExportMetadataFile(file);
       dispatch(updateExportedLessonMetadata(data));
 
       setMetadataFileName(file.name);

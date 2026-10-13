@@ -3,6 +3,7 @@ import { Layers, BookOpen, Settings } from "lucide-react";
 import { AddPartDialog } from "../components/add-part-dialog";
 import { EditPartDialog } from "../components/edit-part-dialog";
 import { DeleteConfirmationDialog } from "../components/delete-confirmation-dialog";
+import { SaveStateConfirmDialog } from "../components/save-state-confirm-dialog";
 import { HybridContentEditor } from "../components/hybrid-content-editor";
 import { base_url } from "../../../../compugrade-constants";
 import { useNavigate, useParams } from "react-router";
@@ -96,6 +97,9 @@ export default function LessonBuilder() {
   const [lessonStatesLoading, setLessonStatesLoading] = useState(false);
   const [lessonStateSaving, setLessonStateSaving] = useState(false);
   const [restoringStateId, setRestoringStateId] = useState(null);
+  const [saveStateConfirmOpen, setSaveStateConfirmOpen] = useState(false);
+  const [saveStateConfirmBusy, setSaveStateConfirmBusy] = useState(false);
+  const [pendingPersistAction, setPendingPersistAction] = useState(null);
   const pendingQaStatesRef = useRef(null);
 
   useEffect(() => {
@@ -1323,24 +1327,50 @@ export default function LessonBuilder() {
     setDraggedPartIndex(null);
   };
 
-  const handlePublishClick = async () => {
+  const openPersistConfirm = (action) => {
     const errors = validateLesson(lessonParts);
     if (errors.length > 0) {
       setValidationErrors(errors);
       setValidationOpen(true);
       return;
     }
-    await handleSubmit();
+    setPendingPersistAction(action);
+    setSaveStateConfirmOpen(true);
   };
 
-  const handleSaveDraftClick = async () => {
-    const errors = validateLesson(lessonParts);
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      setValidationOpen(true);
-      return;
+  const handlePublishClick = () => {
+    openPersistConfirm("publish");
+  };
+
+  const handleSaveDraftClick = () => {
+    openPersistConfirm("draft");
+  };
+
+  const handlePersistWithOptionalState = async (shouldSaveState) => {
+    if (saveStateConfirmBusy || !pendingPersistAction) return;
+    const action = pendingPersistAction;
+    setSaveStateConfirmBusy(true);
+    try {
+      if (shouldSaveState) {
+        // Notes are optional — call save-states with empty note, no note input UI.
+        // Skip list refresh to avoid extra work during save/publish.
+        const saved = await handleSaveLessonState("", { refreshList: false });
+        if (!saved) {
+          return;
+        }
+      }
+      setSaveStateConfirmOpen(false);
+      setPendingPersistAction(null);
+      if (action === "publish") {
+        await handleSubmit();
+        return;
+      }
+      if (action === "draft") {
+        await handleSubmitDraft();
+      }
+    } finally {
+      setSaveStateConfirmBusy(false);
     }
-    await handleSubmitDraft();
   };
 
   const openEditDialog = (part) => {
@@ -1965,8 +1995,9 @@ export default function LessonBuilder() {
     await fetchLessonStates();
   };
 
-  const handleSaveLessonState = async (note) => {
+  const handleSaveLessonState = async (note = "", options = {}) => {
     if (!blockId) return false;
+    const { refreshList = true } = options;
     const encodedBlockId = encodeURIComponent(blockId);
     setLessonStateSaving(true);
     try {
@@ -1996,7 +2027,10 @@ export default function LessonBuilder() {
         message: "Lesson state saved successfully.",
         variant: "success",
       });
-      await fetchLessonStates();
+      // Skip list refresh during save/publish flow — modal isn't open and it adds latency.
+      if (refreshList) {
+        await fetchLessonStates();
+      }
       return true;
     } catch (error) {
       addToast({
@@ -2410,6 +2444,21 @@ export default function LessonBuilder() {
           onOpenChange={setShowDeleteDialog}
           partTitle={deletingPart?.title || ""}
           onConfirm={() => deletingPart && handleDeletePart(deletingPart.id)}
+        />
+        <SaveStateConfirmDialog
+          open={saveStateConfirmOpen}
+          onOpenChange={(open) => {
+            if (!open && !saveStateConfirmBusy) {
+              setPendingPersistAction(null);
+              setSaveStateConfirmOpen(false);
+            }
+          }}
+          actionLabel={
+            pendingPersistAction === "publish" ? "publish" : "save draft"
+          }
+          busy={saveStateConfirmBusy}
+          onConfirmWithState={() => handlePersistWithOptionalState(true)}
+          onConfirmWithoutState={() => handlePersistWithOptionalState(false)}
         />
         <ValidationErrorsModal
           open={validationOpen}

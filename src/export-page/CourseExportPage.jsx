@@ -26,6 +26,7 @@ import ExportModalError from './export-modal-error/ExportModalError';
 import ExportFooter from './export-footer/ExportFooter';
 import ExportStepper from './export-stepper/ExportStepper';
 import { exportLessonDataMapping } from './utils/exportLessonData';
+import { downloadExportMetadataJson, valueToJsonBlob } from './utils/chunkedJsonBlob';
 import { getCourseOutlineIndex } from '../course-outline/data/api';
 
 
@@ -117,162 +118,24 @@ const CourseExportPage = ({ intl, courseId }) => {
                                   courseDisplayName,
                                 };
                                 setExportedMetadata(exportMeta);
-                                
-                                // CRITICAL: Download the JSON file - this MUST work regardless of sessionStorage
-                                // This works for infinite number of rubrics as long as browser memory allows
-                                const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
-                                
-                                // Initialize variables for error handling
-                                let jsonString = null;
-                                let fileSizeMB = 0;
-                                let blob = null;
-                                
+
+                                // Chunked Blob download — avoids one giant JSON.stringify
                                 try {
-                                  // Stringify with multiple fallback strategies for very large files
-                                  let stringifyAttempts = 0;
-                                  const maxStringifyAttempts = 3;
-                                  
-                                  while (stringifyAttempts < maxStringifyAttempts && !jsonString) {
-                                    try {
-                                      if (stringifyAttempts === 0) {
-                                        // First attempt: pretty print
-                                        jsonString = JSON.stringify(exportMeta, null, 2);
-                                      } else if (stringifyAttempts === 1) {
-                                        // Second attempt: compact (no pretty print)
-                                        jsonString = JSON.stringify(exportMeta);
-                                      } else {
-                                        // Third attempt: with replacer to handle circular refs
-                                        const seen = new WeakSet();
-                                        jsonString = JSON.stringify(exportMeta, (key, value) => {
-                                          if (typeof value === 'object' && value !== null) {
-                                            if (seen.has(value)) {
-                                              return '[Circular]';
-                                            }
-                                            seen.add(value);
-                                          }
-                                          return value;
-                                        });
-                                      }
-                                      break; // Success, exit loop
-                                    } catch (stringifyError) {
-                                      stringifyAttempts++;
-                                      if (stringifyAttempts >= maxStringifyAttempts) {
-                                        throw new Error(`Failed to stringify export data after ${maxStringifyAttempts} attempts. This may indicate the file is extremely large or contains circular references. Error: ${stringifyError.message}`);
-                                      }
-                                      console.warn(`Stringify attempt ${stringifyAttempts} failed, trying alternative method:`, stringifyError);
-                                    }
-                                  }
-                                  
-                                  if (!jsonString) {
-                                    throw new Error('Failed to stringify export data - all attempts failed');
-                                  }
-                                  
-                                  // Check file size and log
-                                  fileSizeMB = new Blob([jsonString]).size / (1024 * 1024);
-                                  console.log(`Export file size: ${fileSizeMB.toFixed(2)}MB`);
-                                  
-                                  if (fileSizeMB > 100) {
-                                    console.warn(`File size is very large: ${fileSizeMB.toFixed(2)}MB. Download may take longer.`);
-                                  }
-                                  
-                                  // Create blob with multiple fallback strategies
-                                  try {
-                                    // First attempt: standard blob creation
-                                    blob = new Blob([jsonString], { type: 'application/json' });
-                                  } catch (blobError) {
-                                    // Fallback: try with Uint8Array for very large files
-                                    try {
-                                      console.log('Standard blob creation failed, trying Uint8Array encoding...');
-                                      const encoder = new TextEncoder();
-                                      const data = encoder.encode(jsonString);
-                                      blob = new Blob([data], { type: 'application/json' });
-                                    } catch (uint8Error) {
-                                      // Last resort: try chunked approach for extremely large files
-                                      try {
-                                        console.log('Uint8Array encoding failed, trying chunked blob creation...');
-                                        const chunkSize = 1024 * 1024; // 1MB chunks
-                                        const chunks = [];
-                                        for (let i = 0; i < jsonString.length; i += chunkSize) {
-                                          chunks.push(jsonString.slice(i, i + chunkSize));
-                                        }
-                                        blob = new Blob(chunks, { type: 'application/json' });
-                                      } catch (chunkError) {
-                                        const sizeInfo = fileSizeMB > 0 ? `File size: ${fileSizeMB.toFixed(2)}MB. ` : '';
-                                        throw new Error(`Failed to create file blob after all attempts. ${sizeInfo}This may exceed browser memory limits. Error: ${chunkError.message}`);
-                                      }
-                                    }
-                                  }
-                                  
-                                  // Verify blob was created successfully
-                                  if (!blob || blob.size === 0) {
-                                    throw new Error('Failed to create file blob - blob is empty');
-                                  }
-                                  
-                                  // Download the file - this MUST succeed
-                                  await new Promise((resolve, reject) => {
-                                    try {
-                                      const url = window.URL.createObjectURL(blob);
-                                      const link = document.createElement('a');
-                                      link.href = url;
-                                      link.download = `course-export-metadata-${safeCourseId}.json`;
-                                      link.style.display = 'none';
-                                      
-                                      document.body.appendChild(link);
-                                      
-                                      // Multiple download trigger strategies
-                                      const triggerDownload = () => {
-                                        try {
-                                          link.click();
-                                        } catch (clickError) {
-                                          console.warn('Click error, trying alternative method:', clickError);
-                                          // Fallback: dispatch mouse event
-                                          const event = new MouseEvent('click', {
-                                            view: window,
-                                            bubbles: true,
-                                            cancelable: true,
-                                          });
-                                          link.dispatchEvent(event);
-                                        }
-                                      };
-                                      
-                                      // Try immediate click
-                                      triggerDownload();
-                                      
-                                      // Also try with delay as fallback
-                                      setTimeout(() => {
-                                        try {
-                                          // Clean up after giving browser time to start download
-                                          setTimeout(() => {
-                                            try {
-                                              document.body.removeChild(link);
-                                              window.URL.revokeObjectURL(url);
-                                            } catch (cleanupError) {
-                                              console.warn('Cleanup error (non-critical):', cleanupError);
-                                            }
-                                            resolve();
-                                          }, 500); // Longer delay for large files
-                                        } catch (error) {
-                                          // Still resolve - download may have started
-                                          resolve();
-                                        }
-                                      }, 200);
-                                    } catch (error) {
-                                      reject(error);
-                                    }
-                                  });
-                                  
-                                  console.log('JSON file download initiated successfully');
-                                  // Clear any previous download failure state on success
+                                  await downloadExportMetadataJson(exportMeta, courseId);
                                   setDownloadFailed(false);
                                   setDownloadBlob(null);
                                   setDownloadFileName(null);
                                 } catch (downloadError) {
-                                  // Auto-download failed - store blob for manual download
                                   console.error('Auto-download failed, storing blob for manual download:', downloadError);
-                                  setDownloadBlob(blob);
-                                  setDownloadFileName(`course-export-metadata-${safeCourseId}.json`);
-                                  setDownloadFailed(true);
-                                  // Don't throw - allow export to continue, user can download manually
+                                  try {
+                                    const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
+                                    const fallbackBlob = await valueToJsonBlob(exportMeta);
+                                    setDownloadBlob(fallbackBlob);
+                                    setDownloadFileName(`course-export-metadata-${safeCourseId}.json`);
+                                    setDownloadFailed(true);
+                                  } catch {
+                                    throw downloadError;
+                                  }
                                   console.warn('Automatic download failed, but export data is ready. Use the download button to download manually.');
                                 }
                               } else {

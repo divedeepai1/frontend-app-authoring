@@ -1,6 +1,10 @@
 import { base_url } from '../../compugrade-constants';
-import { exportQaStates, getAppNameFromSession } from '../../compugrade/utils/rubricQaTransfer';
+import {
+  exportQaStates,
+  getAppNameFromSession,
+} from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
+import { fetchCourseLevelTextsForExport } from '../../course-outline/utils/courseIntroApi';
 
 export async function exportLessonDataMapping(courseId, courseBlockId, options = {}) {
   try {
@@ -15,8 +19,8 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
 
     const lessonDataMapping = {};
     let processedUnits = 0;
-
-    const getAppName = () => getAppNameFromSession();
+    const fallbackAppName = options.appName || getAppNameFromSession();
+    const getAppName = (rubricAppName) => rubricAppName || fallbackAppName;
 
     // First, count total units for accurate progress tracking
     const countTotalUnits = (sections) => {
@@ -84,7 +88,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                         video_transcript: originalRubric.video_transcript || "",
                         skills: originalRubric.skills || [],
                         num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
-                        app_name: originalRubric.app_name || getAppName(),
+                        app_name: getAppName(originalRubric.app_name),
                         source_document: originalRubric.source_document || null,
                         answer_key: originalRubric.answer_key || null,
                         text_before_video: originalRubric.text_before_video || "",
@@ -95,6 +99,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                           id: lesson.id,
                           title: lesson.title,
                           weightage: lesson.weightage || 0,
+                          time_allowed: lesson.time_allowed || null,
                           video_timestamp: lesson.video_timestamp || null,
                           source_document: lesson.source_document || null,
                           answer_key: lesson.answer_key || null,
@@ -159,7 +164,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                 }
 
                 let qaStates = null;
-                const appName = rubricData?.app_name || getAppName();
+                const appName = getAppName(rubricData?.app_name);
                 qaStates = await exportQaStates(unit.id, appName);
 
                 const mappingKey = unit.displayName || `Unit at ${unitPathKey}`;
@@ -194,12 +199,22 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
 
     await collectUnits(course.childInfo.children || []);
 
+    // Course-level dashboard text + description (outline editors) — best-effort
+    let courseLevel = { dashboardText: '', description: '' };
+    try {
+      courseLevel = await fetchCourseLevelTextsForExport(courseId);
+    } catch (courseLevelError) {
+      // eslint-disable-next-line no-console
+      console.warn('Could not export course dashboard/description texts:', courseLevelError);
+    }
+
     const exportData = {
       courseId,
       courseBlockId,
       exportedAt: Date.now(),
       lessonDataMapping,
       exportedUnits: processedUnits,
+      courseLevel,
     };
 
     // Try to save to sessionStorage, but NEVER let it block the export

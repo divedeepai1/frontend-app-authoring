@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Bell, ChevronDown, LogOut, MessageSquare, Settings } from "lucide-react"
 import { useNavigate } from "react-router"
-import { appendNextToLogoutUrl, getLogoutNextDestination } from "./buildLogoutNextUrl"
 import { getEdxUserInitials, parseEdxUserInfoCookie } from "./parseEdxUserInfoCookie"
+import { performTeacherPortalLogout } from "../session/performTeacherPortalLogout"
 import SendFeedbackModal from "../modules/feedback/components/SendFeedbackModal"
 import DistrictSchoolHeaderMeta from "../modules/district-school/components/DistrictSchoolHeaderMeta"
 import { useUserProfile } from "../modules/user-profile/context/UserProfileContext"
@@ -45,11 +45,6 @@ export default function TeacherPortalHeader({ title, subtitle }) {
     [cookieUser, profile.firstName, profile.fullName, profile.username, displayEmail]
   )
 
-  const go = (href) => {
-    if (href) window.location.assign(href)
-    close()
-  }
-
   const goAccountSettings = () => {
     navigate("/account-settings")
     close()
@@ -61,11 +56,8 @@ export default function TeacherPortalHeader({ title, subtitle }) {
   }
 
   const goLogout = () => {
-    const base = urls.logout
-    if (!base) return
-    const nextDest = getLogoutNextDestination()
-    const href = nextDest ? appendNextToLogoutUrl(base, nextDest) : base
-    go(href)
+    close()
+    performTeacherPortalLogout()
   }
 
   return (
