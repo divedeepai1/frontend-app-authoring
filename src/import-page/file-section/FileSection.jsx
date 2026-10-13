@@ -14,7 +14,7 @@ import {
 import messages from './messages';
 import { handleProcessUpload } from '../data/thunks';
 import { updateExportedLessonMetadata } from '../data/slice';
-import { parseExportMetadataFile } from '../utils/parseExportMetadataFile';
+import { prepareExportMetadataForImport } from '../utils/parseExportMetadataFile';
 
 const FileSection = ({ intl, courseId }) => {
   const dispatch = useDispatch();
@@ -25,6 +25,7 @@ const FileSection = ({ intl, courseId }) => {
   const isShowedDropzone = !importTriggered || currentStage === IMPORT_STAGES.SUCCESS || hasError;
   const [metadataFileName, setMetadataFileName] = useState(null);
   const [metadataMessage, setMetadataMessage] = useState(null);
+  const [isPreparingMetadata, setIsPreparingMetadata] = useState(false);
 
   const handleMetadataUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -37,22 +38,39 @@ const FileSection = ({ intl, courseId }) => {
       return;
     }
 
+    setIsPreparingMetadata(true);
+    setMetadataMessage({
+      type: 'info',
+      text: file.size > 24 * 1024 * 1024
+        ? 'Preparing large metadata file (memory-safe)…'
+        : 'Reading metadata file…',
+    });
+
     try {
-      // Size-safe parse (fast path + streaming) — same metadata shape for integration/QA
-      const data = await parseExportMetadataFile(file);
-      dispatch(updateExportedLessonMetadata(data));
+      // Small files: full object in memory. Large files: unit-by-unit IndexedDB (exact data).
+      const prepared = await prepareExportMetadataForImport(file, {
+        onProgress: (done) => {
+          setMetadataMessage({
+            type: 'info',
+            text: `Preparing large metadata… ${done} unit(s) indexed`,
+          });
+        },
+      });
+      dispatch(updateExportedLessonMetadata(prepared));
 
       setMetadataFileName(file.name);
       setMetadataMessage({
         type: 'success',
-        text: intl.formatMessage(messages.metadataLoaded, { courseId: data.courseId }),
+        text: intl.formatMessage(messages.metadataLoaded, { courseId: prepared.courseId }),
       });
     } catch (error) {
+      dispatch(updateExportedLessonMetadata(null));
       setMetadataMessage({
         type: 'error',
         text: intl.formatMessage(messages.metadataInvalidContent),
       });
     } finally {
+      setIsPreparingMetadata(false);
       // Reset input so the same file can be re-selected if needed
       event.target.value = '';
     }
@@ -79,6 +97,7 @@ const FileSection = ({ intl, courseId }) => {
             accept=".json,application/json"
             className="form-control"
             onChange={handleMetadataUpload}
+            disabled={isPreparingMetadata}
           />
           {metadataFileName && (
             <p className="small text-muted mt-2">
@@ -86,12 +105,20 @@ const FileSection = ({ intl, courseId }) => {
             </p>
           )}
           {metadataMessage && (
-            <p className={`small mt-2 ${metadataMessage.type === 'error' ? 'text-danger' : 'text-success'}`}>
+            <p
+              className={`small mt-2 ${
+                metadataMessage.type === 'error'
+                  ? 'text-danger'
+                  : metadataMessage.type === 'info'
+                    ? 'text-muted'
+                    : 'text-success'
+              }`}
+            >
               {metadataMessage.text}
             </p>
           )}
         </div>
-        {isShowedDropzone && metadataMessage?.type === 'success' && (
+        {isShowedDropzone && metadataMessage?.type === 'success' && !isPreparingMetadata && (
           <Dropzone
             onProcessUpload={
               ({ fileData, requestConfig, handleError }) => dispatch(handleProcessUpload(
