@@ -2,7 +2,6 @@ import { base_url } from '../../compugrade-constants';
 import {
   exportQaStates,
   getAppNameFromSession,
-  resolveAppName,
 } from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
 import { fetchCourseLevelTextsForExport } from '../../course-outline/utils/courseIntroApi';
@@ -21,7 +20,7 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
     const lessonDataMapping = {};
     let processedUnits = 0;
     const fallbackAppName = options.appName || getAppNameFromSession();
-    const getAppName = (rubricAppName) => resolveAppName(rubricAppName, fallbackAppName);
+    const getAppName = (rubricAppName) => rubricAppName || fallbackAppName;
 
     // First, count total units for accurate progress tracking
     const countTotalUnits = (sections) => {
