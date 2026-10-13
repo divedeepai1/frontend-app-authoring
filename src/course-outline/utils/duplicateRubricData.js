@@ -62,6 +62,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
       lessons: (originalRubric.lessons || []).map((lesson) => ({
         id: lesson.id,
         title: lesson.title,
+        time_allowed: lesson.time_allowed || null,
         weightage: lesson.weightage || 0,
         source_document: lesson.source_document || null,
         video_timestamp: lesson.video_timestamp || null,
