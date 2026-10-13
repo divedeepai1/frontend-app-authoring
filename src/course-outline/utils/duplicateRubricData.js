@@ -63,6 +63,7 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
         id: lesson.id,
         title: lesson.title,
         weightage: lesson.weightage || 0,
+        time_allowed: lesson.time_allowed || null,
         source_document: lesson.source_document || null,
         video_timestamp: lesson.video_timestamp || null,
         answer_key: lesson.answer_key || null,
