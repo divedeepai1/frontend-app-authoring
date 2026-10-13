@@ -5,6 +5,7 @@ import {
   resolveAppName,
 } from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
+import { fetchCourseLevelTextsForExport } from '../../course-outline/utils/courseIntroApi';
 
 export async function exportLessonDataMapping(courseId, courseBlockId, options = {}) {
   try {
@@ -198,12 +199,22 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
 
     await collectUnits(course.childInfo.children || []);
 
+    // Course-level dashboard text + description (outline editors) — best-effort
+    let courseLevel = { dashboardText: '', description: '' };
+    try {
+      courseLevel = await fetchCourseLevelTextsForExport(courseId);
+    } catch (courseLevelError) {
+      // eslint-disable-next-line no-console
+      console.warn('Could not export course dashboard/description texts:', courseLevelError);
+    }
+
     const exportData = {
       courseId,
       courseBlockId,
       exportedAt: Date.now(),
       lessonDataMapping,
       exportedUnits: processedUnits,
+      courseLevel,
     };
 
     // Try to save to sessionStorage, but NEVER let it block the export

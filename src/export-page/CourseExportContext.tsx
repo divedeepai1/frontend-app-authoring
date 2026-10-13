@@ -21,6 +21,7 @@ import { useExportStatus, useInvalidateExportStatus, useStartCourseExporting } f
 import { EXPORT_STAGES, LAST_EXPORT_COOKIE_NAME } from './data/constants';
 import messages from './messages';
 import { setExportCookie } from './utils';
+import { downloadExportMetadataJson, valueToJsonBlob } from './utils/chunkedJsonBlob';
 import { exportLessonDataMapping } from './utils/exportLessonData';
 import { getCourseOutlineIndex } from '../course-outline/data/api';
 
@@ -52,80 +53,6 @@ const CourseExportContext = createContext<CourseExportContextData | undefined>(u
 type CourseExportProviderProps = {
   children?: React.ReactNode;
 };
-
-async function downloadExportJson(exportMeta: object, courseId: string) {
-  const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
-  const fileName = `course-export-metadata-${safeCourseId}.json`;
-
-  let jsonString: string | null = null;
-  let stringifyAttempts = 0;
-  const maxStringifyAttempts = 3;
-
-  while (stringifyAttempts < maxStringifyAttempts && !jsonString) {
-    try {
-      if (stringifyAttempts === 0) {
-        jsonString = JSON.stringify(exportMeta, null, 2);
-      } else if (stringifyAttempts === 1) {
-        jsonString = JSON.stringify(exportMeta);
-      } else {
-        const seen = new WeakSet();
-        jsonString = JSON.stringify(exportMeta, (_key, value) => {
-          if (typeof value === 'object' && value !== null) {
-            if (seen.has(value)) {
-              return '[Circular]';
-            }
-            seen.add(value);
-          }
-          return value;
-        });
-      }
-      break;
-    } catch (stringifyError) {
-      stringifyAttempts += 1;
-      if (stringifyAttempts >= maxStringifyAttempts) {
-        throw new Error(
-          `Failed to stringify export data after ${maxStringifyAttempts} attempts: ${
-            (stringifyError as Error).message
-          }`,
-        );
-      }
-    }
-  }
-
-  if (!jsonString) {
-    throw new Error('Failed to stringify export data');
-  }
-
-  let blob: Blob;
-  try {
-    blob = new Blob([jsonString], { type: 'application/json' });
-  } catch {
-    const encoder = new TextEncoder();
-    blob = new Blob([encoder.encode(jsonString)], { type: 'application/json' });
-  }
-
-  if (!blob || blob.size === 0) {
-    throw new Error('Failed to create export JSON blob');
-  }
-
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  setTimeout(() => {
-    try {
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch {
-      // non-critical cleanup
-    }
-  }, 500);
-
-  return { blob, fileName };
-}
 
 export const CourseExportProvider = ({ children }: CourseExportProviderProps) => {
   const intl = useIntl();
@@ -274,22 +201,21 @@ export const CourseExportProvider = ({ children }: CourseExportProviderProps) =>
       };
 
       try {
-        await downloadExportJson(exportMeta, courseId);
+        await downloadExportMetadataJson(exportMeta, courseId);
         setDownloadFailed(false);
         setDownloadBlob(null);
         setDownloadFileName(null);
       } catch (downloadError) {
-        // Keep blob for manual retry; still continue to Studio export after alert
+        // Keep chunked blob for manual retry; still continue to Studio export after alert
         // eslint-disable-next-line no-console
         console.error('Auto-download failed, storing blob for manual download:', downloadError);
         try {
           const safeCourseId = courseId.replace(/[^a-zA-Z0-9-_]/g, '_');
-          const fallbackBlob = new Blob(
-            [JSON.stringify(exportMeta)],
-            { type: 'application/json' },
-          );
+          const fileName = `course-export-metadata-${safeCourseId}.json`;
+          // Same chunked serializer — never JSON.stringify the whole payload
+          const fallbackBlob = await valueToJsonBlob(exportMeta);
           setDownloadBlob(fallbackBlob);
-          setDownloadFileName(`course-export-metadata-${safeCourseId}.json`);
+          setDownloadFileName(fileName);
           setDownloadFailed(true);
         } catch {
           throw downloadError;

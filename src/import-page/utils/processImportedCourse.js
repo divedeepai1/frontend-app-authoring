@@ -1,6 +1,7 @@
 import { base_url } from '../../compugrade-constants';
 import { ensureInstructionItemNums, importQaStates } from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
+import { restoreCourseLevelTextsFromExport } from '../../course-outline/utils/courseIntroApi';
 // import { duplicateRubricData } from '../../course-outline/utils/duplicateRubricData';
 
 /**
@@ -47,6 +48,15 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
 
     const exportedLessonData = exportedLessonMetadata;
     const processed = { sections: 0, subsections: 0, units: 0 };
+
+    // Restore course dashboard text + description onto the target course (same save APIs as outline)
+    try {
+      await restoreCourseLevelTextsFromExport(actualCourseId, exportedLessonData);
+    } catch (courseLevelError) {
+      // eslint-disable-next-line no-console
+      console.warn('Could not restore course dashboard/description texts:', courseLevelError);
+    }
+
     const normalizeName = (name) => (name || '').trim().toLowerCase();
 
     const exportedUnitQueue = [];

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getConfig } from '@edx/frontend-platform';
-import { fetchCsrfToken } from '@src/cms-csrftoken';
+import {
+  fetchCourseDashboardText,
+  fetchCourseDescription,
+  saveCourseDashboardText,
+  saveCourseDescription,
+} from '../utils/courseIntroApi';
 
 /**
  * Shared Compugrade course description / dashboard text fetch+save (cms Studio myplugin APIs).
@@ -14,75 +18,35 @@ export const useCourseIntroEditors = (courseId?: string) => {
   const [isSavingCourseDescription, setIsSavingCourseDescription] = useState(false);
 
   useEffect(() => {
-    const fetchCourseDashboardText = async () => {
+    const fetchCourseDashboard = async () => {
       if (!courseId) {
         return;
       }
       try {
-        const token = await fetchCsrfToken();
-        const response = await fetch(
-          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/intro-text/`,
-          {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': token,
-            },
-          },
-        );
-        if (!response.ok) {
-          return;
-        }
-        const data = await response.json();
-        setCourseDashboardText(
-          data?.course_intro_text
-          || data?.intro_text
-          || data?.courseIntroText
-          || '',
-        );
+        const text = await fetchCourseDashboardText(courseId);
+        setCourseDashboardText(text);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error fetching course dashboard text:', error);
       }
     };
-    fetchCourseDashboardText();
+    fetchCourseDashboard();
   }, [courseId]);
 
   useEffect(() => {
-    const fetchCourseDescription = async () => {
+    const fetchDescription = async () => {
       if (!courseId) {
         return;
       }
       try {
-        const token = await fetchCsrfToken();
-        const response = await fetch(
-          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/description/`,
-          {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': token,
-            },
-          },
-        );
-        if (!response.ok) {
-          return;
-        }
-        const data = await response.json();
-        setCourseDescriptionText(
-          data?.description
-          || data?.course_description
-          || data?.courseDescription
-          || '',
-        );
+        const text = await fetchCourseDescription(courseId);
+        setCourseDescriptionText(text);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error fetching course description:', error);
       }
     };
-    fetchCourseDescription();
+    fetchDescription();
   }, [courseId]);
 
   const handleCourseDashboardSave = useCallback(async (content: string) => {
@@ -91,20 +55,8 @@ export const useCourseIntroEditors = (courseId?: string) => {
     }
     setIsSavingCourseDashboard(true);
     try {
-      const token = await fetchCsrfToken();
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/update-intro-text/`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': token,
-          },
-          body: JSON.stringify({ course_intro_text: content }),
-        },
-      );
-      if (!response.ok) {
+      const ok = await saveCourseDashboardText(courseId, content);
+      if (!ok) {
         return;
       }
       setCourseDashboardText(content);
@@ -123,20 +75,8 @@ export const useCourseIntroEditors = (courseId?: string) => {
     }
     setIsSavingCourseDescription(true);
     try {
-      const token = await fetchCsrfToken();
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/update-description/`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': token,
-          },
-          body: JSON.stringify({ course_description: content }),
-        },
-      );
-      if (!response.ok) {
+      const ok = await saveCourseDescription(courseId, content);
+      if (!ok) {
         return;
       }
       setCourseDescriptionText(content);

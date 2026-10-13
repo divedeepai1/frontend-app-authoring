@@ -3,6 +3,7 @@ import { useIntl } from '@edx/frontend-platform/i18n';
 import { Card, Dropzone } from '@openedx/paragon';
 
 import { IMPORT_STAGES } from '../data/constants';
+import { parseExportMetadataFile } from '../utils/parseExportMetadataFile';
 import messages from './messages';
 import { useCourseImportContext } from '../CourseImportContext';
 
@@ -32,11 +33,8 @@ const FileSection = () => {
       return;
     }
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!data.courseId) {
-        throw new Error('Missing courseId in metadata file');
-      }
+      // Size-safe parse (fast path + streaming) — same metadata shape for integration/QA
+      const data = await parseExportMetadataFile(file);
       setExportedLessonMetadata(data);
       setMetadataFileName(file.name);
       setMetadataMessage({
