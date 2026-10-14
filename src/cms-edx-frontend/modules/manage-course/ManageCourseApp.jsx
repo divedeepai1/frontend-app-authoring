@@ -4,6 +4,7 @@ import CourseResourcesDialog from "../../components/courses/CourseResourcesDialo
 import LessonScheduleModal from "../../components/courses/LessonScheduleModal"
 import LessonTimerModal from "../../components/courses/LessonTimerModal"
 import LessonAttemptsModal from "../../components/courses/LessonAttemptsModal"
+import LessonAutomaticStartingFileLoadModal from "../../components/courses/LessonAutomaticStartingFileLoadModal"
 import LessonPreviewModal from "../../components/courses/LessonPreviewModal"
 import ManageCourseBulkActionBar from "./components/ManageCourseBulkActionBar"
 import ManageCourseFilters from "./components/ManageCourseFilters"
@@ -56,6 +57,7 @@ export default function ManageCourseApp() {
           onSchedule={c.openBulkSchedule}
           onTimer={c.openBulkTimer}
           onAttempts={c.openBulkAttempts}
+          onStartingFileLoad={c.openBulkStartingFileLoad}
           onClear={c.selection.clearSelection}
         />
 
@@ -73,6 +75,7 @@ export default function ManageCourseApp() {
           onPreview={c.openPreview}
           onTimer={c.openTimer}
           onAttempts={c.openAttempts}
+          onStartingFileLoad={c.openStartingFileLoad}
           onSchedule={c.openSchedule}
         />
       </div>
@@ -107,6 +110,14 @@ export default function ManageCourseApp() {
         title={c.modalTitle(c.attemptContext)}
         students={c.classStudents}
         rubricIds={c.attemptContext?.rubricIds}
+      />
+
+      <LessonAutomaticStartingFileLoadModal
+        isOpen={!!c.startingFileLoadContext}
+        onClose={() => c.setStartingFileLoadContext(null)}
+        title={c.modalTitle(c.startingFileLoadContext)}
+        students={c.classStudents}
+        rubricIds={c.startingFileLoadContext?.rubricIds}
       />
 
       <LessonPreviewModal

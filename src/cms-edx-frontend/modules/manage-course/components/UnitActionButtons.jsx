@@ -1,6 +1,12 @@
-import { Calendar, Clock, Eye, ListChecks } from "lucide-react"
+import { Calendar, Clock, Eye, FileInput, ListChecks } from "lucide-react"
 
-export default function UnitActionButtons({ onPreview, onTimer, onAttempts, onSchedule }) {
+export default function UnitActionButtons({
+  onPreview,
+  onTimer,
+  onAttempts,
+  onStartingFileLoad,
+  onSchedule,
+}) {
   return (
     <div className="tp-curriculum-unit-actions">
       <button
@@ -29,6 +35,15 @@ export default function UnitActionButtons({ onPreview, onTimer, onAttempts, onSc
         onClick={onAttempts}
       >
         <ListChecks size={16} strokeWidth={2} />
+      </button>
+      <button
+        type="button"
+        className="tp-curriculum-unit-action tp-curriculum-unit-action--asfl"
+        title="Automatic starting file load"
+        aria-label="Automatic starting file load"
+        onClick={onStartingFileLoad}
+      >
+        <FileInput size={16} strokeWidth={2} />
       </button>
       <button
         type="button"
