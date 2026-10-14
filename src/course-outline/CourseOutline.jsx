@@ -65,6 +65,12 @@ import { ChevronsLeftRightEllipsis } from 'lucide-react';
 import TableView from './TableView';
 import { fetchCsrfToken } from "../cms-csrftoken";
 import { getConfig } from "@edx/frontend-platform";
+import {
+  fetchCourseDashboardText,
+  fetchCourseDescription,
+  saveCourseDashboardText,
+  saveCourseDescription,
+} from './utils/courseIntroApi';
 import RichTextEditorModal from '../compugrade/pages/MultiPartLessonBuilder/components/RichTextEditorModal';
 
 
@@ -202,67 +208,21 @@ const CourseOutline = ({ courseId }) => {
   }, [location, courseId, courseName, fetchRubricSkills]);
 
   useEffect(() => {
-    const fetchCourseDashboardText = async () => {
+    const loadCourseDashboardText = async () => {
       if (!courseId) return;
-      try {
-        const token = await fetchCsrfToken();
-        const response = await fetch(
-          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/intro-text/`,
-          {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': token,
-            },
-          },
-        );
-
-        if (!response.ok) return;
-        const data = await response.json();
-        setCourseDashboardText(
-          data?.course_intro_text
-          || data?.intro_text
-          || data?.courseIntroText
-          || '',
-        );
-      } catch (error) {
-        // Silently handle error
-      }
+      const text = await fetchCourseDashboardText(courseId);
+      setCourseDashboardText(text);
     };
-    fetchCourseDashboardText();
+    loadCourseDashboardText();
   }, [courseId]);
 
   useEffect(() => {
-    const fetchCourseDescription = async () => {
+    const loadCourseDescription = async () => {
       if (!courseId) return;
-      try {
-        const token = await fetchCsrfToken();
-        const response = await fetch(
-          `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/description/`,
-          {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': token,
-            },
-          },
-        );
-
-        if (!response.ok) return;
-        const data = await response.json();
-        setCourseDescriptionText(
-          data?.description
-          || data?.course_description
-          || data?.courseDescription
-          || '',
-        );
-      } catch (error) {
-      }
+      const text = await fetchCourseDescription(courseId);
+      setCourseDescriptionText(text);
     };
-
-    fetchCourseDescription();
+    loadCourseDescription();
   }, [courseId]);
 
   const [sections, setSections] = useState(sectionsList);
@@ -717,25 +677,10 @@ const CourseOutline = ({ courseId }) => {
     if (!courseId) return;
     setIsSavingCourseDashboard(true);
     try {
-      const token = await fetchCsrfToken();
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/update-intro-text/`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': token,
-          },
-          body: JSON.stringify({ course_intro_text: content }),
-        },
-      );
-
-      if (!response.ok) return;
+      const ok = await saveCourseDashboardText(courseId, content);
+      if (!ok) return;
       setCourseDashboardText(content);
       setIsCourseDashboardModalOpen(false);
-    } catch (error) {
-      // Silently handle error
     } finally {
       setIsSavingCourseDashboard(false);
     }
@@ -745,24 +690,10 @@ const CourseOutline = ({ courseId }) => {
     if (!courseId) return;
     setIsSavingCourseDescription(true);
     try {
-      const token = await fetchCsrfToken();
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/courses/${encodeURIComponent(courseId)}/update-description/`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': token,
-          },
-          body: JSON.stringify({ course_description: content }),
-        },
-      );
-
-      if (!response.ok) return;
+      const ok = await saveCourseDescription(courseId, content);
+      if (!ok) return;
       setCourseDescriptionText(content);
       setIsCourseDescriptionModalOpen(false);
-    } catch (error) {
     } finally {
       setIsSavingCourseDescription(false);
     }

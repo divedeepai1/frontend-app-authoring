@@ -58,6 +58,7 @@ export function useManageCourse() {
   const [scheduleContext, setScheduleContext] = useState(null)
   const [timerContext, setTimerContext] = useState(null)
   const [attemptContext, setAttemptContext] = useState(null)
+  const [startingFileLoadContext, setStartingFileLoadContext] = useState(null)
   const [previewContext, setPreviewContext] = useState(null)
   const [loadingCurriculum, setLoadingCurriculum] = useState(false)
 
@@ -205,6 +206,14 @@ export function useManageCourse() {
     [buildModalContext]
   )
 
+  const openStartingFileLoad = useCallback(
+    (lesson, vertical) => {
+      if (!lesson || !vertical?.id) return
+      setStartingFileLoadContext(buildModalContext(lesson, vertical, [String(vertical.id)]))
+    },
+    [buildModalContext]
+  )
+
   const openBulkSchedule = useCallback(() => {
     const rubricIds = selection.selectedRubricIds
     if (!rubricIds.length) return
@@ -229,6 +238,16 @@ export function useManageCourse() {
     const rubricIds = selection.selectedRubricIds
     if (!rubricIds.length) return
     setAttemptContext({
+      rubricIds,
+      isBulk: true,
+      lessonCount: rubricIds.length,
+    })
+  }, [selection.selectedRubricIds])
+
+  const openBulkStartingFileLoad = useCallback(() => {
+    const rubricIds = selection.selectedRubricIds
+    if (!rubricIds.length) return
+    setStartingFileLoadContext({
       rubricIds,
       isBulk: true,
       lessonCount: rubricIds.length,
@@ -272,10 +291,12 @@ export function useManageCourse() {
     scheduleContext,
     timerContext,
     attemptContext,
+    startingFileLoadContext,
     previewContext,
     setScheduleContext,
     setTimerContext,
     setAttemptContext,
+    setStartingFileLoadContext,
     setPreviewContext,
     toggleChapter,
     toggleLessonUiExpanded,
@@ -283,9 +304,11 @@ export function useManageCourse() {
     openSchedule,
     openTimer,
     openAttempts,
+    openStartingFileLoad,
     openBulkSchedule,
     openBulkTimer,
     openBulkAttempts,
+    openBulkStartingFileLoad,
     openPreview,
     modalTitle,
     loadingCurriculum,
