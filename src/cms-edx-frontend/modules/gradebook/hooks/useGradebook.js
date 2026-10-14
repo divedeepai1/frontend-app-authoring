@@ -22,6 +22,8 @@ export function useGradebook() {
   const lastGradebookRequestKeyRef = useRef("")
   const gradebookAbortRef = useRef(null)
   const latestGradebookRequestIdRef = useRef(0)
+  const silentGradebookRequestIdRef = useRef(0)
+  const selectionRef = useRef({ classId: "", courseId: "" })
 
   const studentIds = useMemo(() => classStudents.map((student) => student.id), [classStudents])
 
@@ -45,13 +47,20 @@ export function useGradebook() {
     return selectedCourseItem?.display_name || "selected course"
   }, [courses, selectedCourse])
 
+  useEffect(() => {
+    selectionRef.current = { classId: selectedClassId, courseId: selectedCourse }
+  }, [selectedClassId, selectedCourse])
+
   const loadGradebook = useCallback(
-    async (classId, courseId, studentsArg, lessonsArg, force = false) => {
+    async (classId, courseId, studentsArg, lessonsArg, force = false, options = {}) => {
+      const { silent = false } = options
       const safeStudents = Array.isArray(studentsArg) ? studentsArg : []
       const safeRubrics = Array.isArray(lessonsArg) ? lessonsArg : []
       if (!courseId || !classId || !safeStudents.length || !safeRubrics.length) {
-        setGradebookRows({})
-        setEditedLessonIds(new Set())
+        if (!silent) {
+          setGradebookRows({})
+          setEditedLessonIds(new Set())
+        }
         return
       }
       const requestKey = [
@@ -60,22 +69,29 @@ export function useGradebook() {
         safeStudents.map((student) => String(student.id)).join(","),
         safeRubrics.map((lesson) => String(lesson.id)).join(","),
       ].join("|")
-      if (!force && lastGradebookRequestKeyRef.current === requestKey) {
+      if (!force && !silent && lastGradebookRequestKeyRef.current === requestKey) {
         return
       }
-      lastGradebookRequestKeyRef.current = requestKey
-
-      if (gradebookAbortRef.current) {
-        gradebookAbortRef.current.abort()
+      if (!silent) {
+        lastGradebookRequestKeyRef.current = requestKey
       }
-      const controller = new AbortController()
-      gradebookAbortRef.current = controller
-      const requestId = latestGradebookRequestIdRef.current + 1
-      latestGradebookRequestIdRef.current = requestId
 
-      setLoading(true)
-      setError("")
-      setSuccess("")
+      const controller = new AbortController()
+      let requestId
+      if (silent) {
+        requestId = silentGradebookRequestIdRef.current + 1
+        silentGradebookRequestIdRef.current = requestId
+      } else {
+        if (gradebookAbortRef.current) {
+          gradebookAbortRef.current.abort()
+        }
+        gradebookAbortRef.current = controller
+        requestId = latestGradebookRequestIdRef.current + 1
+        latestGradebookRequestIdRef.current = requestId
+        setLoading(true)
+        setError("")
+        setSuccess("")
+      }
       try {
         const data = await gradebookApi.postViewGradebook({
           courseId,
@@ -83,27 +99,72 @@ export function useGradebook() {
           rubrics: safeRubrics,
           signal: controller.signal,
         })
-        if (requestId !== latestGradebookRequestIdRef.current) {
+        const isStale = silent
+          ? requestId !== silentGradebookRequestIdRef.current
+          : requestId !== latestGradebookRequestIdRef.current
+        if (isStale) {
+          return
+        }
+        if (
+          silent &&
+          (String(classId) !== String(selectionRef.current.classId) ||
+            String(courseId) !== String(selectionRef.current.courseId))
+        ) {
           return
         }
         const normalized = gradebookApi.normalizeGradebookResponse(data, safeStudents, safeRubrics)
-        setCourseRubrics(normalized.lessons.length ? normalized.lessons : safeRubrics)
-        setClassStudents(normalized.students.length ? normalized.students : safeStudents)
+        if (!silent) {
+          setCourseRubrics(normalized.lessons.length ? normalized.lessons : safeRubrics)
+          setClassStudents(normalized.students.length ? normalized.students : safeStudents)
+        }
         setGradebookRows(normalized.gradesByStudent)
         setEditedLessonIds(normalized.editedLessonIds)
       } catch (e) {
         if (e?.name === "AbortError") {
           return
         }
-        setError("Unable to load gradebook right now.")
+        if (!silent) {
+          setError("Unable to load gradebook right now.")
+        }
       } finally {
-        if (requestId === latestGradebookRequestIdRef.current) {
+        if (!silent && requestId === latestGradebookRequestIdRef.current) {
           setLoading(false)
         }
       }
     },
     []
   )
+
+  const applyLocalGradeOverride = useCallback(({ userId, rubricId, overrideScore }) => {
+    const studentKey = String(userId)
+    const lessonKey = String(rubricId)
+    setGradebookRows((prev) => {
+      const previousRow = prev[studentKey] || {}
+      const previousCell =
+        previousRow[lessonKey] && typeof previousRow[lessonKey] === "object"
+          ? previousRow[lessonKey]
+          : {}
+      return {
+        ...prev,
+        [studentKey]: {
+          ...previousRow,
+          [lessonKey]: {
+            ...previousCell,
+            score: overrideScore,
+          },
+        },
+      }
+    })
+    setEditedLessonIds((prev) => {
+      const next = new Set(prev)
+      if (overrideScore === null || overrideScore === undefined) {
+        // Reset may clear the edited flag once the quiet refresh returns.
+        return next
+      }
+      next.add(lessonKey)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     gradebookApi
@@ -218,7 +279,12 @@ export function useGradebook() {
       setOverrideContext(null)
       setSuccess("Grade updated successfully.")
       tpToast.success("Grade updated successfully")
-      await loadGradebook(selectedClassId, selectedCourse, classStudents, courseRubrics, true)
+      // Update only the edited cell immediately so the table stays mounted and scroll position is kept.
+      applyLocalGradeOverride({ userId, rubricId, overrideScore })
+      // Quietly refresh scores (overall grade, reset values) without a full loading reload.
+      void loadGradebook(selectedClassId, selectedCourse, classStudents, courseRubrics, true, {
+        silent: true,
+      })
     } catch {
       const msg = "Unable to update grade right now."
       setError(msg)

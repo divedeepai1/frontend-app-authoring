@@ -1,6 +1,14 @@
 import { base_url } from '../../compugrade-constants';
 import { ensureInstructionItemNums, importQaStates } from '../../compugrade/utils/rubricQaTransfer';
 import { getCourseItem } from '../../course-outline/data/api';
+import { restoreCourseLevelTextsFromExport } from '../../course-outline/utils/courseIntroApi';
+import { valueToJsonBlob } from '../../export-page/utils/chunkedJsonBlob';
+import {
+  IMPORT_STORE_MARKER,
+  clearMetadataImportStore,
+  deleteImportUnit,
+  getImportUnit,
+} from './exportMetadataUnitStore';
 // import { duplicateRubricData } from '../../course-outline/utils/duplicateRubricData';
 
 /**
@@ -45,12 +53,38 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
       throw new Error('Invalid course structure');
     }
 
-    const exportedLessonData = exportedLessonMetadata;
+    // Support both inline full metadata and memory-safe unit-store handles from prepareExportMetadataForImport
+    const exportedLessonData = (
+      exportedLessonMetadata?.mode === 'inline'
+      || exportedLessonMetadata?.mode === 'unit-store'
+    )
+      ? exportedLessonMetadata.data
+      : exportedLessonMetadata;
+    const isUnitStore = Boolean(
+      exportedLessonData
+      && exportedLessonData[IMPORT_STORE_MARKER]
+      && exportedLessonData.storeId
+      && Array.isArray(exportedLessonData.unitRecords),
+    );
     const processed = { sections: 0, subsections: 0, units: 0 };
+
+    // Restore course dashboard text + description onto the target course (same save APIs as outline)
+    try {
+      await restoreCourseLevelTextsFromExport(actualCourseId, exportedLessonData);
+    } catch (courseLevelError) {
+      // eslint-disable-next-line no-console
+      console.warn('Could not restore course dashboard/description texts:', courseLevelError);
+    }
+
     const normalizeName = (name) => (name || '').trim().toLowerCase();
 
     const exportedUnitQueue = [];
-    if (exportedLessonData && exportedLessonData.lessonDataMapping) {
+    if (isUnitStore) {
+      // Lightweight sorted index only — full unit payloads loaded one at a time from IndexedDB
+      exportedLessonData.unitRecords.forEach((record) => {
+        exportedUnitQueue.push({ ...record });
+      });
+    } else if (exportedLessonData && exportedLessonData.lessonDataMapping) {
       Object.entries(exportedLessonData.lessonDataMapping).forEach(([, data]) => {
         exportedUnitQueue.push({
           ...data,
@@ -76,17 +110,43 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
       });
     }
 
-    const getNextMetadataEntry = () => {
+    const getNextMetadataEntry = async () => {
       if (!exportedUnitQueue.length) {
         return null;
       }
-      return exportedUnitQueue.shift();
+      const next = exportedUnitQueue.shift();
+      if (!isUnitStore) {
+        return next;
+      }
+      if (!next?.recordId) {
+        return null;
+      }
+      try {
+        // Exact stored unit (rubricData + qaStates + all fields) — then free IDB slot
+        const unitData = await getImportUnit(next.recordId);
+        await deleteImportUnit(next.recordId);
+        if (!unitData) {
+          return null;
+        }
+        return {
+          ...unitData,
+          sectionDisplayName: normalizeName(unitData.sectionDisplayName),
+          subsectionDisplayName: normalizeName(unitData.subsectionDisplayName),
+          sectionIndex: typeof unitData.sectionIndex === 'number' ? unitData.sectionIndex : next.sectionIndex,
+          subsectionIndex:
+            typeof unitData.subsectionIndex === 'number' ? unitData.subsectionIndex : next.subsectionIndex,
+          unitIndex: typeof unitData.unitIndex === 'number' ? unitData.unitIndex : next.unitIndex,
+          path: unitData.path || next.path || '',
+        };
+      } catch (loadError) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load import unit from store:', loadError);
+        return null;
+      }
     };
 
- 
-
     const duplicateLessonOnly = async (currentUnitId) => {
-      const entry = getNextMetadataEntry();
+      const entry = await getNextMetadataEntry();
       if (!entry || !entry.rubricData) {
         return;
       }
@@ -97,12 +157,14 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
       };
 
       try {
+        // Chunked body avoids Invalid string length on very large single-unit payloads
+        const saveBody = await valueToJsonBlob(savePayload);
         const saveResponse = await fetch(
           `${base_url}/api/openedx/create_base_lesson_from_scratch`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(savePayload),
+            body: saveBody,
           }
         );
 
@@ -223,6 +285,16 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
       }
     }
 
+    // Cleanup IndexedDB after successful restore (best-effort)
+    if (isUnitStore && exportedLessonData.storeId) {
+      try {
+        await clearMetadataImportStore(exportedLessonData.storeId);
+      } catch (cleanupError) {
+        // eslint-disable-next-line no-console
+        console.warn('Failed to clear import unit store:', cleanupError);
+      }
+    }
+
     return {
       success: true,
       processed,
@@ -230,6 +302,20 @@ export async function processImportedCourse(courseId, courseBlockId, originalCou
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error processing imported course:', error);
+    // Best-effort cleanup so a failed large import does not leave orphan IDB data
+    try {
+      const maybeStore = (
+        exportedLessonMetadata?.mode === 'inline'
+        || exportedLessonMetadata?.mode === 'unit-store'
+      )
+        ? exportedLessonMetadata.data
+        : exportedLessonMetadata;
+      if (maybeStore?.[IMPORT_STORE_MARKER] && maybeStore.storeId) {
+        await clearMetadataImportStore(maybeStore.storeId);
+      }
+    } catch {
+      // ignore cleanup errors
+    }
     return {
       success: false,
       error: error.message,
