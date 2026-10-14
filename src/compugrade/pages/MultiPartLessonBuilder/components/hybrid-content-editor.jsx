@@ -2284,7 +2284,6 @@ export function HybridContentEditor({
           blocks.find((b) => b.id === stringChecksModal.blockId)?.content
             ?.stringChecks || []
         }
-        sourceDocument={selectedPart?.sourceDocument || null}
       />
 
       {/* Preview Modal */}

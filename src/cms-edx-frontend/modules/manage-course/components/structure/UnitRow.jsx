@@ -8,6 +8,7 @@ export default function UnitRow({
   onPreview,
   onTimer,
   onAttempts,
+  onStartingFileLoad,
   onSchedule,
 }) {
   return (
@@ -29,6 +30,7 @@ export default function UnitRow({
           onPreview={onPreview}
           onTimer={onTimer}
           onAttempts={onAttempts}
+          onStartingFileLoad={onStartingFileLoad}
           onSchedule={onSchedule}
         />
       </td>

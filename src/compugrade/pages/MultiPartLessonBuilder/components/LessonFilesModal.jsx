@@ -56,7 +56,7 @@ export default function LessonFilesModal({
                 Upload lesson files
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Supported examples: .docx, .txt, .xlsx, .csv, .pptx, .jpg, .jpeg, .png
+                Supported examples: .docx, .mp4, .txt, .xlsx, .csv, .pptx, .jpg, .jpeg, .png
               </p>
             </label>
           </div>

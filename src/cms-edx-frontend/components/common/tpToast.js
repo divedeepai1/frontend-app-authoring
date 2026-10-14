@@ -25,6 +25,11 @@ export const tpToast = {
     return id
   },
 
+  dismiss(id) {
+    if (id == null) return
+    emit({ id, dismiss: true })
+  },
+
   success(title, options) {
     const { title: t, description, duration } = normalizeMessage(title, options)
     return tpToast.show({ title: t, description, variant: "success", duration })
