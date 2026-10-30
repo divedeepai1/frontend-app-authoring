@@ -49,6 +49,10 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
       content_type:
         originalRubric.content_type ||
         (originalRubric.is_assessment ? "quiz" : "lesson"),
+      grading_mode:
+        originalRubric.grading_mode === "partial_key"
+          ? "partial_key"
+          : "answer_key",
       lesson_files: originalRubric.lesson_files || [],
       num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
       app_name: appName,
