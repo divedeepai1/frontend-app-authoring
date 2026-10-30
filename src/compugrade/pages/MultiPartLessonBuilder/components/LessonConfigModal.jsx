@@ -9,6 +9,10 @@ import {
   isTimedContentType,
   normalizeContentType,
 } from "../utils/contentType";
+import {
+  GRADING_MODE_OPTIONS,
+  normalizeGradingMode,
+} from "../utils/gradingMode";
 
 export default function LessonConfigModal({
   open,
@@ -30,6 +34,7 @@ export default function LessonConfigModal({
   const contentType = normalizeContentType(lessonConfig?.content_type, {
     isAssessment: !!lessonConfig?.is_assessment,
   });
+  const gradingMode = normalizeGradingMode(lessonConfig?.grading_mode);
   const isTimedType = isTimedContentType(contentType);
 
   const cleanHtml = (html = "") =>
@@ -285,6 +290,42 @@ export default function LessonConfigModal({
                 {[...Array(20)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>
                     {i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-lg bg-slate-50">
+                  <Settings className="w-5 h-5 text-slate-600" />
+                </div>
+                <div className="min-w-0">
+                  <label className="text-sm font-semibold text-gray-900" htmlFor="lesson-grading-mode">
+                    Configuration
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Grading type for this lesson
+                  </p>
+                </div>
+              </div>
+              <select
+                id="lesson-grading-mode"
+                value={gradingMode}
+                onChange={(e) => {
+                  const nextMode = normalizeGradingMode(e.target.value);
+                  setLessonConfig((current) => ({
+                    ...current,
+                    grading_mode: nextMode,
+                  }));
+                }}
+                className="block w-36 rounded-md border border-gray-300 py-1.5 pl-2 pr-8 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm sm:leading-6 shrink-0"
+              >
+                {GRADING_MODE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>

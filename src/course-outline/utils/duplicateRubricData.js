@@ -49,6 +49,10 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
       content_type:
         originalRubric.content_type ||
         (originalRubric.is_assessment ? "quiz" : "lesson"),
+      grading_mode:
+        originalRubric.grading_mode === "partial_key"
+          ? "partial_key"
+          : "answer_key",
       lesson_files: originalRubric.lesson_files || [],
       num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
       app_name: appName,
@@ -62,8 +66,8 @@ export async function duplicateRubricData(originalRubricId, newRubricId) {
       lessons: (originalRubric.lessons || []).map((lesson) => ({
         id: lesson.id,
         title: lesson.title,
-        weightage: lesson.weightage || 0,
         time_allowed: lesson.time_allowed || null,
+        weightage: lesson.weightage || 0,
         source_document: lesson.source_document || null,
         video_timestamp: lesson.video_timestamp || null,
         answer_key: lesson.answer_key || null,

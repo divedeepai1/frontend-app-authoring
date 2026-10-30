@@ -21,7 +21,6 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
     let processedUnits = 0;
     const fallbackAppName = options.appName || getAppNameFromSession();
     const getAppName = (rubricAppName) => rubricAppName || fallbackAppName;
-    
 
     // First, count total units for accurate progress tracking
     const countTotalUnits = (sections) => {
@@ -86,6 +85,10 @@ export async function exportLessonDataMapping(courseId, courseBlockId, options =
                         content_type:
                           originalRubric.content_type ||
                           (originalRubric.is_assessment ? "quiz" : "lesson"),
+                        grading_mode:
+                          originalRubric.grading_mode === "partial_key"
+                            ? "partial_key"
+                            : "answer_key",
                         video_transcript: originalRubric.video_transcript || "",
                         skills: originalRubric.skills || [],
                         num_of_attempts: originalRubric.num_of_attempts === null ? null : (originalRubric.num_of_attempts || 3),
