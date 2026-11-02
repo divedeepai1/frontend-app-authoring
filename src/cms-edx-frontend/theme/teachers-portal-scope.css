@@ -6131,3 +6131,57 @@
   }
 }
 
+.cms-tp-scope .tp-input--error {
+  border-color: #dc2626;
+}
+
+.cms-tp-scope .tp-edit-student {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cms-tp-scope .tp-edit-student-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cms-tp-scope .tp-edit-student-section:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.cms-tp-scope .tp-edit-student-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cms-tp-scope .tp-edit-student-section-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  color: #111827;
+}
+
+.cms-tp-scope .tp-edit-student-section-desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: #6a7282;
+}
+
+.cms-tp-scope .tp-edit-student-section-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.cms-tp-scope .tp-edit-student-email-toggle {
+  margin-top: 0.15rem;
+}
+
