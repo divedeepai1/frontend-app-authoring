@@ -71,11 +71,11 @@ export default function LessonAutomaticStartingFileLoadModal({
       <div className="tp-asfl-warning" role="note">
         <AlertTriangle className="tp-asfl-warning-icon" size={18} strokeWidth={2} aria-hidden />
         <div>
-          <p className="tp-asfl-warning-title">Turning this off makes cheating easier</p>
+          <p className="tp-asfl-warning-title">Answer key protection is off</p>
           <p className="tp-asfl-warning-text">
-            When automatic starting file load is off, students begin from their own document instead
-            of the controlled starting file. Use this only when Office build differences break the
-            automatic load.
+            Use this only when an older Office version won't load the lesson. With it off,
+            students could open a finished copy of the lesson instead of starting from the
+            beginning.
           </p>
         </div>
       </div>
