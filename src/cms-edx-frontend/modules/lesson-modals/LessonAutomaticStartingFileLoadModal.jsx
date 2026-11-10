@@ -44,6 +44,8 @@ export default function LessonAutomaticStartingFileLoadModal({
 }) {
   const s = useAutomaticStartingFileLoad({ isOpen, rubricId, rubricIds, students })
   const busy = s.loading || s.savingClass || !!s.savingStudentId
+  const showProtectionWarning =
+    !s.classEnabled || s.rows.some((row) => row.enabled === false)
 
   return (
     <TpLessonModalFrame
@@ -68,17 +70,19 @@ export default function LessonAutomaticStartingFileLoadModal({
     >
       <TpModalFeedback error={s.error} success={s.success} />
 
-      <div className="tp-asfl-warning" role="note">
-        <AlertTriangle className="tp-asfl-warning-icon" size={18} strokeWidth={2} aria-hidden />
-        <div>
-          <p className="tp-asfl-warning-title">Answer key protection is off</p>
-          <p className="tp-asfl-warning-text">
-            Use this only when an older Office version won't load the lesson. With it off,
-            students could open a finished copy of the lesson instead of starting from the
-            beginning.
-          </p>
+      {showProtectionWarning ? (
+        <div className="tp-asfl-warning" role="note">
+          <AlertTriangle className="tp-asfl-warning-icon" size={18} strokeWidth={2} aria-hidden />
+          <div>
+            <p className="tp-asfl-warning-title">Answer key protection is off</p>
+            <p className="tp-asfl-warning-text">
+              Use this only when an older Office version won't load the lesson. With it off,
+              students could open a finished copy of the lesson instead of starting from the
+              beginning.
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <section className="tp-lesson-modal-section">
         <h3 className="tp-lesson-modal-section-title">Apply to whole class</h3>
