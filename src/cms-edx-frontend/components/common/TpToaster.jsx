@@ -9,6 +9,10 @@ const VARIANTS = {
     className: "tp-toast--error",
     Icon: AlertTriangle,
   },
+  warning: {
+    className: "tp-toast--warning",
+    Icon: AlertTriangle,
+  },
   info: {
     className: "tp-toast--info",
     Icon: Info,

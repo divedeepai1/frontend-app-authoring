@@ -1,3 +1,15 @@
+export function formatApiErrorEntry(entry) {
+  if (entry == null) return ""
+  if (typeof entry === "string") return entry.trim()
+  if (typeof entry !== "object") return String(entry).trim()
+
+  if (typeof entry.error === "string" && entry.error.trim()) return entry.error.trim()
+  if (typeof entry.message === "string" && entry.message.trim()) return entry.message.trim()
+  if (typeof entry.detail === "string" && entry.detail.trim()) return entry.detail.trim()
+
+  return ""
+}
+
 export function parseApiErrorMessage(payload, fallback = "Something went wrong. Please try again.") {
   if (!payload) return fallback
 
@@ -18,11 +30,13 @@ export function parseApiErrorMessage(payload, fallback = "Something went wrong. 
   if (typeof payload.detail === "string" && payload.detail.trim()) return payload.detail.trim()
 
   if (Array.isArray(payload.non_field_errors) && payload.non_field_errors.length) {
-    return payload.non_field_errors.map(String).join(" ")
+    const messages = payload.non_field_errors.map(formatApiErrorEntry).filter(Boolean)
+    if (messages.length) return messages.join(" ")
   }
 
   if (Array.isArray(payload.errors) && payload.errors.length) {
-    return payload.errors.map(String).join(" ")
+    const messages = payload.errors.map(formatApiErrorEntry).filter(Boolean)
+    if (messages.length) return messages.join(" ")
   }
 
   if (payload.errors && typeof payload.errors === "object" && !Array.isArray(payload.errors)) {

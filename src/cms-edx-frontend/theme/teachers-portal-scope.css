@@ -5815,6 +5815,11 @@
   border-color: #fecaca;
 }
 
+.tp-toast--warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
 .tp-toast--info {
   background: #eff6ff;
   border-color: #bfdbfe;
@@ -5841,6 +5846,10 @@
 
 .tp-toast--error .tp-toast-icon {
   color: #dc2626;
+}
+
+.tp-toast--warning .tp-toast-icon {
+  color: #d97706;
 }
 
 .tp-toast--info .tp-toast-icon {
