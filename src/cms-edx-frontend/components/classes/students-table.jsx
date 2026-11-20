@@ -1,5 +1,5 @@
 
-import { ArrowLeftRight, Eye, RotateCcw, Trash2, Users } from "lucide-react"
+import { ArrowLeftRight, Eye, Pencil, RotateCcw, Trash2, Users } from "lucide-react"
 import TpCheckbox from "../common/TpCheckbox"
 import { useNavigate } from "react-router"
 import { useState } from "react"
@@ -20,6 +20,7 @@ export default function StudentTable({
   handleSelectAllStudents,
   handleSelectStudents,
   handleMoveStudent,
+  handleEditStudent,
   classId,
   toolbar,
   embedInModal = false,
@@ -51,6 +52,8 @@ export default function StudentTable({
   const showActions = showRowActions ?? Boolean(fromTeachers && handleDeleteStudents)
   const canRemove = typeof handleDeleteStudents === "function"
   const canMove = typeof handleMoveStudent === "function"
+  const canEdit = typeof handleEditStudent === "function"
+  const actionsColWidth = canEdit && canMove ? "14.5rem" : canMove || canEdit ? "12.5rem" : "10.5rem"
 
   const isStudentSelected = (studentId) =>
     selectedIdList.some((id) => String(id) === String(studentId))
@@ -70,6 +73,20 @@ export default function StudentTable({
           }}
         >
           <Eye size={20} strokeWidth={1.5} />
+        </button>
+      ) : null}
+      {canEdit ? (
+        <button
+          type="button"
+          className="tp-portal-data-table-action"
+          title="Edit student"
+          aria-label={`Edit ${student.username || "student"}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleEditStudent(student)
+          }}
+        >
+          <Pencil size={18} strokeWidth={2} />
         </button>
       ) : null}
       {canMove ? (
@@ -161,7 +178,7 @@ export default function StudentTable({
               <col />
               <col />
               <col />
-              {showActions ? <col style={{ width: canMove ? "12.5rem" : "10.5rem" }} /> : null}
+              {showActions ? <col style={{ width: actionsColWidth }} /> : null}
             </colgroup>
             <thead>
               <tr>

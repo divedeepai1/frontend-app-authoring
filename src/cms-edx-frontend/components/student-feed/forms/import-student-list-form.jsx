@@ -4,6 +4,10 @@ import { getConfig } from "@edx/frontend-platform"
 import { useNavigate } from "react-router"
 import { Download, FileSpreadsheet, Upload } from "lucide-react"
 import { tpToast } from "../../common/tpToast"
+import {
+  resolveStudentImportFailureMessage,
+  summarizeStudentImportResults,
+} from "../utils/studentImportMessages"
 
 const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStudentAdded }) => {
   const [csvFile, setCsvFile] = useState(null)
@@ -15,6 +19,7 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
     const opts = duration ? { description: message, duration } : message
     if (variant === "success") tpToast.success(title, opts)
     else if (variant === "error") tpToast.error(title, opts)
+    else if (variant === "warning") tpToast.warning(title, opts)
     else tpToast.info(title, opts)
   }
 
@@ -224,29 +229,23 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
       }
 
       if (response.ok) {
-        const results = responseData?.results || {}
-        const created = Array.isArray(results.created) ? results.created : []
-        const updated = Array.isArray(results.updated) ? results.updated : []
-        const skipped = Array.isArray(results.skipped) ? results.skipped : []
-        const errors = Array.isArray(results.errors) ? results.errors : []
+        const summary = summarizeStudentImportResults(responseData?.results || {})
+        const detailParts = [summary.countsMessage]
+        if (summary.errorDetails) detailParts.push(summary.errorDetails)
 
-        const countsMessage = `Created: ${created.length} | Updated: ${updated.length} | Skipped: ${skipped.length} | Errors: ${errors.length}`
-
-        notify({
-          title: "Import successful",
-          message: `Students processed successfully. ${countsMessage}`,
-          variant: "success",
-          duration: 6000,
-        })
-
-        if (errors.length > 0) {
-          const errorMessages = errors.slice(0, 5).join(", ")
-          const moreErrors = errors.length > 5 ? ` and ${errors.length - 5} more` : ""
+        if (summary.hasErrors) {
           notify({
-            title: "Some errors occurred",
-            message: `Errors: ${errorMessages}${moreErrors}`,
-            variant: "error",
-            duration: 7000,
+            title: "Import completed with errors",
+            message: detailParts.join(" · "),
+            variant: "warning",
+            duration: 9000,
+          })
+        } else {
+          notify({
+            title: "Import successful",
+            message: summary.countsMessage,
+            variant: "success",
+            duration: 6000,
           })
         }
 
@@ -262,12 +261,15 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
           }
         }, 2000)
       } else {
-        const errorMessage =
-          responseData?.message || responseData?.error || `Server error: ${response.status} ${response.statusText}`
+        const errorMessage = resolveStudentImportFailureMessage(
+          responseData,
+          "Import failed.",
+        )
         notify({
           title: "Import failed",
           message: errorMessage,
           variant: "error",
+          duration: 9000,
         })
       }
     } catch (error) {
