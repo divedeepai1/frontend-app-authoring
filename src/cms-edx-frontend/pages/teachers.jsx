@@ -2,7 +2,9 @@ import TpDeleteConfirmationModal from "../components/common/TpDeleteConfirmation
 import TpPortalSearchField from "../components/common/TpPortalSearchField"
 import TeacherPortalShell from "../layout/TeacherPortalShell"
 import ManageClassModalFrame from "../modules/manage-classes/components/ManageClassModalFrame"
+import EditStudentModal from "../modules/manage-classes/components/EditStudentModal"
 import MoveStudentModal from "../modules/manage-classes/components/MoveStudentModal"
+import { useEditStudent } from "../modules/manage-classes/hooks/useEditStudent"
 import { useMoveStudent } from "../modules/manage-classes/hooks/useMoveStudent"
 import { useNavigate, useParams } from "react-router"
 import { fetchCsrfToken } from "../../cms-csrftoken"
@@ -135,6 +137,11 @@ const Teachers = () => {
     sourceClassId: classId,
     sourceClass: classMeta,
     onMoved: fetchStudents,
+  })
+
+  const editStudent = useEditStudent({
+    classId,
+    onUpdated: fetchStudents,
   })
 
   useEffect(() => {
@@ -385,12 +392,29 @@ const Teachers = () => {
                   handleSelectAllStudents={handleSelectAllStudents}
                   handleSelectStudents={handleSelectStudents}
                   handleMoveStudent={moveStudent.openMove}
+                  handleEditStudent={editStudent.openEdit}
                 />
               </div>
             </ManageClassModalFrame>
           </div>
         </TeacherPortalShell>
       </div>
+
+      <EditStudentModal
+        isOpen={editStudent.isOpen}
+        onClose={editStudent.closeEdit}
+        student={editStudent.student}
+        infoForm={editStudent.infoForm}
+        passwordForm={editStudent.passwordForm}
+        infoErrors={editStudent.infoErrors}
+        passwordErrors={editStudent.passwordErrors}
+        savingInfo={editStudent.savingInfo}
+        savingPassword={editStudent.savingPassword}
+        onInfoChange={editStudent.handleInfoChange}
+        onPasswordChange={editStudent.handlePasswordChange}
+        onSaveInfo={editStudent.saveInfo}
+        onSavePassword={editStudent.savePassword}
+      />
 
       <MoveStudentModal
         isOpen={moveStudent.isOpen}
