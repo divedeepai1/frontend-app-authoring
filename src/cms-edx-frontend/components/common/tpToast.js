@@ -44,6 +44,11 @@ export const tpToast = {
     const { title: t, description, duration } = normalizeMessage(title, options)
     return tpToast.show({ title: t, description, variant: "info", duration })
   },
+
+  warning(title, options) {
+    const { title: t, description, duration } = normalizeMessage(title, options)
+    return tpToast.show({ title: t, description, variant: "warning", duration })
+  },
 }
 
 export function subscribeTpToast(fn) {
