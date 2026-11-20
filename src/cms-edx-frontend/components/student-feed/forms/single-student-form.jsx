@@ -3,6 +3,7 @@ import { fetchCsrfToken } from "../../../../cms-csrftoken"
 import { getConfig } from "@edx/frontend-platform"
 import { useNavigate } from "react-router"
 import { tpToast } from "../../common/tpToast"
+import { readApiError } from "../../../modules/account-settings/utils/apiError"
 
 const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStudentAdded }) => {
   const navigate = useNavigate()
@@ -55,8 +56,8 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Failed to add: ${response.status} ${errorText}`)
+        const message = await readApiError(response, "Unable to add student.")
+        throw new Error(message)
       }
 
       await response.json()
@@ -69,7 +70,7 @@ const SingleStudentForm = ({ setSelectedOption, setAddStudents, isNewStudent, on
         setAddStudents(false)
       }
     } catch (error) {
-      tpToast.error("Unable to add student", error?.message || "Please try again.")
+      tpToast.error(error?.message || "Unable to add student")
     } finally {
       setIsAdding(false)
     }

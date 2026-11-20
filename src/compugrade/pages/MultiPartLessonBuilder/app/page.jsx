@@ -31,6 +31,10 @@ import {
   normalizeContentType,
 } from "../utils/contentType";
 import {
+  GRADING_MODES,
+  normalizeGradingMode,
+} from "../utils/gradingMode";
+import {
   ensureInstructionItemNums,
   exportQaStates,
   getAppNameFromSession,
@@ -83,6 +87,7 @@ export default function LessonBuilder() {
     lesson_overview: "",
     num_of_attempts: 3,
     content_type: CONTENT_TYPES.LESSON,
+    grading_mode: GRADING_MODES.ANSWER_KEY,
     time_allowed: null,
     timer_mode: null,
   });
@@ -376,6 +381,7 @@ export default function LessonBuilder() {
       content_type: normalizeContentType(backendData.content_type, {
         isAssessment: !!backendData.is_assessment,
       }),
+      grading_mode: normalizeGradingMode(backendData.grading_mode),
       time_allowed: backendData.time_allowed ?? null,
       timer_mode:
         backendData.timer_mode === "display" || backendData.timer_mode === "lock"
@@ -1064,6 +1070,7 @@ export default function LessonBuilder() {
       lessons: lesson_parts,
       num_of_attempts: currentLessonConfig.num_of_attempts === null ? null : (currentLessonConfig.num_of_attempts || 3),
       content_type: normalizeContentType(currentLessonConfig.content_type),
+      grading_mode: normalizeGradingMode(currentLessonConfig.grading_mode),
       time_allowed: currentLessonConfig.time_allowed ?? null,
       timer_mode: currentLessonConfig.timer_mode ?? null,
     };
@@ -1089,6 +1096,7 @@ export default function LessonBuilder() {
     content_type: normalizeContentType(payload?.content_type, {
       isAssessment: !!payload?.is_assessment,
     }),
+    grading_mode: normalizeGradingMode(payload?.grading_mode),
     time_allowed: payload?.time_allowed ?? null,
     timer_mode:
       payload?.timer_mode === "display" || payload?.timer_mode === "lock"
