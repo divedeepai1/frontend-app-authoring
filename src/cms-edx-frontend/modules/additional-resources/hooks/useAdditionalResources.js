@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { tpToast } from "../../../components/common/tpToast"
 import * as resourcesApi from "../services/resourcesApi"
+import { canPreviewResource } from "../utils/resourcePreview"
 
 function getFileName(resource) {
   const pathName = String(resource?.file_path || "")
@@ -68,6 +69,9 @@ export function useAdditionalResources() {
   const handleView = useCallback((resource) => {
     if (!resource?.file_path) {
       tpToast.error("This resource has no file available.")
+      return
+    }
+    if (!canPreviewResource(resource)) {
       return
     }
     setPreviewResource(resource)

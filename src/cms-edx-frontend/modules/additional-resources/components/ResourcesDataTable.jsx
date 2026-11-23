@@ -1,5 +1,6 @@
 import { FileText, Download, Eye } from "lucide-react"
 import TpLoadingState from "../../../components/common/TpLoadingState"
+import { canPreviewResource } from "../utils/resourcePreview"
 
 export default function ResourcesDataTable({ isLoading, resources, onView, onDownload }) {
   if (isLoading) {
@@ -45,15 +46,17 @@ export default function ResourcesDataTable({ isLoading, resources, onView, onDow
                 </td>
                 <td className="tp-resources-td-actions">
                   <div className="tp-resources-actions">
-                    <button
-                      type="button"
-                      className="tp-resources-action-btn"
-                      title="View"
-                      aria-label="View"
-                      onClick={() => onView(resource)}
-                    >
-                      <Eye size={16} strokeWidth={2} />
-                    </button>
+                    {canPreviewResource(resource) ? (
+                      <button
+                        type="button"
+                        className="tp-resources-action-btn"
+                        title="View"
+                        aria-label="View"
+                        onClick={() => onView(resource)}
+                      >
+                        <Eye size={16} strokeWidth={2} />
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="tp-resources-action-btn"
