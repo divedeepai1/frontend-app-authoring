@@ -6,6 +6,7 @@ import EditStudentModal from "../modules/manage-classes/components/EditStudentMo
 import MoveStudentModal from "../modules/manage-classes/components/MoveStudentModal"
 import { useEditStudent } from "../modules/manage-classes/hooks/useEditStudent"
 import { useMoveStudent } from "../modules/manage-classes/hooks/useMoveStudent"
+import { HealthThresholds, trackAsync } from "../modules/errorLogging"
 import { useNavigate, useParams } from "react-router"
 import { fetchCsrfToken } from "../../cms-csrftoken"
 import { getConfig } from "@edx/frontend-platform"
@@ -106,26 +107,32 @@ const Teachers = () => {
 
   const fetchStudents = useCallback(async () => {
     setLoadingStudents(true)
-    const token = await fetchCsrfToken()
     try {
-      const response = await fetch(
-        `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students-list/`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-        }
-      )
+      await trackAsync(
+        "class.roster_load",
+        async () => {
+          const token = await fetchCsrfToken()
+          const response = await fetch(
+            `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/students-list/`,
+            {
+              method: "GET",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": token,
+              },
+            },
+          )
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Failed to get: ${response.status} ${errorText}`)
-      }
-      const result = await response.json()
-      setStudentState((prev) => ({ ...prev, list: result?.students || [] }))
+          if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`Failed to get: ${response.status} ${errorText}`)
+          }
+          const result = await response.json()
+          setStudentState((prev) => ({ ...prev, list: result?.students || [] }))
+        },
+        { thresholdMs: HealthThresholds.heavyPageMs },
+      )
     } catch {
       setStudentState((prev) => ({ ...prev, list: [] }))
     } finally {

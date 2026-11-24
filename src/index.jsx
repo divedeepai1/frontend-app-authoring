@@ -56,10 +56,17 @@ import Resources from './cms-edx-frontend/pages/resources';
 import Chat from './cms-edx-frontend/pages/Chat';
 import Gradebook from './cms-edx-frontend/pages/gradebook';
 import AccountSettings from './cms-edx-frontend/pages/account-settings';
+import {
+  initErrorLogging,
+  syncTelemetryUserId,
+} from './cms-edx-frontend/modules/errorLogging';
 
 import 'react-datepicker/dist/react-datepicker.css';
 import './index.scss';
 import './global.css';
+
+// Must run before React mounts so early failures are captured in SigNoz.
+initErrorLogging();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -162,6 +169,7 @@ const App = () => {
           throw new Error(`Failed to get: ${response.status} ${errorText}`);
         }
         const result = await response.json();
+        void syncTelemetryUserId();
         setRole(result?.role || 'course_creator_group');
       } catch (error) {
         // Fall back to Studio authoring routes if role lookup fails.

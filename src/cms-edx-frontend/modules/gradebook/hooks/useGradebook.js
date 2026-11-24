@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { tpToast } from "../../../components/common/tpToast"
+import {
+  HealthThresholds,
+  trackAsync,
+  watchUiStuck,
+} from "../../errorLogging"
 import * as gradebookApi from "../services/gradebookApi"
 
 export function useGradebook() {
@@ -236,30 +241,38 @@ export function useGradebook() {
     if (!selectedCourse || !studentIds.length) return
     setExporting(true)
     setError("")
+    const stuck = watchUiStuck("gradebook.export", HealthThresholds.uiStuckMs)
     try {
-      const response = await gradebookApi.postExportGradebookCsv({
-        courseId: selectedCourse,
-        students: classStudents,
-        rubrics: courseRubrics,
-      })
-      const blob = await response.blob()
-      const disposition = response.headers.get("content-disposition") || ""
-      const match = disposition.match(/filename="?([^"]+)"?/)
-      const filename = match?.[1] || "gradebook.csv"
-      const link = document.createElement("a")
-      const objectUrl = URL.createObjectURL(blob)
-      link.href = objectUrl
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(objectUrl)
-      tpToast.success("Gradebook exported as CSV successfully")
+      await trackAsync(
+        "gradebook.export",
+        async () => {
+          const response = await gradebookApi.postExportGradebookCsv({
+            courseId: selectedCourse,
+            students: classStudents,
+            rubrics: courseRubrics,
+          })
+          const blob = await response.blob()
+          const disposition = response.headers.get("content-disposition") || ""
+          const match = disposition.match(/filename="?([^"]+)"?/)
+          const filename = match?.[1] || "gradebook.csv"
+          const link = document.createElement("a")
+          const objectUrl = URL.createObjectURL(blob)
+          link.href = objectUrl
+          link.download = filename
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          URL.revokeObjectURL(objectUrl)
+          tpToast.success("Gradebook exported as CSV successfully")
+        },
+        { thresholdMs: HealthThresholds.gradeFlowMs },
+      )
     } catch {
       const msg = "Unable to export gradebook right now."
       setError(msg)
       tpToast.error(msg)
     } finally {
+      stuck.clear()
       setExporting(false)
     }
   }
@@ -268,28 +281,36 @@ export function useGradebook() {
     setSavingOverride(true)
     setError("")
     setSuccess("")
+    const stuck = watchUiStuck("gradebook.save_override", HealthThresholds.uiStuckMs)
     try {
-      await gradebookApi.postOverrideGradebook({
-        courseId,
-        rubricId,
-        userId,
-        overrideScore,
-        reason,
-      })
-      setOverrideContext(null)
-      setSuccess("Grade updated successfully.")
-      tpToast.success("Grade updated successfully")
-      // Update only the edited cell immediately so the table stays mounted and scroll position is kept.
-      applyLocalGradeOverride({ userId, rubricId, overrideScore })
-      // Quietly refresh scores (overall grade, reset values) without a full loading reload.
-      void loadGradebook(selectedClassId, selectedCourse, classStudents, courseRubrics, true, {
-        silent: true,
-      })
+      await trackAsync(
+        "gradebook.save_override",
+        async () => {
+          await gradebookApi.postOverrideGradebook({
+            courseId,
+            rubricId,
+            userId,
+            overrideScore,
+            reason,
+          })
+          setOverrideContext(null)
+          setSuccess("Grade updated successfully.")
+          tpToast.success("Grade updated successfully")
+          // Update only the edited cell immediately so the table stays mounted and scroll position is kept.
+          applyLocalGradeOverride({ userId, rubricId, overrideScore })
+          // Quietly refresh scores (overall grade, reset values) without a full loading reload.
+          void loadGradebook(selectedClassId, selectedCourse, classStudents, courseRubrics, true, {
+            silent: true,
+          })
+        },
+        { thresholdMs: HealthThresholds.apiMs },
+      )
     } catch {
       const msg = "Unable to update grade right now."
       setError(msg)
       tpToast.error(msg)
     } finally {
+      stuck.clear()
       setSavingOverride(false)
     }
   }

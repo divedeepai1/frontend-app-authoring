@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "outDir": "dist",
+    "baseUrl": ".",
     "paths": {
       "@src/*": ["./src/*"],
       "CourseAuthoring/*": ["./src/*"]

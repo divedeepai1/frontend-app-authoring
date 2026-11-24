@@ -1,5 +1,6 @@
 import { appendNextToLogoutUrl, getLogoutNextDestination } from "../layout/buildLogoutNextUrl"
 import { parseEdxUserInfoCookie } from "../layout/parseEdxUserInfoCookie"
+import { clearTelemetryUserId } from "../modules/errorLogging/sessionUser"
 
 /**
  * Builds the same logout URL used by the top-bar "Log out" action.
@@ -22,6 +23,7 @@ export function performTeacherPortalLogout() {
   if (typeof window === "undefined") return false
   const href = getTeacherPortalLogoutHref()
   if (!href) return false
+  clearTelemetryUserId()
   window.location.assign(href)
   return true
 }

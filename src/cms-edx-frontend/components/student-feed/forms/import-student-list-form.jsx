@@ -5,6 +5,11 @@ import { useNavigate } from "react-router"
 import { Download, FileSpreadsheet, Upload } from "lucide-react"
 import { tpToast } from "../../common/tpToast"
 import {
+  HealthThresholds,
+  trackAsync,
+  watchUiStuck,
+} from "../../../modules/errorLogging"
+import {
   resolveStudentImportFailureMessage,
   summarizeStudentImportResults,
 } from "../utils/studentImportMessages"
@@ -200,78 +205,88 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
     }
 
     setIsImporting(true)
+    const stuck = watchUiStuck("students.csv_import", HealthThresholds.uiStuckMs)
 
     try {
-      const token = await fetchCsrfToken()
-      const classId = sessionStorage.getItem("classId")
-      const formData = new FormData()
-      formData.append("file", csvFile)
+      await trackAsync(
+        "students.csv_import",
+        async () => {
+          const token = await fetchCsrfToken()
+          const classId = sessionStorage.getItem("classId")
+          const formData = new FormData()
+          formData.append("file", csvFile)
 
-      const response = await fetch(`${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/add-students-csv/`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "X-CSRFToken": token,
-        },
-        body: formData,
-      })
+          const response = await fetch(
+            `${getConfig().STUDIO_BASE_URL}/myplugin/classrooms/${classId}/add-students-csv/`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "X-CSRFToken": token,
+              },
+              body: formData,
+            },
+          )
 
-      let responseData
-      try {
-        responseData = await response.json()
-      } catch {
-        notify({
-          title: "Import error",
-          message: "Failed to parse server response. Please try again.",
-          variant: "error",
-        })
-        return
-      }
-
-      if (response.ok) {
-        const summary = summarizeStudentImportResults(responseData?.results || {})
-        const detailParts = [summary.countsMessage]
-        if (summary.errorDetails) detailParts.push(summary.errorDetails)
-
-        if (summary.hasErrors) {
-          notify({
-            title: "Import completed with errors",
-            message: detailParts.join(" · "),
-            variant: "warning",
-            duration: 9000,
-          })
-        } else {
-          notify({
-            title: "Import successful",
-            message: summary.countsMessage,
-            variant: "success",
-            duration: 6000,
-          })
-        }
-
-        setTimeout(() => {
-          setCsvFile(null)
-          if (isNewStudent) {
-            navigate(-1)
-          } else if (onStudentAdded) {
-            onStudentAdded()
-          } else {
-            setAddStudents(false)
-            setSelectedOption(null)
+          let responseData
+          try {
+            responseData = await response.json()
+          } catch {
+            notify({
+              title: "Import error",
+              message: "Failed to parse server response. Please try again.",
+              variant: "error",
+            })
+            return
           }
-        }, 2000)
-      } else {
-        const errorMessage = resolveStudentImportFailureMessage(
-          responseData,
-          "Import failed.",
-        )
-        notify({
-          title: "Import failed",
-          message: errorMessage,
-          variant: "error",
-          duration: 9000,
-        })
-      }
+
+          if (response.ok) {
+            const summary = summarizeStudentImportResults(responseData?.results || {})
+            const detailParts = [summary.countsMessage]
+            if (summary.errorDetails) detailParts.push(summary.errorDetails)
+
+            if (summary.hasErrors) {
+              notify({
+                title: "Import completed with errors",
+                message: detailParts.join(" · "),
+                variant: "warning",
+                duration: 9000,
+              })
+            } else {
+              notify({
+                title: "Import successful",
+                message: summary.countsMessage,
+                variant: "success",
+                duration: 6000,
+              })
+            }
+
+            setTimeout(() => {
+              setCsvFile(null)
+              if (isNewStudent) {
+                navigate(-1)
+              } else if (onStudentAdded) {
+                onStudentAdded()
+              } else {
+                setAddStudents(false)
+                setSelectedOption(null)
+              }
+            }, 2000)
+          } else {
+            const errorMessage = resolveStudentImportFailureMessage(
+              responseData,
+              "Import failed.",
+            )
+            notify({
+              title: "Import failed",
+              message: errorMessage,
+              variant: "error",
+              duration: 9000,
+            })
+          }
+        },
+        { thresholdMs: HealthThresholds.heavyPageMs },
+      )
     } catch (error) {
       notify({
         title: "Upload error",
@@ -279,6 +294,7 @@ const CsvImportForm = ({ setSelectedOption, setAddStudents, isNewStudent, onStud
         variant: "error",
       })
     } finally {
+      stuck.clear()
       setIsImporting(false)
     }
   }
