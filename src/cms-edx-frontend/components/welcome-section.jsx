@@ -12,7 +12,7 @@ export function WelcomeSection() {
       const parts = value.split(`; ${name}=`);
       if (parts.length === 2) return parts.pop().split(";").shift();
     }
-
+//hello
     const raw = getCookie("edx-user-info");
     if (raw) {
       try {
