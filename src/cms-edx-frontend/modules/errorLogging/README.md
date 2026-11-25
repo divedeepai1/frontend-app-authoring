@@ -17,6 +17,9 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%<URL-ENCODED-TOKEN>
 `webpack.otel.js` sets `SIGNOZ_ERROR_LOGGING=true` in the bundle when `SIGNOZ_OTLP_ENDPOINT` is set.
 Dev server proxies `/otel` → the collector and injects auth headers from `OTEL_EXPORTER_OTLP_HEADERS`.
 
+OpenTelemetry packages are pinned to a peer-compatible set (`api@1.9.1` + sdk/exporters `@0.203.0` / `@2.0.1`) so Tutor’s
+`npm clean-install` succeeds without `--legacy-peer-deps` (Docker only copies `package.json` + `package-lock.json`, not `.npmrc`).
+
 ## Production (EC2 / nginx)
 
 Place **above** the SPA catch-all (example):

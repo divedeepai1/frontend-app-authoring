@@ -7,7 +7,7 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import { resourceFromAttributes } from "@opentelemetry/resources"
 import {
   ATTR_SERVICE_NAME,
-  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
+  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from "@opentelemetry/semantic-conventions"
 import { getErrorLoggingConfig } from "./config"
 import { ContextAttributesProcessor } from "./contextAttributes"
@@ -17,11 +17,15 @@ let initialized = false
 let loggerProviderRef = null
 let tracerProviderRef = null
 
+// Prefer modern attr constant when present; older semconv uses SEMRESATTRS_*.
+const DEPLOYMENT_ENVIRONMENT_ATTR =
+  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT || "deployment.environment"
+
 function buildResource(config) {
   return resourceFromAttributes({
     [ATTR_SERVICE_NAME]: config.serviceName,
     // New OTel name + legacy key — SigNoz Logs env filter still indexes deployment.environment.
-    [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: config.environment,
+    [DEPLOYMENT_ENVIRONMENT_ATTR]: config.environment,
     "deployment.environment": config.environment,
   })
 }
